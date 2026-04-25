@@ -519,7 +519,6 @@ function App(){
 
   // ── CALENDAR CONFIG ────────────────────────────────────────────────────────
   function CalCfg(){
-    const [pendingNotifs,setPendingNotifs]=useState([]);
     async function savePreAssign(){
       const mid=preAssignMarineRef.current;
       const reason=(preAssignReasonRef.current?.value||'').trim();
