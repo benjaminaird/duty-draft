@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>DutyDraft</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;600;700&family=Courier+Prime:wght@400;700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#07090d;--s1:#0c0f16;--s2:#111620;--s3:#171d2a;
+  --border:#1e2535;--border2:#28304a;--text:#dde4f0;--muted:#566078;--dim:#2e3a52;
+  --accent:#c8a84b;--a2:#e8c870;--green:#27ae60;--red:#e74c3c;--blue:#3498db;--orange:#e67e22;
+  --fh:'Oswald',sans-serif;--fb:'Source Sans 3',sans-serif;--fm:'Courier Prime',monospace;
+}
+html,body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:15px;min-height:100vh;-webkit-font-smoothing:antialiased;}
+.app{min-height:100vh;display:flex;flex-direction:column;max-width:860px;margin:0 auto;}
+.hdr{background:var(--s1);border-bottom:2px solid var(--accent);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 4px 24px rgba(0,0,0,.7);}
+.logo{font-family:var(--fh);font-size:24px;letter-spacing:4px;color:var(--accent);line-height:1;}
+.logo-sub{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:1px;}
+.hdr-right{display:flex;align-items:center;gap:6px;}
+.phase-chip{font-family:var(--fh);font-size:9px;letter-spacing:1.5px;background:var(--accent);color:#000;padding:3px 8px;border-radius:2px;white-space:nowrap;}
+.demo-label{font-family:var(--fh);font-size:9px;letter-spacing:1px;color:var(--orange);white-space:nowrap;}
+.demo-sel{background:var(--s3);border:1px solid var(--orange);border-radius:3px;color:var(--orange);font-family:var(--fh);font-size:9px;padding:3px 6px;outline:none;cursor:pointer;max-width:130px;}
+.tabs{display:flex;background:var(--s1);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{font-family:var(--fh);font-size:10px;letter-spacing:1px;padding:9px 11px;border:none;background:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent);}
+.main{flex:1;padding:12px;overflow-y:auto;}
+.card{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:10px;}
+.card-title{font-family:var(--fh);font-size:16px;letter-spacing:2px;color:var(--accent);margin-bottom:2px;}
+.card-sub{color:var(--muted);font-size:11px;margin-bottom:10px;line-height:1.5;}
+.btn{font-family:var(--fh);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border:none;border-radius:3px;cursor:pointer;padding:7px 12px;transition:all .15s;display:inline-flex;align-items:center;gap:4px;}
+.btn-gold{background:var(--accent);color:#000;}.btn-gold:hover{background:var(--a2);}
+.btn-red{background:#3a0a0a;color:#fca5a5;border:1px solid #7a1515;}.btn-red:hover{background:var(--red);color:#fff;}
+.btn-grn{background:#0a2015;color:var(--green);border:1px solid #1a5030;}.btn-grn:hover{background:var(--green);color:#000;}
+.btn-ghost{background:var(--s3);color:var(--text);border:1px solid var(--border2);}.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn-orange{background:#1a0e00;color:var(--orange);border:1px solid var(--orange);}.btn-orange:hover{background:var(--orange);color:#000;}
+.btn-sm{padding:4px 8px;font-size:9px;}.btn:disabled{opacity:.3;cursor:not-allowed;}.btn-full{width:100%;justify-content:center;}
+.btn-icon{padding:4px 7px;background:var(--s3);border:1px solid var(--border2);border-radius:3px;cursor:pointer;color:var(--muted);font-size:12px;transition:all .15s;line-height:1;}
+.btn-icon:hover{color:var(--accent);border-color:var(--accent);}
+.btn-icon:disabled{opacity:.2;cursor:not-allowed;}
+.field{margin-bottom:8px;}
+.lbl{display:block;font-family:var(--fh);font-size:9px;letter-spacing:1.5px;color:var(--muted);margin-bottom:3px;}
+.inp,.sel,.ta{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:3px;color:var(--text);font-family:var(--fb);font-size:13px;padding:6px 9px;outline:none;transition:border-color .15s;}
+.inp:focus,.sel:focus,.ta:focus{border-color:var(--accent);}
+.ta{resize:vertical;min-height:60px;}
+.ii{background:var(--bg);border:1px solid var(--border2);border-radius:3px;color:var(--text);font-size:12px;padding:4px 7px;outline:none;font-family:var(--fb);}
+.ii:focus{border-color:var(--accent);}
+.timer-pills{display:flex;gap:8px;margin-top:6px;}
+.timer-pill{flex:1;padding:12px 4px;text-align:center;border-radius:4px;cursor:pointer;font-family:var(--fh);font-size:22px;background:var(--s3);border:2px solid var(--border2);color:var(--muted);transition:all .15s;user-select:none;}
+.timer-pill.selected{background:#1a1200;border-color:var(--accent);color:var(--accent);}
+.timer-pill-label{font-size:9px;letter-spacing:1px;margin-top:3px;font-family:var(--fh);}
+.mrow{display:flex;align-items:center;gap:5px;padding:6px 8px;background:var(--s1);border:1px solid var(--border);border-radius:4px;margin-bottom:4px;}
+.mrow-num{font-family:var(--fh);font-size:14px;color:var(--dim);min-width:18px;text-align:right;flex-shrink:0;}
+.cal-wrap{margin-top:6px;}
+.cal-mhdr{font-family:var(--fh);font-size:13px;letter-spacing:3px;color:var(--accent);text-align:center;margin-bottom:6px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.cal-dow{font-family:var(--fh);font-size:8px;letter-spacing:1px;color:var(--muted);text-align:center;padding:2px 0;}
+.cc{min-height:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:3px;border:1px solid transparent;transition:all .12s;position:relative;padding:2px 1px;user-select:none;font-size:11px;font-weight:600;}
+.cc.empty{cursor:default;background:none;}
+.cc.avail{background:var(--s3);border-color:var(--border2);color:var(--text);cursor:pointer;}
+.cc.avail:hover{border-color:var(--accent);color:var(--accent);}
+.cc.avail-wk{background:#181208;border-color:#3d2e08;color:#c8a84b;cursor:pointer;}
+.cc.avail-wk:hover{border-color:var(--a2);}
+.cc.pref{background:#071a0f;border-color:var(--green);color:var(--green);cursor:pointer;}
+.cc.pref-wk{background:#0f1a05;border-color:#4a8020;color:#8fbc44;cursor:pointer;}
+.cc.grey{background:#090a0d;border-color:#111318;color:#1e2028;cursor:not-allowed;}
+.cc.na-red{background:#130303;border-color:#3a0a0a;color:var(--red);cursor:not-allowed;}
+.cc.bo{background:#100606;border-color:#280e0e;color:#331010;cursor:not-allowed;}
+.cc.wk-cfg{background:#181208;border-color:#3d2e08;color:#c8a84b;cursor:pointer;}
+.cc.workday{background:var(--s3);border-color:var(--blue);color:var(--blue);cursor:pointer;}
+.cc.pre-assigned{background:#0d0515;border-color:#6a1a9a;color:#c084fc;cursor:not-allowed;}
+.cc.top5-sel{background:#071a0f;border-color:var(--green);color:var(--green);cursor:pointer;}
+.cc.top5-grey{background:#090a0d;border-color:#111318;color:#1e2028;cursor:not-allowed;}
+.cc.assigned{background:#071a0f;border-color:#1a5030;color:var(--green);cursor:default;}
+.cc.pending{background:#1a1500;border-color:var(--accent);color:var(--accent);cursor:pointer;box-shadow:0 0 0 2px rgba(200,168,75,.25);}
+.c-prio{position:absolute;top:1px;right:2px;font-family:var(--fh);font-size:8px;color:var(--green);}
+.c-lbl{font-size:6px;color:var(--muted);text-align:center;max-width:100%;line-height:1.1;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.c-num{font-size:11px;}
+.confirm-bar{position:sticky;bottom:0;background:var(--s1);border-top:2px solid var(--accent);padding:10px 12px;display:flex;align-items:center;gap:8px;z-index:50;}
+.confirm-bar-date{font-family:var(--fh);font-size:14px;color:var(--accent);letter-spacing:1px;}
+.confirm-bar-sub{font-size:10px;color:var(--muted);}
+.draft-banner{background:linear-gradient(135deg,#1a1200 0%,#0a1500 100%);border-bottom:2px solid var(--accent);padding:10px 14px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:90;}
+.draft-banner-name{font-family:var(--fh);font-size:18px;letter-spacing:2px;color:var(--accent);}
+.draft-banner-sub{font-size:10px;color:var(--muted);font-family:var(--fh);letter-spacing:1px;}
+.draft-banner-timer{font-family:var(--fm);font-size:20px;color:var(--accent);margin-left:auto;flex-shrink:0;}
+.draft-banner-timer.urg{color:var(--red);}
+.draft-banner-pick{font-family:var(--fh);font-size:10px;color:var(--orange);letter-spacing:1px;margin-top:2px;}
+.cdwn{font-family:var(--fm);font-size:16px;color:var(--accent);background:var(--s3);border:1px solid var(--border2);border-radius:4px;padding:6px 10px;text-align:center;letter-spacing:2px;margin-bottom:10px;}
+.cdwn.urg{color:var(--red);border-color:var(--red);}
+.cdwn-labels{display:flex;justify-content:center;font-family:var(--fh);font-size:8px;color:var(--muted);letter-spacing:1px;margin-top:2px;}
+.cdwn-seg{min-width:38px;text-align:center;}
+.dbox{background:linear-gradient(135deg,#120f04 0%,#04110a 100%);border:1px solid var(--accent);border-radius:6px;padding:12px;margin-bottom:10px;}
+.d-rank{font-family:var(--fh);font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:1px;}
+.d-name{font-family:var(--fh);font-size:26px;letter-spacing:3px;color:var(--accent);}
+.d-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;flex-wrap:wrap;}
+.trblock{display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;}
+.tring{position:relative;width:56px;height:56px;}
+.tring svg{transform:rotate(-90deg);}
+.tnum{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--fh);font-size:16px;color:var(--accent);}
+.tlbl{font-size:7px;color:var(--muted);letter-spacing:1px;font-family:var(--fh);}
+.urg .tnum{color:var(--red);}
+.ahead-badge{background:var(--s3);border:1px solid var(--border2);border-radius:4px;padding:8px 12px;text-align:center;margin-bottom:10px;}
+.ahead-num{font-family:var(--fh);font-size:32px;color:var(--accent);line-height:1;}
+.ahead-label{font-family:var(--fh);font-size:10px;letter-spacing:2px;color:var(--muted);margin-top:3px;}
+.pill{font-family:var(--fh);font-size:8px;letter-spacing:1px;padding:2px 6px;border-radius:2px;display:inline-block;}
+.p-gold{background:#160f00;color:var(--accent);border:1px solid var(--accent);}
+.p-grn{background:#061208;color:var(--green);border:1px solid var(--green);}
+.p-red{background:#130303;color:var(--red);border:1px solid var(--red);}
+.p-grey{background:var(--s3);color:var(--muted);border:1px solid var(--border2);}
+.p-org{background:#150900;color:var(--orange);border:1px solid var(--orange);}
+.p-blue{background:#020d18;color:var(--blue);border:1px solid var(--blue);}
+.p-purple{background:#100520;color:#c084fc;border:1px solid #6a1a9a;}
+.alert{border-radius:4px;padding:9px 11px;margin-bottom:9px;font-size:12px;line-height:1.5;}
+.a-w{background:#160f00;border:1px solid var(--accent);color:#c8a84b;}
+.a-d{background:#130303;border:1px solid var(--red);color:#fca5a5;}
+.a-i{background:#030d18;border:1px solid var(--blue);color:#93c5fd;}
+.a-g{background:#0a1a0f;border:1px solid var(--green);color:#86efac;}
+.alert strong{display:block;font-family:var(--fh);font-size:10px;letter-spacing:1px;margin-bottom:2px;}
+.wk-group{background:var(--s1);border:1px solid var(--border);border-radius:4px;padding:10px;margin-bottom:8px;}
+.wk-group-title{font-family:var(--fh);font-size:12px;letter-spacing:1px;margin-bottom:6px;}
+.wk-marine-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);}
+.wk-marine-row:last-child{border-bottom:none;}
+.freed-banner{background:#0a1a0f;border:1px solid var(--green);border-radius:4px;padding:8px 10px;margin-bottom:8px;font-size:12px;color:var(--green);}
+.freed-banner strong{display:block;font-family:var(--fh);font-size:10px;letter-spacing:1px;margin-bottom:2px;}
+.draft-cd-box{background:var(--s3);border:1px solid var(--border2);border-radius:6px;padding:16px;text-align:center;margin-bottom:10px;}
+.draft-cd-label{font-family:var(--fh);font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:8px;}
+.draft-cd-time{font-family:var(--fm);font-size:32px;color:var(--accent);letter-spacing:4px;}
+.draft-cd-units{display:flex;justify-content:center;font-family:var(--fh);font-size:8px;color:var(--muted);letter-spacing:1px;margin-top:4px;}
+.draft-cd-seg{min-width:52px;text-align:center;}
+.draft-cd-sub{font-size:11px;color:var(--muted);margin-top:8px;}
+.short-banner{background:#130303;border:1px solid var(--red);border-radius:4px;padding:10px 12px;margin-bottom:10px;}
+.short-split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;}
+.short-col-title{font-family:var(--fh);font-size:10px;letter-spacing:1px;margin-bottom:6px;}
+.short-marine{font-size:11px;padding:4px 0;border-bottom:1px solid var(--border);}
+.short-marine:last-child{border-bottom:none;}
+.nlist{display:flex;flex-direction:column;gap:6px;}
+.ni{display:flex;gap:8px;background:var(--s1);border:1px solid var(--border);border-radius:4px;padding:8px;align-items:flex-start;}
+.ni.unread{border-left:2px solid var(--accent);}
+.ni-ico{font-size:14px;flex-shrink:0;}
+.ni-title{font-weight:700;font-size:11px;font-family:var(--fh);letter-spacing:.5px;}
+.ni-body{color:var(--muted);font-size:11px;margin-top:2px;line-height:1.4;}
+.rt{width:100%;border-collapse:collapse;}
+.rt th{font-family:var(--fh);font-size:9px;letter-spacing:1px;color:var(--muted);border-bottom:1px solid var(--border);padding:5px;text-align:left;}
+.rt td{padding:5px;border-bottom:1px solid var(--border);font-size:11px;}
+.rt tr:last-child td{border-bottom:none;}
+.wkstar{color:var(--accent);}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;display:flex;align-items:center;justify-content:center;padding:12px;}
+.modal{background:var(--s2);border:1px solid var(--border2);border-radius:6px;padding:16px;max-width:420px;width:100%;max-height:88vh;overflow-y:auto;}
+.modal-title{font-family:var(--fh);font-size:17px;letter-spacing:2px;color:var(--accent);margin-bottom:3px;}
+hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
+.row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.rowb{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;}
+.mt{margin-top:8px;}
+::-webkit-scrollbar{width:3px;height:3px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+@media(max-width:500px){.cc{min-height:32px;}.c-lbl{display:none;}.d-name{font-size:20px;}.timer-pill{font-size:18px;}.short-split{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#c8a84b;font-family:'Courier Prime',monospace;letter-spacing:2px;font-size:14px;">LOADING DUTYDRAFT…</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.5/babel.min.js"></script>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback}=React;
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+const RANKS=['PVT','PFC','LCPL','CPL','SGT','SSGT','GYSGT'];
+const RANK_TO_GRADE={PVT:'E1',PFC:'E2',LCPL:'E3',CPL:'E4',SGT:'E5',SSGT:'E6',GYSGT:'E7'};
+const GRADE_NUM={E1:1,E2:2,E3:3,E4:4,E5:5,E6:6,E7:7};
+const BURDEN_GROUP={E1:'junior',E2:'junior',E3:'junior',E4:'junior',E5:'junior',E6:'ssgt',E7:'gysgt'};
+const GROUP_QUOTA={junior:0.60,ssgt:0.25,gysgt:0.15};
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const PHASE_ORDER=['setup','calendar','wkpreview','top5','nonavail','review','draft-scheduled','draft','postdraft','published'];
+const NA_REASONS=['Approved Leave','On the Roster for a Gig','TAD','Parental Leave','Approved Out of Bounds Liberty','Other — Non-Sensitive Conflict','Other — Please Speak with SNCOIC in Person'];
+const PL={setup:'ROSTER SETUP',calendar:'CAL CONFIG',wkpreview:'WK PREVIEW',shortmonth:'SHORT MONTH',top5:'PREF DATES',nonavail:'NON-AVAIL',review:'NCOIC REVIEW','draft-scheduled':'DRAFT SCHED',draft:'LIVE DRAFT',postdraft:'POST-DRAFT',published:'PUBLISHED'};
+const TABS=[{id:'admin',label:'NCOIC'},{id:'top5',label:'PREF DATES'},{id:'nonavail',label:'N/A'},{id:'draft',label:'DRAFT'},{id:'roster',label:'ROSTER'},{id:'notifs',label:'NOTIFS'},{id:'settings',label:'⚙'}];
+
+// ─── UTILITIES ────────────────────────────────────────────────────────────────
+const getDIM=(y,m)=>new Date(y,m+1,0).getDate();
+const getFirstDow=(y,m)=>new Date(y,m,1).getDay();
+const isNatWk=(y,m,d)=>{const w=new Date(y,m,d).getDay();return w===0||w===6;};
+const dk=(y,m,d)=>`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+const gradeOf=r=>RANK_TO_GRADE[r]||'E1';
+const groupOf=r=>BURDEN_GROUP[gradeOf(r)]||'junior';
+const gradeNum=r=>GRADE_NUM[gradeOf(r)]||1;
+const dName=m=>m?`${m.rank} ${m.lastName}${m.firstName?' '+m.firstName:''}`.toUpperCase():'';
+const isConsec=(d,list)=>list.some(a=>Math.abs(d-a)===1);
+const consecPrev=(d,last,y,m)=>{if(last==null)return false;const lm=m===0?getDIM(y-1,11):getDIM(y,m-1);return last===lm&&d===1;};
+const fmtCD=s=>{if(s<=0)return'00:00:00:00';return[Math.floor(s/86400),Math.floor((s%86400)/3600),Math.floor((s%3600)/60),s%60].map(n=>String(n).padStart(2,'0')).join(':');};
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+const api={
+  getState:()=>fetch('/api/state').then(r=>r.json()),
+  setState:data=>fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json()),
+  addNotif:(title,body,icon,targetMid)=>fetch('/api/notif',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,body,icon:icon||'🔔',targetMid:targetMid||null})}).then(r=>r.json()),
+  markRead:mid=>fetch('/api/notif/read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mid})}).then(r=>r.json()),
+  reset:()=>fetch('/api/reset',{method:'POST'}).then(r=>r.json()),
+};
+
+// ─── SCHEDULING ENGINE ────────────────────────────────────────────────────────
+function computeWkAssignees(marines,wkCount,history){
+  if(!wkCount)return{junior:[],ssgt:[],gysgt:[]};
+  const groups={junior:[],ssgt:[],gysgt:[]};
+  marines.forEach(m=>groups[groupOf(m.rank)].push(m));
+  const q={junior:Math.round(GROUP_QUOTA.junior*wkCount),ssgt:Math.round(GROUP_QUOTA.ssgt*wkCount),gysgt:0};
+  q.gysgt=Math.max(0,wkCount-q.junior-q.ssgt);
+  if(q.junior+q.ssgt+q.gysgt!==wkCount)q.junior+=wkCount-(q.junior+q.ssgt+q.gysgt);
+  const result={junior:[],ssgt:[],gysgt:[]};
+  let total=0;
+  Object.entries(groups).forEach(([g,gMs])=>{
+    if(!gMs.length||q[g]<=0)return;
+    const hist=(history.weekendBurden||{})[g]||[];
+    const sorted=[...gMs].sort((a,b)=>{const ai=hist.lastIndexOf(a.id),bi=hist.lastIndexOf(b.id);return ai!==bi?ai-bi:gradeNum(a.rank)-gradeNum(b.rank);});
+    result[g]=sorted.slice(0,Math.min(q[g],sorted.length));
+    total+=result[g].length;
+  });
+  while(total<wkCount){
+    const hist=(history.weekendBurden||{}).junior||[];
+    const sorted=[...groups.junior].sort((a,b)=>{const ai=hist.lastIndexOf(a.id),bi=hist.lastIndexOf(b.id);return ai!==bi?ai-bi:gradeNum(a.rank)-gradeNum(b.rank);});
+    const have=new Set(result.junior.map(m=>m.id));
+    const next=sorted.find(m=>!have.has(m.id));
+    if(next){result.junior.push(next);total++;}else break;
+  }
+  return result;
+}
+
+function computeDoubleDuty(marines,totalDays,preAssigned,history){
+  const preIds=new Set(Object.values(preAssigned));
+  const elig=marines.filter(m=>!preIds.has(m.id));
+  const rem=totalDays-Object.keys(preAssigned).length;
+  if(rem<=elig.length)return{};
+  const hist=(history.extraDuty)||[];
+  const sorted=[...elig].sort((a,b)=>{const ai=hist.lastIndexOf(a.id),bi=hist.lastIndexOf(b.id);return ai!==bi?ai-bi:gradeNum(a.rank)-gradeNum(b.rank);});
+  const dd={};
+  sorted.slice(0,Math.min(rem-elig.length,4)).forEach(m=>{dd[m.id]=2;});
+  return dd;
+}
+
+function computeShortMonthRoster(marines,availDays,preAssigned,history){
+  const preIds=new Set(Object.values(preAssigned));
+  const elig=marines.filter(m=>!preIds.has(m.id));
+  const rem=availDays-Object.keys(preAssigned).length;
+  const s={junior:Math.round(GROUP_QUOTA.junior*rem),ssgt:Math.round(GROUP_QUOTA.ssgt*rem),gysgt:0};
+  s.gysgt=Math.max(0,rem-s.junior-s.ssgt);
+  const diff=rem-(s.junior+s.ssgt+s.gysgt);if(diff)s.junior+=diff;
+  const standing={junior:[],ssgt:[],gysgt:[]};
+  const sittingOut={junior:[],ssgt:[],gysgt:[]};
+  ['junior','ssgt','gysgt'].forEach(g=>{
+    const gMs=elig.filter(m=>groupOf(m.rank)===g);
+    const hist=((history.dutyHistory)||{})[g]||[];
+    const sorted=[...gMs].sort((a,b)=>{const ai=hist.lastIndexOf(a.id),bi=hist.lastIndexOf(b.id);return ai!==bi?ai-bi:gradeNum(a.rank)-gradeNum(b.rank);});
+    const n=Math.max(0,Math.min(s[g],sorted.length));
+    standing[g]=sorted.slice(0,n);sittingOut[g]=sorted.slice(n);
+  });
+  return{standing,sittingOut};
+}
+
+function buildDraftOrder(marines,doubleDuty,preAssigned){
+  const preIds=new Set(Object.values(preAssigned));
+  const elig=marines.filter(m=>!preIds.has(m.id));
+  const ddGy=elig.filter(m=>m.rank==='GYSGT'&&doubleDuty[m.id]);
+  const normGy=elig.filter(m=>m.rank==='GYSGT'&&!doubleDuty[m.id]);
+  const ddNon=elig.filter(m=>m.rank!=='GYSGT'&&doubleDuty[m.id]);
+  const rest=elig.filter(m=>m.rank!=='GYSGT'&&!doubleDuty[m.id]);
+  const order=[];
+  ddGy.forEach(m=>{order.push({id:m.id,turn:1});order.push({id:m.id,turn:2});});
+  normGy.forEach(m=>order.push({id:m.id,turn:1}));
+  ddNon.forEach(m=>{order.push({id:m.id,turn:1});order.push({id:m.id,turn:2});});
+  rest.forEach(m=>order.push({id:m.id,turn:1}));
+  return order;
+}
+
+function isDateValid(mid,d,asgn,wkDates,nonAvail,blackouts,preAssigned,workdays,history,y,m,needsWk){
+  const k=dk(y,m,d);
+  if((blackouts||[]).includes(k))return false;
+  const pa=preAssigned||{};
+  if(pa[d]&&pa[d]!==mid)return false;
+  const approvedNA=new Set(((nonAvail||{})[mid]||[]).filter(n=>n.approved===true).map(n=>n.date));
+  if(approvedNA.has(k))return false;
+  if(asgn[d]&&asgn[d]!==mid)return false;
+  if(asgn[d]===mid)return false;
+  const myDays=Object.entries(asgn).filter(([,x])=>x===mid).map(([d])=>Number(d));
+  if(isConsec(d,myDays))return false;
+  if(consecPrev(d,(history.lastDutyDay||{})[mid]??null,y,m))return false;
+  if(needsWk&&!(wkDates||[]).includes(d))return false;
+  return true;
+}
+
+function getValidDates(mid,allDates,asgn,wkDates,nonAvail,blackouts,preAssigned,workdays,history,y,m,needsWk=false){
+  return allDates.filter(d=>isDateValid(mid,d,asgn,wkDates,nonAvail,blackouts,preAssigned,workdays,history,y,m,needsWk));
+}
+
+function autoPick(mid,allDates,asgn,wkDates,wkIds,nonAvail,blackouts,preAssigned,workdays,doubleDuty,prefs,history,y,m){
+  const myDays=Object.entries(asgn).filter(([,x])=>x===mid).map(([d])=>Number(d));
+  const hasWk=myDays.some(d=>(wkDates||[]).includes(d));
+  const needsWk=(wkIds||[]).includes(mid)&&!hasWk;
+  const valid=getValidDates(mid,allDates,asgn,wkDates,nonAvail,blackouts,preAssigned,workdays,history,y,m,needsWk);
+  if(!valid.length)return null;
+  const myPrefs=((prefs||{})[mid]||[]).map(p=>p.day);
+  const isWkSlotted=(wkIds||[]).includes(mid);
+  const pool=isWkSlotted?valid:[...valid].sort((a,b)=>{const aw=(wkDates||[]).includes(a),bw=(wkDates||[]).includes(b);return aw&&!bw?1:!aw&&bw?-1:0;});
+  for(const p of myPrefs){if(pool.includes(p))return p;}
+  return pool[0];
+}
+
+// ─── TIMER RING ───────────────────────────────────────────────────────────────
+function TimerRing({secs,total}){
+  const pct=Math.max(0,secs/total),r=24,circ=2*Math.PI*r,urgent=secs<=30;
+  return(
+    <div className={'trblock'+(urgent?' urg':'')}>
+      <div className="tring">
+        <svg width="56" height="56">
+          <circle cx="28" cy="28" r={r} fill="none" stroke="#181828" strokeWidth="5"/>
+          <circle cx="28" cy="28" r={r} fill="none" stroke={urgent?'#e74c3c':'#c8a84b'} strokeWidth="5" strokeDasharray={`${pct*circ} ${circ}`} strokeLinecap="round"/>
+        </svg>
+        <div className="tnum">{secs}</div>
+      </div>
+      <div className="tlbl">SEC</div>
+    </div>
+  );
+}
+
+// ─── CALENDAR GRID ────────────────────────────────────────────────────────────
+function CalGrid({year,month,renderCell}){
+  const total=getDIM(year,month),first=getFirstDow(year,month);
+  const cells=[];
+  for(let i=0;i<first;i++)cells.push(<div key={'e'+i} className="cc empty"/>);
+  for(let d=1;d<=total;d++)cells.push(renderCell(d));
+  return(
+    <div className="cal-wrap">
+      <div className="cal-mhdr">{MONTHS[month].toUpperCase()} {year}</div>
+      <div className="cal-grid">
+        {DAYS_SHORT.map(d=><div key={d} className="cal-dow">{d}</div>)}
+        {cells}
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+function App(){
+  const [st,setSt]=useState(null);
+  const [tab,setTab]=useState('admin');
+  const [activeUser,setActiveUser]=useState('ncoic');
+  const [pendingDay,setPendingDay]=useState(null);
+  const [timerSecs,setTimerSecs]=useState(180);
+  const [draftCountdown,setDraftCountdown]=useState(null);
+  const [wkWarnModal,setWkWarnModal]=useState(null);
+  const [naModal,setNaModal]=useState(null);
+  const [naWkWarn,setNaWkWarn]=useState(null);
+  const [naReason,setNaReason]=useState(NA_REASONS[0]);
+  const [dupModal,setDupModal]=useState(null);
+  const [preAssignModal,setPreAssignModal]=useState(null);
+  const [editDModal,setEditDModal]=useState(null);
+  const [calMode,setCalMode]=useState(null);
+  const [loading,setLoading]=useState(true);
+
+  const naOtherRef=useRef(null);
+  const preAssignMarineRef=useRef('');
+  const preAssignReasonRef=useRef(null);
+  const newLastRef=useRef(null);
+  const newFirstRef=useRef(null);
+  const dupFirstRef=useRef(null);
+  const editDRef=useRef('');
+  const timerRef=useRef(null);
+  const countdownRef=useRef(null);
+  const stRef=useRef(null);
+  useEffect(()=>{stRef.current=st;},[st]);
+
+  // Load state from server
+  useEffect(()=>{
+    api.getState().then(s=>{setSt(s);setLoading(false);}).catch(()=>setLoading(false));
+    const poll=setInterval(()=>{
+      api.getState().then(s=>setSt(s)).catch(()=>{});
+    },3000);
+    return()=>clearInterval(poll);
+  },[]);
+
+  // Sync tab to phase
+  useEffect(()=>{
+    if(!st)return;
+    const map={setup:'admin',calendar:'admin',wkpreview:'admin',shortmonth:'admin',review:'admin','draft-scheduled':'draft',top5:'top5',nonavail:'nonavail',draft:'draft',postdraft:'roster',published:'roster'};
+    setTab(map[st.phase]||'admin');
+  },[st?.phase]);
+
+  // Draft countdown
+  useEffect(()=>{
+    if(!st?.draftScheduled||st.draftLive||st.draftDone)return;
+    clearInterval(countdownRef.current);
+    countdownRef.current=setInterval(()=>{
+      const diff=Math.floor((new Date(st.draftScheduled)-new Date())/1000);
+      if(diff<=0){clearInterval(countdownRef.current);setDraftCountdown(0);handleLaunchDraft();}
+      else setDraftCountdown(diff);
+    },1000);
+    return()=>clearInterval(countdownRef.current);
+  },[st?.draftScheduled,st?.draftLive]);
+
+  // Turn timer
+  useEffect(()=>{
+    if(!st?.draftLive||st?.draftDone){clearInterval(timerRef.current);return;}
+    clearInterval(timerRef.current);
+    const turnSecs=(st.turnMins||3)*60;
+    timerRef.current=setInterval(()=>{
+      setTimerSecs(s=>{
+        if(s===turnSecs-1){
+          const cur=stRef.current;
+          const threeIdx=(cur?.draftIdx||0)+3;
+          const threeEntry=(cur?.draftOrder||[])[threeIdx];
+          if(threeEntry){
+            const m=(cur.marines||[]).find(x=>x.id===threeEntry.id);
+            if(m)api.addNotif('STAND BY',`${dName(m)}: 3 picks away.`,'⏱',m.id);
+          }
+        }
+        if(s<=1){handleAutoForce();return turnSecs;}
+        return s-1;
+      });
+    },1000);
+    return()=>clearInterval(timerRef.current);
+  },[st?.draftLive,st?.draftIdx,st?.draftDone]);
+
+  function patch(updates){
+    const next={...stRef.current,...updates};
+    setSt(next);
+    return api.setState(updates);
+  }
+
+  function isWkDate(d){
+    if(!st)return false;
+    const k=dk(st.year,st.month,d);
+    if((st.workdays||[]).includes(k))return false;
+    return isNatWk(st.year,st.month,d)||(st.extraWk||[]).includes(k);
+  }
+
+  function getAllDates(){
+    if(!st)return[];
+    const total=getDIM(st.year,st.month);
+    return Array.from({length:total},(_,i)=>i+1).filter(d=>!(st.blackouts||[]).includes(dk(st.year,st.month,d)));
+  }
+
+  function currentNeedsWk(mid,turn,asgn){
+    if(!st)return false;
+    const isDD=!!(st.doubleDuty||{})[mid];
+    const isWkSlotted=(st.wkAssigneeIds||[]).includes(mid);
+    const isFreed=(st.freedMarines||[]).includes(mid);
+    if(!isWkSlotted||isFreed)return false;
+    const myDays=Object.entries(asgn||{}).filter(([,x])=>x===mid).map(([d])=>Number(d));
+    const hasWk=myDays.some(d=>(st.weekendDates||[]).includes(d));
+    if(hasWk)return false;
+    return isDD?turn===1:true;
+  }
+
+  async function handleAutoForce(){
+    clearInterval(timerRef.current);
+    const cur=stRef.current;
+    if(!cur)return;
+    const e=(cur.draftOrder||[])[cur.draftIdx||0];
+    if(!e){await handleFinishDraft();return;}
+    const mid=e.id;
+    const m=(cur.marines||[]).find(x=>x.id===mid);
+    const asgn=cur.assignments||{};
+    const day=autoPick(mid,getAllDates(),asgn,cur.weekendDates,cur.wkAssigneeIds,cur.nonAvail,cur.blackouts,cur.preAssigned,cur.workdays,cur.doubleDuty,cur.prefs,cur.history,cur.year,cur.month);
+    const newAsgn={...asgn};
+    if(day!==null){
+      newAsgn[day]=mid;
+      if(m)await api.addNotif('DUTY DATE ASSIGNED',`${dName(m)}: timed out — assigned ${MONTHS[cur.month]} ${day}.`,'⏱',mid);
+      await handleCheckVoluntaryWk(mid,day,asgn,cur);
+    }
+    await handleMoveNext(newAsgn,cur);
+  }
+
+  async function handleFinishDraft(){
+    await patch({draftDone:true,draftLive:false});
+    await api.addNotif('DRAFT COMPLETE','All duty dates assigned. NCOIC: review and publish the roster.','✅');
+  }
+
+  async function handleMoveNext(newAsgn,cur){
+    const next=(cur?.draftIdx||0)+1;
+    const order=cur?.draftOrder||[];
+    if(next>=order.length){
+      await patch({assignments:newAsgn,draftIdx:next,draftDone:true,draftLive:false});
+      await api.addNotif('DRAFT COMPLETE','All duty dates assigned. NCOIC: review and publish.','✅');
+      return;
+    }
+    const turnSecs=(cur?.turnMins||3)*60;
+    await patch({assignments:newAsgn,draftIdx:next});
+    setPendingDay(null);
+    setTimerSecs(turnSecs);
+    const e=order[next];
+    const m=(cur?.marines||[]).find(x=>x.id===e?.id);
+    if(m){
+      const dd=(cur?.doubleDuty||{})[m.id];
+      const lbl=dd&&e.turn===2?' — Day 2 of 2':dd?' — Day 1 of 2':'';
+      await api.addNotif('YOUR TURN',`${dName(m)}${lbl}: it is your turn. You have ${cur?.turnMins||3} minute(s).`,'⭐',m.id);
+    }
+  }
+
+  async function handleCheckVoluntaryWk(pickerMid,day,curAsgn,cur){
+    if(!isWkDate(day)||(cur?.wkAssigneeIds||[]).includes(pickerMid))return;
+    const newVol=[...(cur?.voluntaryWkTakers||[])];
+    if(!newVol.includes(pickerMid))newVol.push(pickerMid);
+    const allAsgn={...curAsgn,[day]:pickerMid};
+    const wkCovered=Object.entries(allAsgn).filter(([d,])=>isWkDate(Number(d))).length;
+    const newFreed=[...(cur?.freedMarines||[])];
+    if(wkCovered>=(cur?.weekendDates||[]).length){
+      for(const mid of(cur?.wkAssigneeIds||[])){
+        const hasWk=Object.entries(allAsgn).some(([d,x])=>x===mid&&isWkDate(Number(d)));
+        if(!hasWk&&!newFreed.includes(mid)){
+          newFreed.push(mid);
+          const fm=(cur?.marines||[]).find(x=>x.id===mid);
+          if(fm)await api.addNotif('WEEKEND OBLIGATION COVERED',`${dName(fm)}: another duty covered a weekend day. Your obligation is fulfilled — all dates now open.`,'🟢',mid);
+        }
+      }
+    }
+    await patch({voluntaryWkTakers:newVol,freedMarines:newFreed});
+  }
+
+  async function handleDayClick(day){
+    if(!st?.draftLive||st?.draftDone)return;
+    const e=(st.draftOrder||[])[st.draftIdx||0];
+    if(!e)return;
+    const mid=e.id;
+    const asgn=st.assignments||{};
+    const needsWk=currentNeedsWk(mid,e.turn,asgn);
+    if(!isDateValid(mid,day,asgn,st.weekendDates,st.nonAvail,st.blackouts,st.preAssigned,st.workdays,st.history,st.year,st.month,needsWk))return;
+    const isDD=!!(st.doubleDuty||{})[mid];
+    const isWkSlotted=(st.wkAssigneeIds||[]).includes(mid);
+    const isFreed=(st.freedMarines||[]).includes(mid);
+    const myDays=Object.entries(asgn).filter(([,x])=>x===mid).map(([d])=>Number(d));
+    const hasWk=myDays.some(d=>(st.weekendDates||[]).includes(d));
+    const isVoluntaryWk=isWkDate(day)&&!isWkSlotted&&!isFreed;
+    const isSecondDDWk=isDD&&isWkSlotted&&hasWk&&e.turn===2&&isWkDate(day);
+    if((isVoluntaryWk||isSecondDDWk)&&day!==pendingDay){setWkWarnModal({day,isSecondDD:isSecondDDWk});return;}
+    setPendingDay(prev=>prev===day?null:day);
+  }
+
+  async function handleConfirmPick(){
+    if(pendingDay===null)return;
+    const e=(st?.draftOrder||[])[st?.draftIdx||0];
+    if(!e)return;
+    const mid=e.id;
+    const asgn={...st.assignments||{},[pendingDay]:mid};
+    clearInterval(timerRef.current);
+    const m=(st?.marines||[]).find(x=>x.id===mid);
+    const isDD=(st?.doubleDuty||{})[mid];
+    const lbl=isDD?e.turn===2?' (Day 2)':' (Day 1)':'';
+    if(m)await api.addNotif('SELECTION CONFIRMED',`${dName(m)}${lbl}: ${MONTHS[st.month]} ${pendingDay} confirmed.`,'✅',mid);
+    await handleCheckVoluntaryWk(mid,pendingDay,st.assignments||{},st);
+    await handleMoveNext(asgn,st);
+    setPendingDay(null);
+  }
+
+  if(loading)return(<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',color:'#c8a84b',fontFamily:'"Courier Prime",monospace',letterSpacing:'2px',fontSize:'14px'}}>LOADING…</div>);
+  if(!st)return(<div style={{color:'#e74c3c',padding:'20px',fontFamily:'monospace'}}>Failed to load. Check server.</div>);
+
+  const marines=st.marines||[];
+  const draftOrder=st.draftOrder||[];
+  const draftIdx=st.draftIdx||0;
+  const assignments=st.assignments||{};
+  const doubleDuty=st.doubleDuty||{};
+  const wkAssigneeIds=st.wkAssigneeIds||[];
+  const freedMarines=st.freedMarines||[];
+  const voluntaryWkTakers=st.voluntaryWkTakers||[];
+  const preAssigned=st.preAssigned||{};
+  const preAssignReasons=st.preAssignReasons||{};
+  const blackouts=st.blackouts||[];
+  const workdays=st.workdays||[];
+  const extraWk=st.extraWk||[];
+  const prefs=st.prefs||{};
+  const nonAvail=st.nonAvail||{};
+  const notifications=st.notifications||[];
+  const history=st.history||{weekendBurden:{junior:[],ssgt:[],gysgt:[]},extraDuty:[],dutyHistory:{junior:[],ssgt:[],gysgt:[]},lastDutyDay:{}};
+  const weekendDates=st.weekendDates||[];
+  const wkAssignees=st.wkAssignees||{junior:[],ssgt:[],gysgt:[]};
+  const turnSecs=(st.turnMins||3)*60;
+
+  // ── SETUP ────────────────────────────────────────────────────────────────
+  function insertPositionForRank(roster,rank){
+    const g=GRADE_NUM[gradeOf(rank)]||1;
+    let last=-1;
+    for(let i=0;i<roster.length;i++){if(GRADE_NUM[gradeOf(roster[i].rank)]===g)last=i;}
+    if(last>=0)return last+1;
+    for(let i=0;i<roster.length;i++){if(GRADE_NUM[gradeOf(roster[i].rank)]<g)return i;}
+    return roster.length;
+  }
+
+  function Setup(){
+    const [editRoster,setEditRoster]=useState([...marines]);
+    const [newM,setNewM]=useState({rank:'LCPL'});
+    function moveUp(i){if(!i)return;setEditRoster(r=>{const a=[...r];[a[i-1],a[i]]=[a[i],a[i-1]];return a;});}
+    function moveDown(i){if(i===editRoster.length-1)return;setEditRoster(r=>{const a=[...r];[a[i],a[i+1]]=[a[i+1],a[i]];return a;});}
+    function removeM(id){setEditRoster(r=>r.filter(m=>m.id!==id));}
+    function updateM(id,f,v){setEditRoster(r=>r.map(m=>m.id===id?{...m,[f]:['lastName','firstName'].includes(f)?v.toUpperCase():v}:m));}
+    function addM(){
+      const ln=(newLastRef.current?.value||'').toUpperCase().trim();
+      const fn=(newFirstRef.current?.value||'').toUpperCase().trim();
+      if(!ln)return;
+      const dup=editRoster.find(m=>m.lastName===ln);
+      if(dup){setDupModal({lastName:ln,rank:newM.rank,fn,existing:dup});return;}
+      const pos=insertPositionForRank(editRoster,newM.rank);
+      setEditRoster(r=>{const a=[...r];a.splice(pos,0,{rank:newM.rank,lastName:ln,firstName:fn,id:'m'+Date.now(),active:true});return a;});
+      if(newLastRef.current)newLastRef.current.value='';
+      if(newFirstRef.current)newFirstRef.current.value='';
+    }
+    function resolvedup(){
+      const fn=(dupFirstRef.current?.value||'').toUpperCase().trim();
+      if(!fn||editRoster.find(m=>m.lastName===dupModal.lastName&&m.firstName===fn))return;
+      const pos=insertPositionForRank(editRoster,dupModal.rank);
+      setEditRoster(r=>{const a=[...r];a.splice(pos,0,{rank:dupModal.rank,lastName:dupModal.lastName,firstName:fn,id:'m'+Date.now(),active:true});return a;});
+      setDupModal(null);
+    }
+    async function confirm(){
+      const next=editRoster.filter(m=>m.active);
+      await patch({marines:next,phase:'calendar'});
+      await api.addNotif('ROSTER SET',`${next.length} duties configured for ${MONTHS[st.month]} ${st.year}.`,'📋');
+    }
+    return(
+      <div>
+        {dupModal&&(<div className="overlay"><div className="modal">
+          <div className="modal-title">DUPLICATE NAME</div>
+          <div className="card-sub">{dupModal.rank} {dupModal.lastName} already exists. Add first name to differentiate.</div>
+          <div className="field"><label className="lbl">First Name</label><input className="inp" ref={dupFirstRef} placeholder="First name..." autoFocus/></div>
+          <div className="row mt"><button className="btn btn-gold" onClick={resolvedup}>ADD</button><button className="btn btn-ghost" onClick={()=>setDupModal(null)}>CANCEL</button></div>
+        </div></div>)}
+        <div className="card">
+          <div className="card-title">DUTIES</div>
+          <div className="card-sub">Use ↑↓ to reorder in seniority order. New Marines auto-place by rank.</div>
+          {editRoster.map((m,i)=>(
+            <div key={m.id} className="mrow">
+              <div className="mrow-num">{i+1}</div>
+              <select className="sel" style={{width:70,fontSize:11,padding:'3px 4px'}} value={m.rank} onChange={e=>updateM(m.id,'rank',e.target.value)}>{RANKS.map(r=><option key={r}>{r}</option>)}</select>
+              <input className="ii" style={{flex:1,minWidth:60,fontSize:11}} placeholder="LAST" defaultValue={m.lastName} onBlur={e=>updateM(m.id,'lastName',e.target.value)}/>
+              <input className="ii" style={{width:50,fontSize:11}} placeholder="FIRST" defaultValue={m.firstName||''} onBlur={e=>updateM(m.id,'firstName',e.target.value)}/>
+              <button className="btn-icon" disabled={!i} onClick={()=>moveUp(i)}>↑</button>
+              <button className="btn-icon" disabled={i===editRoster.length-1} onClick={()=>moveDown(i)}>↓</button>
+              <button className="btn btn-red btn-sm" onClick={()=>removeM(m.id)}>✕</button>
+            </div>
+          ))}
+          <hr/>
+          <div className="card-sub">Add Duty — auto-places by rank</div>
+          <div className="row">
+            <select className="sel" style={{width:70,fontSize:11,padding:'4px 5px'}} value={newM.rank} onChange={e=>setNewM(n=>({...n,rank:e.target.value}))}>{RANKS.map(r=><option key={r}>{r}</option>)}</select>
+            <input className="ii" style={{flex:1}} placeholder="LAST NAME*" ref={newLastRef}/>
+            <input className="ii" style={{width:55}} placeholder="FIRST" ref={newFirstRef}/>
+            <button className="btn btn-ghost btn-sm" onClick={addM}>+ ADD</button>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-title">TURN TIMER</div>
+          <div className="card-sub">Minutes per pick during the draft. Default is 3.</div>
+          <div className="timer-pills">
+            {[1,2,3,4,5].map(n=>(<div key={n} className={'timer-pill'+(st.turnMins===n?' selected':'')} onClick={()=>patch({turnMins:n})}>{n}<div className="timer-pill-label">MIN</div></div>))}
+          </div>
+        </div>
+        <div className="rowb">
+          <div style={{color:'var(--muted)',fontSize:11}}>{editRoster.length} duties · {st.turnMins||3} min turns</div>
+          <button className="btn btn-gold" onClick={confirm}>CONFIRM →</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── CALENDAR CONFIG ────────────────────────────────────────────────────────
+  function CalCfg(){
+    async function savePreAssign(){
+      const mid=preAssignMarineRef.current;
+      const reason=(preAssignReasonRef.current?.value||'').trim();
+      if(!mid||!reason)return;
+      const newPA={...preAssigned,[preAssignModal.day]:mid};
+      const newPAR={...preAssignReasons,[preAssignModal.day]:reason};
+      await patch({preAssigned:newPA,preAssignReasons:newPAR});
+      const m=marines.find(x=>x.id===mid);
+      if(m)await api.addNotif('DUTY DATE ASSIGNED',`${dName(m)}: assigned duty on ${MONTHS[st.month]} ${preAssignModal.day}. Reason: ${reason}.`,'📋',m.id);
+      setPreAssignModal(null);
+    }
+    function removePreAssign(d){
+      const newPA={...preAssigned};delete newPA[d];
+      const newPAR={...preAssignReasons};delete newPAR[d];
+      patch({preAssigned:newPA,preAssignReasons:newPAR});
+    }
+    async function toggle(d){
+      const k=dk(st.year,st.month,d);
+      const isNW=isNatWk(st.year,st.month,d);
+      if(calMode==='blackout'){
+        const nb=blackouts.includes(k)?blackouts.filter(x=>x!==k):[...blackouts,k];
+        await patch({blackouts:nb,extraWk:extraWk.filter(x=>x!==k),workdays:workdays.filter(x=>x!==k)});
+      } else if(calMode==='extra'&&!isNW){
+        const ne=extraWk.includes(k)?extraWk.filter(x=>x!==k):[...extraWk,k];
+        await patch({extraWk:ne,blackouts:blackouts.filter(x=>x!==k)});
+      } else if(calMode==='workday'&&isNW){
+        const nw=workdays.includes(k)?workdays.filter(x=>x!==k):[...workdays,k];
+        await patch({workdays:nw});
+      } else if(calMode==='assign'){
+        if(preAssigned[d])removePreAssign(d);
+        else{preAssignMarineRef.current='';setPreAssignModal({day:d});}
+      }
+    }
+    async function confirm(){
+      const ad=getAllDates();
+      const wk=ad.filter(d=>isWkDate(d));
+      const wkAsgn=computeWkAssignees(marines,wk.length,history);
+      const wkIds=[...wkAsgn.junior,...wkAsgn.ssgt,...wkAsgn.gysgt].map(m=>m.id);
+      const dd=computeDoubleDuty(marines,ad.length,preAssigned,history);
+      const preIds=new Set(Object.values(preAssigned));
+      const eligibleCount=marines.filter(m=>!preIds.has(m.id)).length;
+      const remDays=ad.length-Object.keys(preAssigned).length;
+      if(remDays<eligibleCount){
+        const roster=computeShortMonthRoster(marines,ad.length,preAssigned,history);
+        await patch({weekendDates:wk,wkAssigneeIds:wkIds,wkAssignees:wkAsgn,doubleDuty:dd,shortMonth:true,shortRoster:roster,phase:'shortmonth'});
+      } else {
+        await patch({weekendDates:wk,wkAssigneeIds:wkIds,wkAssignees:wkAsgn,doubleDuty:dd,shortMonth:false,shortRoster:null,phase:'wkpreview'});
+      }
+    }
+    return(
+      <div>
+        {preAssignModal&&(<div className="overlay"><div className="modal">
+          <div className="modal-title">ASSIGN — {MONTHS[st.month]} {preAssignModal.day}</div>
+          <div className="field"><label className="lbl">Duty</label>
+            <select className="sel" defaultValue="" onChange={e=>{preAssignMarineRef.current=e.target.value;}}>
+              <option value="">— Select —</option>
+              {marines.map(m=><option key={m.id} value={m.id}>{dName(m)}</option>)}
+            </select>
+          </div>
+          <div className="field"><label className="lbl">Reason</label><input className="inp" ref={preAssignReasonRef} defaultValue="" placeholder="e.g. Not on the gig that day"/></div>
+          <div className="row mt"><button className="btn btn-gold" onClick={savePreAssign}>ASSIGN</button><button className="btn btn-ghost" onClick={()=>setPreAssignModal(null)}>CANCEL</button></div>
+        </div></div>)}
+        <div className="card">
+          <div className="card-title">CALENDAR — {MONTHS[st.month].toUpperCase()} {st.year}</div>
+          <div className="card-sub">Tap a mode then tap dates. Blackout = no duty. Weekend-style = counts toward WK quota. Workday = strips weekend status. Assign = lock a Marine to that date.</div>
+          <div className="row mt" style={{marginBottom:10,gap:5,flexWrap:'wrap'}}>
+            {[['blackout','BLACKOUT','btn-red'],['extra','WEEKEND-STYLE','btn-gold'],['workday','WORKDAY',null],['assign','ASSIGN',null]].map(([mode,label,cls])=>(
+              <button key={mode} className={'btn btn-sm '+(calMode===mode?(cls||'btn-ghost'):'btn-ghost')}
+                style={calMode===mode&&!cls?mode==='workday'?{borderColor:'var(--blue)',color:'var(--blue)'}:{background:'#100520',borderColor:'#6a1a9a',color:'#c084fc'}:{}}
+                onClick={()=>setCalMode(m=>m===mode?null:mode)}>{calMode===mode?'● ':''}{label}</button>
+            ))}
+          </div>
+          <CalGrid year={st.year} month={st.month} renderCell={d=>{
+            const k=dk(st.year,st.month,d),bo=blackouts.includes(k),ew=extraWk.includes(k),wd=workdays.includes(k),pa=preAssigned[d];
+            const am=pa?marines.find(m=>m.id===pa):null;
+            const cls='cc'+(bo?' bo':pa?' pre-assigned':wd?' workday':(ew||isNatWk(st.year,st.month,d))?' wk-cfg':' avail');
+            return(<div key={d} className={cls} onClick={()=>!bo&&toggle(d)}>
+              <div className="c-num">{d}</div>
+              {bo&&<div className="c-lbl">BLKOUT</div>}
+              {ew&&!bo&&!pa&&<div className="c-lbl">WK+</div>}
+              {wd&&!pa&&<div className="c-lbl">WKDAY</div>}
+              {pa&&<div className="c-lbl">{am?.lastName||'ASSGN'}</div>}
+            </div>);
+          }}/>
+          <div className="row mt" style={{fontSize:10,color:'var(--muted)',gap:10,flexWrap:'wrap'}}>
+            <span style={{color:'var(--accent)'}}>■ Weekend</span>
+            <span style={{color:'var(--blue)'}}>■ Workday</span>
+            <span style={{color:'#c084fc'}}>■ Pre-assigned</span>
+            <span style={{color:'#331010'}}>■ Blackout</span>
+          </div>
+        </div>
+        {Object.keys(preAssigned).length>0&&(
+          <div className="card">
+            <div className="card-title">PRE-ASSIGNED</div>
+            {Object.entries(preAssigned).map(([d,mid])=>{const m=marines.find(x=>x.id===mid);return(
+              <div key={d} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 0',borderBottom:'1px solid var(--border)'}}>
+                <span style={{fontFamily:'var(--fm)',fontSize:11,minWidth:55}}>{MONTHS[st.month].slice(0,3)} {d}</span>
+                <span style={{flex:1,fontSize:11}}>{m?dName(m):'—'}</span>
+                <span style={{color:'var(--muted)',fontSize:10,flex:1}}>{preAssignReasons[d]||''}</span>
+                <button className="btn btn-red btn-sm" onClick={()=>removePreAssign(Number(d))}>✕</button>
+              </div>
+            );})}
+          </div>
+        )}
+        <div className="rowb">
+          <div style={{color:'var(--muted)',fontSize:11}}>{blackouts.length} blackout · {extraWk.length} extra WK · {workdays.length} workday · {Object.keys(preAssigned).length} pre-assigned</div>
+          <button className="btn btn-gold" onClick={confirm}>CONFIRM →</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── SHORT MONTH ────────────────────────────────────────────────────────────
+  function ShortMonthView(){
+    const roster=st.shortRoster||{standing:{junior:[],ssgt:[],gysgt:[]},sittingOut:{junior:[],ssgt:[],gysgt:[]}};
+    const standing=[...roster.standing.junior||[],...roster.standing.ssgt||[],...roster.standing.gysgt||[]];
+    const sitting=[...roster.sittingOut.junior||[],...roster.sittingOut.ssgt||[],...roster.sittingOut.gysgt||[]];
+    async function confirm(){
+      const standIds=new Set(standing.map(m=>m.id));
+      const activeMariners=marines.filter(m=>standIds.has(m.id));
+      const ad=getAllDates();
+      const wk=ad.filter(d=>isWkDate(d));
+      const wkAsgn=computeWkAssignees(activeMariners,wk.length,history);
+      const wkIds=[...wkAsgn.junior,...wkAsgn.ssgt,...wkAsgn.gysgt].map(m=>m.id);
+      const dd=computeDoubleDuty(activeMariners,ad.length,preAssigned,history);
+      await patch({marines:activeMariners,weekendDates:wk,wkAssigneeIds:wkIds,wkAssignees:wkAsgn,doubleDuty:dd,phase:'wkpreview'});
+      for(const m of sitting){
+        await api.addNotif('ROSTER UPDATE',`${dName(m)}: limited duty days this month — you are not on the duty roster for ${MONTHS[st.month]}. Rotation position maintained.`,'📋',m.id);
+      }
+    }
+    return(
+      <div>
+        <div className="short-banner">
+          <div style={{fontFamily:'var(--fh)',fontSize:12,letterSpacing:1,color:'var(--red)',marginBottom:4}}>⚠ SHORT MONTH</div>
+          <div style={{fontSize:12,color:'#fca5a5'}}>{getAllDates().length} duty days · {marines.length} Marines · {sitting.length} sit out this month based on 60/25/15 rotation.</div>
+        </div>
+        <div className="card">
+          <div className="card-title">STANDING DUTY ({standing.length})</div>
+          <div className="card-sub">Selected by duty history — least recently assigned goes first within each group.</div>
+          {standing.map(m=><div key={m.id} className="short-marine">{dName(m)}</div>)}
+        </div>
+        <div className="card">
+          <div className="card-title" style={{color:'var(--muted)'}}>SITTING OUT ({sitting.length})</div>
+          {sitting.map(m=><div key={m.id} className="short-marine" style={{color:'var(--muted)'}}>{dName(m)}</div>)}
+        </div>
+        <button className="btn btn-gold btn-full" onClick={confirm}>CONFIRM & NOTIFY →</button>
+      </div>
+    );
+  }
+
+  // ── WK PREVIEW ────────────────────────────────────────────────────────────
+  async function confirmWkPreview(){
+    await patch({phase:'top5'});
+    await api.addNotif('PREFERRED DATES OPEN',`${MONTHS[st.month]} ${st.year}: submit your preferred dates and non-availability. Deadline is 1630 today.`,'📅');
+    for(const m of[...wkAssignees.junior||[],...wkAssignees.ssgt||[],...wkAssignees.gysgt||[]]){
+      await api.addNotif('WEEKEND DUTY',`${dName(m)}: you are scheduled for weekend duty next month.`,'📅',m.id);
+    }
+    for(const mid of Object.keys(doubleDuty)){
+      const m=marines.find(x=>x.id===mid);
+      if(m)await api.addNotif('DOUBLE DUTY',`${dName(m)}: you are assigned double duty next month.`,'⚠',mid);
+    }
+  }
+
+  function WkPreview(){
+    const groups=[{label:'E1–E5 (JUNIOR)',key:'junior',quota:GROUP_QUOTA.junior,color:'var(--blue)'},{label:'E6 (SSGT)',key:'ssgt',quota:GROUP_QUOTA.ssgt,color:'var(--accent)'},{label:'E7 (GYSGT)',key:'gysgt',quota:GROUP_QUOTA.gysgt,color:'var(--orange)'}];
+    return(
+      <div>
+        <div className="card">
+          <div className="card-title">WEEKEND DUTY PREVIEW</div>
+          <div className="card-sub">{MONTHS[st.month]} {st.year} has {weekendDates.length} weekend duty day{weekendDates.length!==1?'s':''}. One slotted duty per weekend date.</div>
+          {groups.map(g=>{const assigned=wkAssignees[g.key]||[];return(
+            <div key={g.key} className="wk-group">
+              <div className="wk-group-title" style={{color:g.color}}>{g.label} — {Math.round(g.quota*100)}% = {assigned.length} day{assigned.length!==1?'s':''}</div>
+              {!assigned.length&&<div style={{color:'var(--muted)',fontSize:11}}>None this month.</div>}
+              {assigned.map((m,i)=>(
+                <div key={m.id} className="wk-marine-row">
+                  <span style={{fontFamily:'var(--fh)',fontSize:11,flex:1}}>{dName(m)}</span>
+                  <span style={{color:'var(--muted)',fontSize:9}}>#{i+1}</span>
+                  {doubleDuty[m.id]&&<span className="pill p-org">×2</span>}
+                </div>
+              ))}
+            </div>
+          );})}
+          {Object.keys(doubleDuty).length>0&&<div className="alert a-w mt"><strong>DOUBLE DUTY</strong>{Object.keys(doubleDuty).map(mid=>{const m=marines.find(x=>x.id===mid);return m?<div key={mid}>{dName(m)}</div>:null;})}</div>}
+          {Object.keys(preAssigned).length>0&&<div className="alert a-i mt"><strong>PRE-ASSIGNED</strong>{Object.entries(preAssigned).map(([d,mid])=>{const m=marines.find(x=>x.id===mid);return<div key={d}>{MONTHS[st.month].slice(0,3)} {d}: {m?dName(m):'—'} — {preAssignReasons[d]||''}</div>;})}</div>}
+        </div>
+        <button className="btn btn-gold btn-full" onClick={confirmWkPreview}>CONFIRM & SEND NOTIFICATIONS →</button>
+      </div>
+    );
+  }
+
+  // ── PREFERRED DATES ────────────────────────────────────────────────────────
+  function PreferredDates(){
+    const isNcoic=activeUser==='ncoic';
+    const mid=isNcoic?null:activeUser;
+    const myPrefs=mid?(prefs[mid]||[]):[];
+    const isWkSlotted=mid?wkAssigneeIds.includes(mid):false;
+    function isEligible(d){
+      const k=dk(st.year,st.month,d);
+      if(blackouts.includes(k))return false;
+      if(isWkSlotted&&!isWkDate(d))return false;
+      if(consecPrev(d,(history.lastDutyDay||{})[mid]??null,st.year,st.month))return false;
+      return true;
+    }
+    async function toggle(d){
+      if(!mid||!isEligible(d))return;
+      const cur=prefs[mid]||[];
+      const ex=cur.find(x=>x.day===d);
+      let next;
+      if(ex)next=cur.filter(x=>x.day!==d).map((x,i)=>({...x,priority:i+1}));
+      else{if(cur.length>=10)return;next=[...cur,{day:d,priority:cur.length+1}];}
+      await patch({prefs:{...prefs,[mid]:next}});
+    }
+    async function proceed(){
+      await patch({phase:'nonavail'});
+      await api.addNotif('NON-AVAILABILITY OPEN','Preferred dates submitted. Non-availability submission now open until 1630.','📅');
+    }
+    const deadline=new Date();deadline.setHours(16,30,0,0);
+    const totalS=Math.max(0,Math.floor((deadline-new Date())/1000));
+    if(isNcoic)return(
+      <div className="card">
+        <div className="card-title">PREFERRED DATES PHASE</div>
+        <div className="card-sub">Marines are selecting preferred dates. Use the DEMO selector to switch perspectives.</div>
+        <div className={'cdwn'+(totalS<1800?' urg':'')}>{fmtCD(totalS)}</div>
+        <div className="cdwn-labels"><div className="cdwn-seg">DAYS</div><div className="cdwn-seg">HRS</div><div className="cdwn-seg">MIN</div><div className="cdwn-seg">SEC</div></div>
+        <div className="mt" style={{color:'var(--muted)',fontSize:11}}>{Object.values(prefs).filter(v=>v&&v.length>0).length}/{marines.length} submitted</div>
+        <button className="btn btn-gold mt" onClick={proceed}>CLOSE SUBMISSIONS & PROCEED →</button>
+      </div>
+    );
+    const marine=marines.find(m=>m.id===mid);
+    return(
+      <div>
+        <div className={'cdwn'+(totalS<1800?' urg':'')}>{fmtCD(totalS)}</div>
+        <div className="cdwn-labels"><div className="cdwn-seg">DAYS</div><div className="cdwn-seg">HRS</div><div className="cdwn-seg">MIN</div><div className="cdwn-seg">SEC</div></div>
+        <div className="card">
+          <div className="card-title">PREFERRED DATES</div>
+          <div className="card-sub">{marine?dName(marine):''} — select up to 10 preferred dates in priority order. Optional.</div>
+          {isWkSlotted&&<div className="alert a-w"><strong>WEEKEND DUTY</strong>You are slated for weekend duty. Only weekend dates are selectable.</div>}
+          {doubleDuty[mid]&&<div className="alert a-d"><strong>DOUBLE DUTY</strong>Two duty days this month. Two picks in the draft.</div>}
+          <div className="row" style={{marginBottom:6,gap:4}}>
+            {!myPrefs.length&&<span style={{color:'var(--muted)',fontSize:11}}>No selections yet (up to 10)</span>}
+            {myPrefs.map(p=><span key={p.day} className="pill p-grn">#{p.priority} {MONTHS[st.month].slice(0,3)} {p.day}</span>)}
+          </div>
+          <CalGrid year={st.year} month={st.month} renderCell={d=>{
+            const elig=isEligible(d),pref=myPrefs.find(x=>x.day===d);
+            const cls='cc'+(!elig?' top5-grey':pref?' top5-sel':isWkDate(d)?' avail-wk':' avail');
+            return(<div key={d} className={cls} onClick={()=>toggle(d)}>{pref&&<div className="c-prio">#{pref.priority}</div>}<div className="c-num">{d}</div></div>);
+          }}/>
+        </div>
+      </div>
+    );
+  }
+
+  // ── NON-AVAILABILITY ────────────────────────────────────────────────────────
+  function NonAvail(){
+    const isNcoic=activeUser==='ncoic';
+    const mid=isNcoic?null:activeUser;
+    const myPrefs=mid?(prefs[mid]||[]):[];
+    const myNA=mid?(nonAvail[mid]||[]):[];
+    async function clickDate(d){
+      if(!mid)return;
+      const k=dk(st.year,st.month,d);
+      if(blackouts.includes(k)||myPrefs.find(p=>p.day===d))return;
+      if(myNA.find(n=>n.date===k)){
+        await patch({nonAvail:{...nonAvail,[mid]:myNA.filter(n=>n.date!==k)}});return;
+      }
+      if(isWkDate(d))setNaWkWarn({date:k,day:d,mid});
+      else{setNaReason(NA_REASONS[0]);setNaModal({date:k,day:d,mid});}
+    }
+    async function saveNA(){
+      const isOtherNS=naReason==='Other — Non-Sensitive Conflict';
+      const isOtherIP=naReason==='Other — Please Speak with SNCOIC in Person';
+      const otherText=(naOtherRef.current?.value||'').trim();
+      if(isOtherNS&&!otherText)return;
+      const reason=isOtherNS?`Other (Non-Sensitive): ${otherText}`:naReason;
+      const cur=nonAvail[mid]||[];
+      await patch({nonAvail:{...nonAvail,[mid]:[...cur,{date:naModal.date,reason,approved:null,needsDiscussion:isOtherIP}]}});
+      setNaModal(null);
+    }
+    async function proceed(){
+      await patch({phase:'review'});
+      await api.addNotif('REVIEW REQUIRED','Submissions closed. NCOIC: review non-availability and schedule the draft.','🛡');
+    }
+    const deadline=new Date();deadline.setHours(16,30,0,0);
+    const totalS=Math.max(0,Math.floor((deadline-new Date())/1000));
+    if(isNcoic)return(
+      <div className="card">
+        <div className="card-title">NON-AVAILABILITY PHASE</div>
+        <div className="card-sub">Marines are submitting non-availability. Use the DEMO selector to switch perspectives.</div>
+        <div className={'cdwn'+(totalS<1800?' urg':'')}>{fmtCD(totalS)}</div>
+        <div className="cdwn-labels"><div className="cdwn-seg">DAYS</div><div className="cdwn-seg">HRS</div><div className="cdwn-seg">MIN</div><div className="cdwn-seg">SEC</div></div>
+        <button className="btn btn-gold mt" onClick={proceed}>CLOSE SUBMISSIONS →</button>
+      </div>
+    );
+    const marine=marines.find(m=>m.id===mid);
+    const isOtherNS=naReason==='Other — Non-Sensitive Conflict';
+    const isOtherIP=naReason==='Other — Please Speak with SNCOIC in Person';
+    return(
+      <div>
+        {naWkWarn&&(<div className="overlay"><div className="modal">
+          <div className="modal-title">⚠ WEEKEND DATE</div>
+          <div style={{color:'var(--muted)',fontSize:12,margin:'8px 0 12px',lineHeight:1.6}}>Marking a weekend date as non-available requires a legitimate reason. The NCOIC will review and may deny.</div>
+          <div className="row"><button className="btn btn-gold" onClick={()=>{setNaReason(NA_REASONS[0]);setNaModal({date:naWkWarn.date,day:naWkWarn.day,mid:naWkWarn.mid});setNaWkWarn(null);}}>CONTINUE</button><button className="btn btn-ghost" onClick={()=>setNaWkWarn(null)}>CANCEL</button></div>
+        </div></div>)}
+        {naModal&&(<div className="overlay"><div className="modal">
+          <div className="modal-title">NON-AVAILABILITY</div>
+          <div style={{color:'var(--muted)',fontSize:11,margin:'3px 0 10px'}}>Date: {naModal.date}</div>
+          <div className="field"><label className="lbl">Reason</label>
+            <select className="sel" value={naReason} onChange={e=>setNaReason(e.target.value)}>
+              {NA_REASONS.map(r=><option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+          {isOtherNS&&<div className="field"><label className="lbl">Brief description</label><input className="inp" ref={naOtherRef} defaultValue="" placeholder="e.g. Non-refundable family commitment"/></div>}
+          {isOtherIP&&<div className="alert a-w" style={{marginBottom:10}}><strong>IN-PERSON REQUIRED</strong>Please speak with the NCOIC directly. Your request will be noted as pending that conversation.</div>}
+          <div style={{color:'var(--muted)',fontSize:10,marginBottom:10}}>⚠ NCOIC must approve before this becomes binding.</div>
+          <div className="row"><button className="btn btn-gold" onClick={saveNA}>SUBMIT REQUEST</button><button className="btn btn-ghost" onClick={()=>setNaModal(null)}>CANCEL</button></div>
+        </div></div>)}
+        <div className={'cdwn'+(totalS<1800?' urg':'')}>{fmtCD(totalS)}</div>
+        <div className="cdwn-labels"><div className="cdwn-seg">DAYS</div><div className="cdwn-seg">HRS</div><div className="cdwn-seg">MIN</div><div className="cdwn-seg">SEC</div></div>
+        <div className="card">
+          <div className="card-title">NON-AVAILABILITY</div>
+          <div className="card-sub">{marine?dName(marine):''} — tap any date you cannot stand duty.</div>
+          <CalGrid year={st.year} month={st.month} renderCell={d=>{
+            const k=dk(st.year,st.month,d),bo=blackouts.includes(k),pref=myPrefs.find(p=>p.day===d),naE=myNA.find(n=>n.date===k);
+            const cls='cc'+(bo?' bo':pref?' top5-sel':naE?' na-red':isWkDate(d)?' avail-wk':' avail');
+            return(<div key={d} className={cls} onClick={()=>clickDate(d)}>{pref&&<div className="c-prio">#{pref.priority}</div>}<div className="c-num">{d}</div>{naE&&<div className="c-lbl">N/A</div>}</div>);
+          }}/>
+        </div>
+      </div>
+    );
+  }
+
+  // ── REVIEW ─────────────────────────────────────────────────────────────────
+  function Review(){
+    const [draftDT,setDraftDT]=useState(()=>{const d=new Date();d.setDate(d.getDate()+1);d.setHours(8,0,0,0);return d.toISOString().slice(0,16);});
+    async function approve(mid,date){await patch({nonAvail:{...nonAvail,[mid]:(nonAvail[mid]||[]).map(n=>n.date===date?{...n,approved:true}:n)}});}
+    async function deny(mid,date){
+      await patch({nonAvail:{...nonAvail,[mid]:(nonAvail[mid]||[]).map(n=>n.date===date?{...n,approved:false}:n)}});
+      const m=marines.find(x=>x.id===mid);
+      if(m)await api.addNotif('NON-AVAILABILITY DENIED',`${dName(m)}: your non-availability request for ${date} was denied.`,'❌',mid);
+    }
+    async function schedule(){
+      const dt=new Date(draftDT);
+      await patch({draftScheduled:dt.toISOString(),phase:'draft-scheduled'});
+      const fmt=dt.toLocaleString('en-US',{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
+      await api.addNotif('DRAFT SCHEDULED',`The duty draft for ${MONTHS[st.month]} ${st.year} is scheduled for ${fmt}. Stand by.`,'⭐');
+    }
+    const flagged=marines.filter(m=>(nonAvail[m.id]||[]).filter(n=>isWkDate(Number(n.date.split('-')[2]))&&n.approved===null).length>=3);
+    const hasNA=Object.values(nonAvail).some(v=>v&&v.length>0);
+    return(
+      <div>
+        {flagged.length>0&&<div className="alert a-d"><strong>⚠ FLAG — REVIEW CAREFULLY</strong>{flagged.map(m=>{const cnt=(nonAvail[m.id]||[]).filter(n=>isWkDate(Number(n.date.split('-')[2]))).length;return<div key={m.id}>{dName(m)}: {cnt} weekend N/As.</div>;})}</div>}
+        <div className="card">
+          <div className="card-title">NON-AVAILABILITY REVIEW</div>
+          <div className="card-sub">Only APPROVED requests become constraints in the draft.</div>
+          {!hasNA&&<div className="alert a-i"><strong>NO SUBMISSIONS</strong>Ready to schedule the draft.</div>}
+          {marines.map(m=>{const na=nonAvail[m.id]||[];if(!na.length)return null;return(
+            <div key={m.id} style={{marginBottom:12}}>
+              <div style={{fontWeight:700,fontSize:12,marginBottom:5}}>{dName(m)}</div>
+              {na.map(n=>(
+                <div key={n.date} style={{display:'flex',gap:5,alignItems:'center',marginBottom:4,paddingLeft:4,flexWrap:'wrap'}}>
+                  <span style={{minWidth:95,fontSize:10,fontFamily:'var(--fm)'}}>{n.date}</span>
+                  <span style={{flex:1,color:n.needsDiscussion?'var(--orange)':'var(--muted)',fontSize:10}}>{n.reason}{n.needsDiscussion?' ⚠ speak in person':''}</span>
+                  {n.approved===null&&<><button className="btn btn-grn btn-sm" onClick={()=>approve(m.id,n.date)}>✓</button><button className="btn btn-red btn-sm" onClick={()=>deny(m.id,n.date)}>✕</button></>}
+                  {n.approved===true&&<span className="pill p-grn">✓</span>}
+                  {n.approved===false&&<span className="pill p-red">✕</span>}
+                </div>
+              ))}
+            </div>
+          );})}
+        </div>
+        <div className="card">
+          <div className="card-title">SCHEDULE DRAFT</div>
+          <div className="field"><label className="lbl">Date and time</label><input className="inp" type="datetime-local" value={draftDT} onChange={e=>setDraftDT(e.target.value)}/></div>
+          <button className="btn btn-gold btn-full" onClick={schedule}>SCHEDULE DRAFT →</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── DRAFT VIEW ─────────────────────────────────────────────────────────────
+  async function handleLaunchDraft(){
+    const order=buildDraftOrder(marines,doubleDuty,preAssigned);
+    const initial={};
+    Object.entries(preAssigned).forEach(([d,mid])=>{initial[Number(d)]=mid;});
+    await patch({draftOrder:order,draftIdx:0,draftLive:true,draftDone:false,draftCountdown:null,assignments:initial,phase:'draft'});
+    const first=marines.find(m=>m.id===order[0]?.id);
+    if(first){
+      const lbl=doubleDuty[first.id]?' — Day 1 of 2':'';
+      await api.addNotif('DRAFT STARTED',`The draft for ${MONTHS[st.month]} ${st.year} has begun. First: ${dName(first)}${lbl}.`,'⭐');
+    }
+    setTimerSecs((st.turnMins||3)*60);
+  }
+
+  function DraftView(){
+    if(st.phase==='draft-scheduled'){
+      const secs=draftCountdown??0;
+      const fmt=st.draftScheduled?new Date(st.draftScheduled).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}):'';
+      return(
+        <div>
+          <div className="draft-cd-box">
+            <div className="draft-cd-label">DRAFT STARTS IN</div>
+            <div className="draft-cd-time">{fmtCD(secs)}</div>
+            <div className="draft-cd-units"><div className="draft-cd-seg">DAYS</div><div className="draft-cd-seg">HRS</div><div className="draft-cd-seg">MIN</div><div className="draft-cd-seg">SEC</div></div>
+            <div className="draft-cd-sub">{fmt}</div>
+          </div>
+          <div className="card">
+            <div className="card-title">DRAFT SCHEDULED</div>
+            <div className="card-sub">All duties notified. Draft launches automatically.</div>
+            <button className="btn btn-orange btn-sm mt" onClick={handleLaunchDraft}>▶ LAUNCH NOW (DEMO)</button>
+          </div>
+        </div>
+      );
+    }
+    if(!draftOrder.length)return<div style={{color:'var(--muted)',padding:'20px'}}>Initializing…</div>;
+    if(st.draftDone)return(
+      <div className="card">
+        <div className="card-title">DRAFT COMPLETE ✅</div>
+        <div className="card-sub">{Object.keys(assignments).length} duty dates assigned.</div>
+        <button className="btn btn-gold mt" onClick={()=>patch({phase:'postdraft'})}>REVIEW & PUBLISH →</button>
+      </div>
+    );
+    const e=draftOrder[draftIdx];
+    if(!e)return null;
+    const currentMid=e.id;
+    const marine=marines.find(m=>m.id===currentMid);
+    if(!marine)return null;
+    const isNcoic=activeUser==='ncoic';
+    const viewingAsCurrent=activeUser===currentMid;
+    const myDays=Object.entries(assignments).filter(([,x])=>x===currentMid).map(([d])=>Number(d));
+    const hasWk=myDays.some(d=>weekendDates.includes(d));
+    const isDD=!!doubleDuty[currentMid];
+    const isWkSlotted=wkAssigneeIds.includes(currentMid);
+    const isFreed=freedMarines.includes(currentMid);
+    const needsWk=currentNeedsWk(currentMid,e.turn,assignments);
+    const myPrefs=prefs[currentMid]||[];
+    const approvedNA=new Set((nonAvail[currentMid]||[]).filter(n=>n.approved===true).map(n=>n.date));
+    const pickLabel=isDD?(e.turn===1?'DAY 1 OF 2':'DAY 2 OF 2'):'';
+    const activeUserIdx=draftOrder.findIndex((en,i)=>i>draftIdx&&en.id===activeUser);
+    const dutiesAhead=activeUserIdx===-1?null:activeUserIdx-draftIdx;
+
+    if(!isNcoic&&!viewingAsCurrent){
+      const myAssigned=Object.entries(assignments).filter(([,x])=>x===activeUser).map(([d])=>Number(d));
+      return(
+        <div>
+          <div className="draft-banner">
+            <div>
+              <div className="draft-banner-sub">{marine.rank} — NOW SELECTING</div>
+              <div className="draft-banner-name">{marine.lastName}</div>
+              {isDD&&<div className="draft-banner-pick">{e.turn===1?'Pick 1 of 2':'Pick 2 of 2'}</div>}
+            </div>
+            <div className={'draft-banner-timer'+(timerSecs<=30?' urg':'')}>{timerSecs}s</div>
+          </div>
+          <div className="card" style={{marginTop:10}}>
+            <div className="card-title">DRAFT IN PROGRESS</div>
+            <div className="card-sub">Not your turn yet. You will be notified when it is time to select.</div>
+            {dutiesAhead!==null&&<div className="ahead-badge"><div className="ahead-num">{dutiesAhead}</div><div className="ahead-label">DUTIES AHEAD OF YOU</div></div>}
+            {myAssigned.length>0&&<div className="alert a-g mt"><strong>YOUR DATE{myAssigned.length>1?'S':''}</strong>{myAssigned.map(d=><div key={d}>{MONTHS[st.month]} {d}{isWkDate(d)?' ★':''}</div>)}</div>}
+            {wkAssigneeIds.includes(activeUser)&&!freedMarines.includes(activeUser)&&<div className="alert a-w mt"><strong>WEEKEND REMINDER</strong>You must pick a weekend date on your turn.</div>}
+            {doubleDuty[activeUser]&&<div className="alert a-d mt"><strong>DOUBLE DUTY</strong>Two picks on your turn.</div>}
+          </div>
+        </div>
+      );
+    }
+
+    function getCellState(d){
+      const k=dk(st.year,st.month,d);
+      if(blackouts.includes(k))return'grey';
+      if(assignments[d]&&assignments[d]!==currentMid)return'grey';
+      if(preAssigned[d]&&preAssigned[d]!==currentMid)return'grey';
+      if(assignments[d]===currentMid)return'mine';
+      if(isConsec(d,myDays))return'grey';
+      if(consecPrev(d,(history.lastDutyDay||{})[currentMid]??null,st.year,st.month))return'grey';
+      if(needsWk&&!weekendDates.includes(d))return'grey';
+      if(approvedNA.has(k))return'na';
+      if(pendingDay===d)return'pending';
+      const isPref=myPrefs.find(p=>p.day===d);
+      if(isPref)return weekendDates.includes(d)?'pref-wk':'pref';
+      return weekendDates.includes(d)?'avail-wk':'avail';
+    }
+
+    return(
+      <div>
+        <div className={'draft-banner'+(isNcoic?'':' ')} style={{opacity:viewingAsCurrent?.8:1}}>
+          <div>
+            <div className="draft-banner-sub">{isNcoic?marine.rank+' — NOW SELECTING':'YOUR TURN — NOW SELECTING'}</div>
+            <div className="draft-banner-name">{marine.lastName}</div>
+            {isDD&&<div className="draft-banner-pick">{e.turn===1?'Pick 1 of 2':'Pick 2 of 2'}</div>}
+          </div>
+          <div className={'draft-banner-timer'+(timerSecs<=30?' urg':'')}>{timerSecs}s</div>
+        </div>
+        {wkWarnModal&&(<div className="overlay"><div className="modal">
+          <div className="modal-title">⚠ WEEKEND DATE</div>
+          <div style={{color:'var(--muted)',fontSize:12,margin:'6px 0 12px',lineHeight:1.6}}>You are about to select <strong style={{color:'var(--accent)'}}>{MONTHS[st.month]} {wkWarnModal.day}</strong> — a weekend duty date.</div>
+          {wkWarnModal.isSecondDD
+            ?<div className="alert a-w" style={{marginBottom:14}}><strong>ALREADY FULFILLED</strong>Your weekend obligation is met. A second weekend pick will free another slotted duty and update the rotation.</div>
+            :<div className="alert a-w" style={{marginBottom:14}}><strong>NOT REQUIRED OF YOU</strong>Another duty is already slotted for a weekend. Selecting this date frees them and takes their weekend obligation.</div>
+          }
+          <div className="row"><button className="btn btn-gold" onClick={()=>{setPendingDay(wkWarnModal.day);setWkWarnModal(null);}}>YES, I'LL TAKE IT</button><button className="btn btn-ghost" onClick={()=>setWkWarnModal(null)}>CHOOSE A DIFFERENT DATE</button></div>
+        </div></div>)}
+        {isFreed&&<div className="freed-banner" style={{marginTop:10}}><strong>🟢 WEEKEND COVERED</strong>Your weekend obligation has been covered. All available dates are open.</div>}
+        <div className="dbox" style={{marginTop:10}}>
+          <div className="d-hdr">
+            <div>
+              <div className="d-rank">{marine.rank} · {draftIdx+1}/{draftOrder.length}</div>
+              <div className="d-name">{marine.lastName}</div>
+              {pickLabel&&<div style={{fontFamily:'var(--fh)',fontSize:11,letterSpacing:1,color:e.turn===2?'var(--orange)':'var(--green)',marginTop:2}}>{pickLabel}</div>}
+              <div className="row" style={{marginTop:4,gap:4}}>
+                {needsWk&&<span className="pill p-gold">MUST PICK WEEKEND</span>}
+                {isDD&&<span className="pill p-org">DOUBLE DUTY</span>}
+              </div>
+            </div>
+            <TimerRing secs={timerSecs} total={turnSecs}/>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-title">SELECT DATE{pickLabel?' — '+pickLabel:''}</div>
+          <div className="row" style={{marginBottom:8,fontSize:9,color:'var(--muted)',gap:8}}>
+            <span style={{color:'var(--green)'}}>■ Pref</span><span>■ Avail</span><span style={{color:'var(--red)'}}>■ N/A</span><span style={{color:'#1e2028'}}>■ Taken</span>
+          </div>
+          <CalGrid year={st.year} month={st.month} renderCell={d=>{
+            const state=getCellState(d);
+            const isPref=myPrefs.find(p=>p.day===d);
+            const takenBy=assignments[d];
+            const takenName=takenBy&&takenBy!==currentMid?marines.find(m=>m.id===takenBy)?.lastName:'';
+            const cls='cc'+(state==='grey'?' grey':state==='mine'?' assigned':state==='na'?' na-red':state==='pending'?' pending':state==='pref'?' pref':state==='pref-wk'?' pref-wk':state==='avail-wk'?' avail-wk':' avail');
+            const clickable=['avail','avail-wk','pref','pref-wk','pending'].includes(state);
+            return(<div key={d} className={cls} onClick={()=>clickable&&handleDayClick(d)}>
+              {isPref&&!['grey','na'].includes(state)&&<div className="c-prio">#{isPref.priority}</div>}
+              <div className="c-num">{d}</div>
+              {takenName&&<div className="c-lbl">{takenName}</div>}
+              {state==='mine'&&<div className="c-lbl">MINE</div>}
+            </div>);
+          }}/>
+        </div>
+        {pendingDay!==null&&(
+          <div className="confirm-bar">
+            <div style={{flex:1}}><div className="confirm-bar-date">{MONTHS[st.month]} {pendingDay}{pickLabel?' — '+pickLabel:''}</div><div className="confirm-bar-sub">Tap CONFIRM to lock in</div></div>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setPendingDay(null)}>✕</button>
+            <button className="btn btn-gold" onClick={handleConfirmPick}>CONFIRM →</button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── ROSTER ─────────────────────────────────────────────────────────────────
+  function RosterView(){
+    const allAsgn={...assignments};
+    Object.entries(preAssigned).forEach(([d,mid])=>{if(!allAsgn[Number(d)])allAsgn[Number(d)]=mid;});
+    async function publish(){
+      await patch({phase:'published'});
+      await api.addNotif('ROSTER PUBLISHED',`The ${MONTHS[st.month]} ${st.year} duty roster is published. All duties: check your assignment.`,'🔒');
+    }
+    return(
+      <div>
+        {editDModal!==null&&(<div className="overlay"><div className="modal">
+          <div className="modal-title">EDIT — {MONTHS[st.month]} {editDModal}</div>
+          <div className="field"><label className="lbl">Assignment</label><input className="inp" defaultValue={editDRef.current} onChange={e=>{editDRef.current=e.target.value.toUpperCase();}} placeholder="SGT HALLAM"/></div>
+          <div className="row mt">
+            <button className="btn btn-gold" onClick={async()=>{
+              const found=marines.find(m=>dName(m)===editDRef.current||m.lastName===editDRef.current.split(' ').pop());
+              if(found)await patch({assignments:{...assignments,[editDModal]:found.id}});
+              setEditDModal(null);
+            }}>APPLY</button>
+            <button className="btn btn-ghost" onClick={()=>setEditDModal(null)}>CANCEL</button>
+          </div>
+        </div></div>)}
+        <div className="card">
+          <div className="rowb" style={{marginBottom:10}}>
+            <div><div className="card-title">DUTY ROSTER — {MONTHS[st.month]} {st.year}</div><div className="card-sub">{st.phase==='postdraft'?'Tap date to edit. ':''}★ = weekend · 🔒 = pre-assigned</div></div>
+            {st.phase==='postdraft'&&<button className="btn btn-gold btn-sm" onClick={publish}>🔒 PUBLISH</button>}
+          </div>
+          <CalGrid year={st.year} month={st.month} renderCell={d=>{
+            const k=dk(st.year,st.month,d),bo=blackouts.includes(k),pa=!!preAssigned[d],mid2=allAsgn[d];
+            const m=marines.find(x=>x.id===mid2);
+            const cls='cc'+(bo?' bo':pa?' pre-assigned':mid2?' assigned':isWkDate(d)?' avail-wk':' avail');
+            return(<div key={d} className={cls} onClick={()=>st.phase==='postdraft'&&!bo&&(()=>{editDRef.current=m?dName(m):'';setEditDModal(d);})()}>
+              <div className="c-num">{d}</div>
+              {m&&<div className="c-lbl">{m.lastName}{pa?' 🔒':''}</div>}
+              {bo&&<div className="c-lbl">SNCOIC</div>}
+            </div>);
+          }}/>
+        </div>
+        <div className="card">
+          <div className="card-title">SUMMARY</div>
+          <table className="rt">
+            <thead><tr><th>DUTY</th><th>WKD</th><th>WKE</th><th>TOT</th><th>FLAGS</th></tr></thead>
+            <tbody>
+              {marines.map(m=>{
+                const total=Object.values(allAsgn).filter(id=>id===m.id).length;
+                const wkC=Object.entries(allAsgn).filter(([d,id])=>id===m.id&&isWkDate(Number(d))).length;
+                if(!total)return null;
+                return(<tr key={m.id}>
+                  <td style={{fontFamily:'var(--fm)',fontSize:10}}>{dName(m)}</td>
+                  <td>{total-wkC}</td>
+                  <td>{wkC>0?<span className="wkstar">★{wkC}</span>:0}</td>
+                  <td><strong>{total}</strong></td>
+                  <td style={{fontSize:9}}>{doubleDuty[m.id]?'×2 ':''}{wkAssigneeIds.includes(m.id)?'WK ':''}{voluntaryWkTakers.includes(m.id)?'VOL ':''}{freedMarines.includes(m.id)?'FREE ':''}{Object.values(preAssigned).includes(m.id)?'PRE':''}</td>
+                </tr>);
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  // ── NOTIFICATIONS ──────────────────────────────────────────────────────────
+  function NotifsView(){
+    const visible=activeUser==='ncoic'?notifications:notifications.filter(n=>!n.targetMid||n.targetMid===activeUser);
+    return(
+      <div className="card">
+        <div className="rowb" style={{marginBottom:10}}>
+          <div className="card-title">NOTIFICATIONS{activeUser!=='ncoic'?` — ${marines.find(m=>m.id===activeUser)?.lastName||''}`:''}</div>
+          <button className="btn btn-ghost btn-sm" onClick={()=>api.markRead(activeUser==='ncoic'?'all':activeUser).then(()=>api.getState().then(setSt))}>MARK READ</button>
+        </div>
+        <div className="nlist">
+          {visible.map(n=>(<div key={n.id} className={'ni'+(n.unread?' unread':'')}>
+            <div className="ni-ico">{n.icon}</div>
+            <div><div className="ni-title">{n.title}</div><div className="ni-body">{n.body}</div></div>
+          </div>))}
+          {!visible.length&&<div style={{color:'var(--muted)',fontSize:12}}>No notifications yet.</div>}
+        </div>
+      </div>
+    );
+  }
+
+  // ── SETTINGS ───────────────────────────────────────────────────────────────
+  function SettingsView(){
+    const phaseIdx=PHASE_ORDER.indexOf(st.phase);
+    async function goBack(){if(phaseIdx>0)await patch({phase:PHASE_ORDER[phaseIdx-1]});}
+    async function reset(){await api.reset().then(()=>api.getState().then(s=>{setSt(s);setActiveUser('ncoic');setPendingDay(null);}));}
+    return(
+      <div>
+        <div className="card">
+          <div className="card-title">DEMO CONTROLS</div>
+          <div className="card-sub">Navigate phases while preserving all data.</div>
+          <div className="row mt">
+            <button className="btn btn-ghost" disabled={phaseIdx<=0} onClick={goBack}>← GO BACK</button>
+            <button className="btn btn-red" onClick={reset}>↺ FULL RESET</button>
+          </div>
+          <div style={{color:'var(--muted)',fontSize:11,marginTop:8}}>Current: <strong style={{color:'var(--text)'}}>{PL[st.phase]||st.phase}</strong></div>
+        </div>
+        <div className="card">
+          <div className="card-title">PHASE ORDER</div>
+          {PHASE_ORDER.map((p,i)=>(
+            <div key={p} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0',borderBottom:'1px solid var(--border)'}}>
+              <span style={{fontFamily:'var(--fh)',fontSize:10,color:p===st.phase?'var(--accent)':'var(--muted)',minWidth:18}}>{i+1}</span>
+              <span style={{fontSize:11,color:p===st.phase?'var(--accent)':'var(--text)',fontWeight:p===st.phase?700:400}}>{PL[p]||p}</span>
+              {p===st.phase&&<span className="pill p-gold">NOW</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── RENDER ─────────────────────────────────────────────────────────────────
+  const unreadCount=notifications.filter(n=>n.unread&&(activeUser==='ncoic'||!n.targetMid||n.targetMid===activeUser)).length;
+
+  function renderContent(){
+    if(tab==='admin'){
+      if(st.phase==='setup')return Setup();
+      if(st.phase==='calendar')return CalCfg();
+      if(st.phase==='shortmonth')return ShortMonthView();
+      if(st.phase==='wkpreview')return WkPreview();
+      if(st.phase==='review')return Review();
+      return <div className="card"><div className="card-sub">No NCOIC action needed. Phase: {PL[st.phase]}.</div></div>;
+    }
+    if(tab==='top5')return(st.phase==='top5'||activeUser!=='ncoic')?PreferredDates():<div className="card"><div className="card-sub">Preferred dates not open yet.</div></div>;
+    if(tab==='nonavail')return(st.phase==='nonavail'||activeUser!=='ncoic')?NonAvail():<div className="card"><div className="card-sub">Non-availability not open yet.</div></div>;
+    if(tab==='draft')return(st.phase==='draft'||st.phase==='draft-scheduled'||st.draftDone)?DraftView():<div className="card"><div className="card-sub">Draft not started yet.</div></div>;
+    if(tab==='roster')return(st.phase==='postdraft'||st.phase==='published')?RosterView():<div className="card"><div className="card-sub">Roster not available yet.</div></div>;
+    if(tab==='notifs')return NotifsView();
+    if(tab==='settings')return SettingsView();
+  }
+
+  return(
+    <div className="app">
+      <div className="hdr">
+        <div><div className="logo">DUTYDRAFT</div><div className="logo-sub">{MONTHS[st.month]} {st.year} · D&B · 8TH & I</div></div>
+        <div className="hdr-right">
+          <span className="demo-label">👤</span>
+          <select className="demo-sel" value={activeUser} onChange={e=>setActiveUser(e.target.value)}>
+            <option value="ncoic">NCOIC (Admin)</option>
+            {marines.map(m=>(<option key={m.id} value={m.id}>{m.rank} {m.lastName}{doubleDuty[m.id]?' ×2':''}{wkAssigneeIds.includes(m.id)?' ★':''}</option>))}
+          </select>
+          <div className="phase-chip">{PL[st.phase]||st.phase.toUpperCase()}</div>
+        </div>
+      </div>
+      <div className="tabs">
+        {TABS.map(t=>(<button key={t.id} className={'tab'+(tab===t.id?' on':'')} onClick={()=>setTab(t.id)}>
+          {t.id==='notifs'?`🔔${unreadCount>0?` (${unreadCount})`:''}`:t.label}
+        </button>))}
+      </div>
+      <div className="main">{renderContent()}</div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
