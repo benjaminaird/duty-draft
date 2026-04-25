@@ -362,6 +362,9 @@ function App(){
   const [editDModal,setEditDModal]=useState(null);
   const [calMode,setCalMode]=useState(null);
   const [loading,setLoading]=useState(true);
+  const [editRoster,setEditRoster]=useState(null); // initialized after state loads
+  const [newMRank,setNewMRank]=useState('LCPL');
+  const [draftDT,setDraftDT]=useState(()=>{const d=new Date();d.setDate(d.getDate()+1);d.setHours(8,0,0,0);return d.toISOString().slice(0,16);});
 
   const naOtherRef=useRef(null);
   const preAssignMarineRef=useRef('');
@@ -377,7 +380,12 @@ function App(){
 
   // Load state from server
   useEffect(()=>{
-    api.getState().then(s=>{setSt(s);setLoading(false);}).catch(()=>setLoading(false));
+    api.getState()
+      .then(s=>{setSt(s);setEditRoster([...s.marines]);setLoading(false);})
+      .catch(err=>{
+        console.error('Failed to load state:',err);
+        document.getElementById('root').innerHTML='<div style="padding:40px;color:#e74c3c;font-family:monospace;font-size:14px;background:#07090d;min-height:100vh;">⚠ Could not connect to server.<br/><br/>'+err.message+'<br/><br/><a href="/" style="color:#c8a84b;">Retry</a></div>';
+      });
     const poll=setInterval(()=>{
       api.getState().then(s=>setSt(s)).catch(()=>{});
     },3000);
@@ -592,32 +600,31 @@ function App(){
   }
 
   function Setup(){
-    const [editRoster,setEditRoster]=useState([...marines]);
-    const [newM,setNewM]=useState({rank:'LCPL'});
+    const er=editRoster||marines;
     function moveUp(i){if(!i)return;setEditRoster(r=>{const a=[...r];[a[i-1],a[i]]=[a[i],a[i-1]];return a;});}
-    function moveDown(i){if(i===editRoster.length-1)return;setEditRoster(r=>{const a=[...r];[a[i],a[i+1]]=[a[i+1],a[i]];return a;});}
+    function moveDown(i){if(i===er.length-1)return;setEditRoster(r=>{const a=[...r];[a[i],a[i+1]]=[a[i+1],a[i]];return a;});}
     function removeM(id){setEditRoster(r=>r.filter(m=>m.id!==id));}
     function updateM(id,f,v){setEditRoster(r=>r.map(m=>m.id===id?{...m,[f]:['lastName','firstName'].includes(f)?v.toUpperCase():v}:m));}
     function addM(){
       const ln=(newLastRef.current?.value||'').toUpperCase().trim();
       const fn=(newFirstRef.current?.value||'').toUpperCase().trim();
       if(!ln)return;
-      const dup=editRoster.find(m=>m.lastName===ln);
-      if(dup){setDupModal({lastName:ln,rank:newM.rank,fn,existing:dup});return;}
-      const pos=insertPositionForRank(editRoster,newM.rank);
-      setEditRoster(r=>{const a=[...r];a.splice(pos,0,{rank:newM.rank,lastName:ln,firstName:fn,id:'m'+Date.now(),active:true});return a;});
+      const dup=er.find(m=>m.lastName===ln);
+      if(dup){setDupModal({lastName:ln,rank:newMRank,fn,existing:dup});return;}
+      const pos=insertPositionForRank(er,newMRank);
+      setEditRoster(r=>{const a=[...r];a.splice(pos,0,{rank:newMRank,lastName:ln,firstName:fn,id:'m'+Date.now(),active:true});return a;});
       if(newLastRef.current)newLastRef.current.value='';
       if(newFirstRef.current)newFirstRef.current.value='';
     }
     function resolvedup(){
       const fn=(dupFirstRef.current?.value||'').toUpperCase().trim();
-      if(!fn||editRoster.find(m=>m.lastName===dupModal.lastName&&m.firstName===fn))return;
-      const pos=insertPositionForRank(editRoster,dupModal.rank);
+      if(!fn||er.find(m=>m.lastName===dupModal.lastName&&m.firstName===fn))return;
+      const pos=insertPositionForRank(er,dupModal.rank);
       setEditRoster(r=>{const a=[...r];a.splice(pos,0,{rank:dupModal.rank,lastName:dupModal.lastName,firstName:fn,id:'m'+Date.now(),active:true});return a;});
       setDupModal(null);
     }
     async function confirm(){
-      const next=editRoster.filter(m=>m.active);
+      const next=er.filter(m=>m.active);
       await patch({marines:next,phase:'calendar'});
       await api.addNotif('ROSTER SET',`${next.length} duties configured for ${MONTHS[st.month]} ${st.year}.`,'📋');
     }
@@ -632,21 +639,21 @@ function App(){
         <div className="card">
           <div className="card-title">DUTIES</div>
           <div className="card-sub">Use ↑↓ to reorder in seniority order. New Marines auto-place by rank.</div>
-          {editRoster.map((m,i)=>(
+          {er.map((m,i)=>(
             <div key={m.id} className="mrow">
               <div className="mrow-num">{i+1}</div>
               <select className="sel" style={{width:70,fontSize:11,padding:'3px 4px'}} value={m.rank} onChange={e=>updateM(m.id,'rank',e.target.value)}>{RANKS.map(r=><option key={r}>{r}</option>)}</select>
               <input className="ii" style={{flex:1,minWidth:60,fontSize:11}} placeholder="LAST" defaultValue={m.lastName} onBlur={e=>updateM(m.id,'lastName',e.target.value)}/>
               <input className="ii" style={{width:50,fontSize:11}} placeholder="FIRST" defaultValue={m.firstName||''} onBlur={e=>updateM(m.id,'firstName',e.target.value)}/>
               <button className="btn-icon" disabled={!i} onClick={()=>moveUp(i)}>↑</button>
-              <button className="btn-icon" disabled={i===editRoster.length-1} onClick={()=>moveDown(i)}>↓</button>
+              <button className="btn-icon" disabled={i===er.length-1} onClick={()=>moveDown(i)}>↓</button>
               <button className="btn btn-red btn-sm" onClick={()=>removeM(m.id)}>✕</button>
             </div>
           ))}
           <hr/>
           <div className="card-sub">Add Duty — auto-places by rank</div>
           <div className="row">
-            <select className="sel" style={{width:70,fontSize:11,padding:'4px 5px'}} value={newM.rank} onChange={e=>setNewM(n=>({...n,rank:e.target.value}))}>{RANKS.map(r=><option key={r}>{r}</option>)}</select>
+            <select className="sel" style={{width:70,fontSize:11,padding:'4px 5px'}} value={newMRank} onChange={e=>setNewMRank(e.target.value)}>{RANKS.map(r=><option key={r}>{r}</option>)}</select>
             <input className="ii" style={{flex:1}} placeholder="LAST NAME*" ref={newLastRef}/>
             <input className="ii" style={{width:55}} placeholder="FIRST" ref={newFirstRef}/>
             <button className="btn btn-ghost btn-sm" onClick={addM}>+ ADD</button>
@@ -660,7 +667,7 @@ function App(){
           </div>
         </div>
         <div className="rowb">
-          <div style={{color:'var(--muted)',fontSize:11}}>{editRoster.length} duties · {st.turnMins||3} min turns</div>
+          <div style={{color:'var(--muted)',fontSize:11}}>{er.length} duties · {st.turnMins||3} min turns</div>
           <button className="btn btn-gold" onClick={confirm}>CONFIRM →</button>
         </div>
       </div>
@@ -1003,7 +1010,6 @@ function App(){
 
   // ── REVIEW ─────────────────────────────────────────────────────────────────
   function Review(){
-    const [draftDT,setDraftDT]=useState(()=>{const d=new Date();d.setDate(d.getDate()+1);d.setHours(8,0,0,0);return d.toISOString().slice(0,16);});
     async function approve(mid,date){await patch({nonAvail:{...nonAvail,[mid]:(nonAvail[mid]||[]).map(n=>n.date===date?{...n,approved:true}:n)}});}
     async function deny(mid,date){
       await patch({nonAvail:{...nonAvail,[mid]:(nonAvail[mid]||[]).map(n=>n.date===date?{...n,approved:false}:n)}});
@@ -1301,7 +1307,7 @@ function App(){
   function SettingsView(){
     const phaseIdx=PHASE_ORDER.indexOf(st.phase);
     async function goBack(){if(phaseIdx>0)await patch({phase:PHASE_ORDER[phaseIdx-1]});}
-    async function reset(){await api.reset().then(()=>api.getState().then(s=>{setSt(s);setActiveUser('ncoic');setPendingDay(null);}));}
+    async function reset(){await api.reset().then(()=>api.getState().then(s=>{setSt(s);setEditRoster([...s.marines]);setActiveUser('ncoic');setPendingDay(null);}));}
     return(
       <div>
         <div className="card">
