@@ -160,8 +160,9 @@ function checkVoluntaryWk(pickerMid,day,asgn,state){
   if(wkCovered<(state.weekendDates||[]).length)return{...state,voluntaryWkTakers:newVol};
   const newFreed=[...(state.freedMarines||[])];
   const order=state.draftOrder||[];
-  const currentIdx=state.draftIdx||0;
-  for(let i=currentIdx;i<order.length;i++){
+  // Search from NEXT index — current picker just finished, look ahead
+  const searchFrom=(state.draftIdx||0)+1;
+  for(let i=searchFrom;i<order.length;i++){
     const mid=order[i].id;
     if(!(state.wkAssigneeIds||[]).includes(mid))continue;
     if(newFreed.includes(mid))continue;
