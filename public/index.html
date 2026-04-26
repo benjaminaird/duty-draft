@@ -428,19 +428,18 @@ function App(){
     api.getState().then(s=>{setSt(s);setEditRoster([...s.marines]);setLoading(false);})
       .catch(()=>{document.getElementById('root').innerHTML='<div style="padding:40px;color:#e74c3c;font-family:monospace;">⚠ Could not connect to server. <a href="/" style="color:#c8a84b;">Retry</a></div>';});
     const poll=setInterval(()=>api.getState().then(s=>{
-      setSt(prev=>{
-        // Bell pulse when new unread arrives
-        const newUnread=(s.notifications||[]).filter(n=>n.unread&&(activeUser==='ncoic'||!n.targetMid||n.targetMid===activeUser)).length;
-        if(newUnread>prevUnreadRef.current){setBellPulse(true);setTimeout(()=>setBellPulse(false),600);}
-        prevUnreadRef.current=newUnread;
-        // Your-turn alert
-        if(s.draftLive&&!s.draftDone&&activeUser!=='ncoic'){
-          const e=(s.draftOrder||[])[s.draftIdx||0];
-          const wasMyTurn=prev&&(prev.draftOrder||[])[prev.draftIdx||0]?.id===activeUser;
-          if(e?.id===activeUser&&!wasMyTurn)setMyTurnAlert(true);
-        }
-        return s;
-      });
+      // Bell pulse check
+      const newUnread=(s.notifications||[]).filter(n=>n.unread&&(activeUser==='ncoic'||!n.targetMid||n.targetMid===activeUser)).length;
+      if(newUnread>prevUnreadRef.current){setBellPulse(true);setTimeout(()=>setBellPulse(false),600);}
+      prevUnreadRef.current=newUnread;
+      // Your-turn alert - compare against current state via ref
+      if(s.draftLive&&!s.draftDone&&activeUser!=='ncoic'){
+        const e=(s.draftOrder||[])[s.draftIdx||0];
+        const prev=stRef.current;
+        const wasMyTurn=prev&&(prev.draftOrder||[])[prev.draftIdx||0]?.id===activeUser;
+        if(e?.id===activeUser&&!wasMyTurn)setMyTurnAlert(true);
+      }
+      setSt(s);
       setLastUpdated(Date.now());
     }).catch(()=>{}),3000);
     return()=>clearInterval(poll);
