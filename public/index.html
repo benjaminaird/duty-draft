@@ -178,8 +178,66 @@ hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
 ::-webkit-scrollbar{width:3px;height:3px;}
 ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
-@media(max-width:500px){.cc{min-height:32px;}.c-lbl{display:none;}.d-name{font-size:20px;}.timer-pill{font-size:18px;}.short-split{grid-template-columns:1fr;}}
-</style>
+/* Phase progress bar */
+.phase-bar{display:flex;align-items:center;background:var(--s1);border-bottom:1px solid var(--border);padding:0 12px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.phase-bar::-webkit-scrollbar{display:none;}
+.phase-step{display:flex;align-items:center;flex-shrink:0;}
+.phase-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);border:1px solid var(--border2);transition:all .2s;flex-shrink:0;}
+.phase-dot.done{background:var(--green);border-color:var(--green);}
+.phase-dot.now{background:var(--accent);border-color:var(--accent);box-shadow:0 0 6px rgba(200,168,75,.5);}
+.phase-dot-lbl{font-family:var(--fh);font-size:7px;letter-spacing:.5px;color:var(--dim);margin-top:2px;white-space:nowrap;}
+.phase-dot-lbl.done{color:var(--green);}
+.phase-dot-lbl.now{color:var(--accent);}
+.phase-step-inner{display:flex;flex-direction:column;align-items:center;padding:5px 6px 4px;}
+.phase-connector{width:14px;height:1px;background:var(--border2);flex-shrink:0;}
+.phase-connector.done{background:var(--green);}
+/* What to do now banner */
+.now-banner{background:linear-gradient(135deg,var(--s1) 0%,var(--s3) 100%);border:1px solid var(--border2);border-left:3px solid var(--accent);border-radius:4px;padding:9px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
+.now-banner.nb-green{border-left-color:var(--green);}
+.now-banner.nb-blue{border-left-color:var(--blue);}
+.now-banner.nb-red{border-left-color:var(--red);}
+.now-banner-icon{font-size:18px;flex-shrink:0;}
+.now-banner-head{font-family:var(--fh);font-size:10px;letter-spacing:1px;color:var(--accent);margin-bottom:2px;}
+.now-banner.nb-green .now-banner-head{color:var(--green);}
+.now-banner.nb-blue .now-banner-head{color:var(--blue);}
+.now-banner.nb-red .now-banner-head{color:var(--red);}
+.now-banner-body{font-size:11px;color:var(--text);line-height:1.4;}
+/* Your turn overlay */
+.your-turn-overlay{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.92);}
+.your-turn-box{background:linear-gradient(135deg,#1a1200 0%,#071a0a 100%);border:2px solid var(--accent);border-radius:10px;padding:32px 28px;text-align:center;max-width:340px;width:90%;animation:ytpulse .6s ease-in-out;}
+@keyframes ytpulse{0%{transform:scale(.92);opacity:0;}100%{transform:scale(1);opacity:1;}}
+.your-turn-icon{font-size:48px;margin-bottom:12px;}
+.your-turn-title{font-family:var(--fh);font-size:28px;letter-spacing:4px;color:var(--accent);margin-bottom:6px;}
+.your-turn-sub{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5;}
+/* Draft queue */
+.queue-list{display:flex;flex-direction:column;gap:2px;margin-top:6px;}
+.queue-row{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:3px;font-size:11px;}
+.queue-row.done-row{color:var(--dim);background:none;}
+.queue-row.now-row{background:#160f00;border:1px solid var(--accent);color:var(--accent);}
+.queue-row.next-row{background:var(--s3);color:var(--text);}
+.queue-row.upcoming-row{color:var(--muted);}
+.queue-idx{font-family:var(--fh);font-size:9px;min-width:22px;text-align:right;}
+.queue-name{flex:1;font-family:var(--fh);font-size:11px;}
+/* Pick confirmation */
+.pick-confirm{position:fixed;inset:0;z-index:250;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.88);}
+.pick-confirm-box{background:var(--s2);border:1px solid var(--green);border-radius:8px;padding:28px 24px;text-align:center;max-width:320px;width:90%;animation:ytpulse .4s ease-in-out;}
+.pick-confirm-icon{font-size:40px;margin-bottom:10px;}
+.pick-confirm-date{font-family:var(--fh);font-size:26px;letter-spacing:3px;color:var(--accent);margin-bottom:4px;}
+.pick-confirm-sub{font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.5;}
+/* Last updated */
+.last-updated{font-family:var(--fh);font-size:8px;letter-spacing:1px;color:var(--dim);text-align:center;padding:4px 0 2px;}
+/* Notif pulse */
+@keyframes bellpulse{0%{transform:scale(1);}30%{transform:scale(1.25)rotate(-8deg);}60%{transform:scale(1.15)rotate(6deg);}100%{transform:scale(1)rotate(0);}}
+.bell-pulse{animation:bellpulse .5s ease-in-out;}
+/* NCOIC dashboard */
+.dash-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;}
+.dash-cell{background:var(--s3);border:1px solid var(--border2);border-radius:4px;padding:10px 8px;text-align:center;}
+.dash-num{font-family:var(--fh);font-size:24px;color:var(--accent);line-height:1;}
+.dash-lbl{font-family:var(--fh);font-size:8px;letter-spacing:1px;color:var(--muted);margin-top:3px;}
+/* Export button */
+@media print{.no-print{display:none!important;}.print-only{display:block!important;}}
+.print-only{display:none;}
+
 </head>
 <body>
 <div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#c8a84b;font-family:'Courier Prime',monospace;letter-spacing:2px;font-size:14px;">LOADING DUTYDRAFT…</div></div>
@@ -346,6 +404,12 @@ function App(){
   const [editRoster,setEditRoster]=useState(null);
   const [newMRank,setNewMRank]=useState('LCPL');
   const [draftDT,setDraftDT]=useState(()=>{const d=new Date();d.setDate(d.getDate()+1);d.setHours(8,0,0,0);return d.toISOString().slice(0,16);});
+  const [myTurnAlert,setMyTurnAlert]=useState(false);
+  const [pickConfirmed,setPickConfirmed]=useState(null); // {day, isWk, isDD}
+  const [queueOpen,setQueueOpen]=useState(false);
+  const [lastUpdated,setLastUpdated]=useState(Date.now());
+  const [bellPulse,setBellPulse]=useState(false);
+  const prevUnreadRef=useRef(0);
   // Drag state
   const dragIdx=useRef(null);
   const [overIdx,setOverIdx]=useState(null);
@@ -363,7 +427,22 @@ function App(){
   useEffect(()=>{
     api.getState().then(s=>{setSt(s);setEditRoster([...s.marines]);setLoading(false);})
       .catch(()=>{document.getElementById('root').innerHTML='<div style="padding:40px;color:#e74c3c;font-family:monospace;">⚠ Could not connect to server. <a href="/" style="color:#c8a84b;">Retry</a></div>';});
-    const poll=setInterval(()=>api.getState().then(s=>setSt(s)).catch(()=>{}),3000);
+    const poll=setInterval(()=>api.getState().then(s=>{
+      setSt(prev=>{
+        // Bell pulse when new unread arrives
+        const newUnread=(s.notifications||[]).filter(n=>n.unread&&(activeUser==='ncoic'||!n.targetMid||n.targetMid===activeUser)).length;
+        if(newUnread>prevUnreadRef.current){setBellPulse(true);setTimeout(()=>setBellPulse(false),600);}
+        prevUnreadRef.current=newUnread;
+        // Your-turn alert
+        if(s.draftLive&&!s.draftDone&&activeUser!=='ncoic'){
+          const e=(s.draftOrder||[])[s.draftIdx||0];
+          const wasMyTurn=prev&&(prev.draftOrder||[])[prev.draftIdx||0]?.id===activeUser;
+          if(e?.id===activeUser&&!wasMyTurn)setMyTurnAlert(true);
+        }
+        return s;
+      });
+      setLastUpdated(Date.now());
+    }).catch(()=>{}),3000);
     return()=>clearInterval(poll);
   },[]);
 
@@ -378,6 +457,55 @@ function App(){
     setSt(next);
     stRef.current=next;
     return api.setState(updates);
+  }
+
+  // Pull-to-refresh
+  const touchStartY=useRef(0);
+  function onTouchStart(e){touchStartY.current=e.touches[0].clientY;}
+  function onTouchEnd(e){
+    if(e.changedTouches[0].clientY-touchStartY.current>70){
+      api.getState().then(s=>{setSt(s);setLastUpdated(Date.now());}).catch(()=>{});
+    }
+  }
+
+  // Phase-aware "what do I do now" instruction
+  function getPhaseInstruction(){
+    if(!st)return null;
+    const ph=st.phase,isNcoic=activeUser==='ncoic';
+    const mid=isNcoic?null:activeUser;
+    const myPrefs=mid?(st.prefs||{})[mid]||[]:[];
+    const myNA=mid?(st.nonAvail||{})[mid]||[]:[];
+    const myAsgn=Object.entries(st.assignments||{}).filter(([,x])=>x===mid).map(([d])=>Number(d));
+    if(ph==='setup'&&isNcoic)return{icon:'📋',cls:'',head:'ACTION REQUIRED',body:'Configure the duty roster in seniority order, set the turn timer, then tap CONFIRM.'};
+    if(ph==='calendar'&&isNcoic)return{icon:'📅',cls:'',head:'ACTION REQUIRED',body:'Set blackout dates, designate any weekend-style days or workdays, assign pre-assigned duties if needed, then tap CONFIRM.'};
+    if(ph==='wkpreview'&&isNcoic)return{icon:'👀',cls:'nb-blue',head:'REVIEW REQUIRED',body:'Review the weekend duty assignments by group. Confirm to send notifications and open the submission window.'};
+    if(ph==='shortmonth'&&isNcoic)return{icon:'⚠',cls:'nb-red',head:'SHORT MONTH',body:'Fewer duty days than Marines. Review the standing/sitting split, then confirm to notify the roster.'};
+    if((ph==='top5'||ph==='nonavail')&&isNcoic)return{icon:'⏳',cls:'nb-blue',head:'WAITING ON SUBMISSIONS',body:`Marines are submitting preferred dates and non-availability. Close submissions when ready.`};
+    if(ph==='review'&&isNcoic)return{icon:'🛡',cls:'',head:'ACTION REQUIRED',body:'Review and approve non-availability requests. Schedule the draft when ready.'};
+    if(ph==='draft-scheduled'&&isNcoic)return{icon:'⏱',cls:'nb-blue',head:'DRAFT SCHEDULED',body:'Draft will launch automatically. You can launch early using the button on the Draft tab.'};
+    if((ph==='draft')&&isNcoic)return{icon:'🎯',cls:'',head:'DRAFT IN PROGRESS',body:'Monitor the draft. Use PAUSE or RESTART controls if needed. Review and publish when complete.'};
+    if(ph==='postdraft'&&isNcoic)return{icon:'🔒',cls:'nb-green',head:'READY TO PUBLISH',body:'Review the roster on the ROSTER tab. Tap PUBLISH to finalize and notify all duties.'};
+    if(ph==='published'&&isNcoic)return{icon:'✅',cls:'nb-green',head:'ROSTER PUBLISHED',body:'The roster is live. All duties have been notified. Next month, use Settings to reset.'};
+    if(!mid)return null;
+    if(ph==='top5'||ph==='nonavail'){
+      const hasPD=myPrefs.length>0,hasNA=myNA.length>0;
+      if(!hasPD&&!hasNA)return{icon:'📅',cls:'nb-blue',head:'YOUR TURN TO SUBMIT',body:'Tap PD / NA above to submit your preferred duty dates (up to 10) and any non-availability requests before the deadline.'};
+      if(hasPD&&!hasNA)return{icon:'📅',cls:'nb-green',head:'PREFERRED DATES SUBMITTED',body:`${myPrefs.length} date${myPrefs.length!==1?'s':''} submitted. Switch to Non-Availability if you have dates you cannot stand duty.`};
+      return{icon:'✅',cls:'nb-green',head:'SUBMISSIONS IN',body:`${myPrefs.length} preferred date${myPrefs.length!==1?'s':''} · ${myNA.length} N/A request${myNA.length!==1?'s':''}. Wait for NCOIC to schedule the draft.`};
+    }
+    if(ph==='draft-scheduled')return{icon:'⏳',cls:'nb-blue',head:'DRAFT SCHEDULED',body:'The draft will launch automatically. You will be notified when it is your turn to pick.'};
+    if(ph==='draft'){
+      const e=(st.draftOrder||[])[st.draftIdx||0];
+      if(e?.id===mid)return{icon:'⭐',cls:'nb-red',head:'IT IS YOUR TURN',body:'Go to the DRAFT tab now and select your duty date. The timer is running.'};
+      if(myAsgn.length>0)return{icon:'✅',cls:'nb-green',head:'DATE ASSIGNED',body:`You are assigned ${MONTHS[st.month]} ${myAsgn.join(' & ')}. Watch the calendar fill up on the DRAFT tab.`};
+      const idx=(st.draftOrder||[]).findIndex((en,i)=>i>(st.draftIdx||0)&&en.id===mid);
+      const ahead=idx===-1?null:idx-(st.draftIdx||0);
+      return{icon:'⏳',cls:'nb-blue',head:'WAITING YOUR TURN',body:ahead!==null?`${ahead} pick${ahead!==1?'s':''} ahead of you. Watch the DRAFT tab — your preferred dates are highlighted.`:'Standby for your turn in the draft.'};
+    }
+    if(ph==='postdraft'||ph==='published'){
+      if(myAsgn.length>0)return{icon:'✅',cls:'nb-green',head:'YOUR DUTY DATE',body:`${myAsgn.map(d=>`${MONTHS[st.month]} ${d}`).join(' & ')}${myAsgn.some(d=>isWkDate(d))?' — includes a weekend day.':''}`};
+    }
+    return null;
   }
 
   function isWkDate(d){
@@ -855,6 +983,10 @@ function App(){
 
   // ── REVIEW ─────────────────────────────────────────────────────────────────
   function Review(){
+    const submitted=marines.filter(m=>(prefs[m.id]||[]).length>0).length;
+    const naTotal=marines.reduce((a,m)=>a+(nonAvail[m.id]||[]).length,0);
+    const naPending=marines.reduce((a,m)=>a+(nonAvail[m.id]||[]).filter(n=>n.approved===null).length,0);
+    const naApproved=marines.reduce((a,m)=>a+(nonAvail[m.id]||[]).filter(n=>n.approved===true).length,0);
     async function approve(mid,date){await patch({nonAvail:{...nonAvail,[mid]:(nonAvail[mid]||[]).map(n=>n.date===date?{...n,approved:true}:n)}});}
     async function deny(mid,date){
       await patch({nonAvail:{...nonAvail,[mid]:(nonAvail[mid]||[]).map(n=>n.date===date?{...n,approved:false}:n)}});
@@ -871,6 +1003,14 @@ function App(){
     const hasNA=Object.values(nonAvail).some(v=>v&&v.length>0);
     return(
       <div>
+        <div className="card">
+          <div className="card-title">SUBMISSION SUMMARY</div>
+          <div className="dash-grid">
+            <div className="dash-cell"><div className="dash-num">{submitted}/{marines.length}</div><div className="dash-lbl">PREF DATES IN</div></div>
+            <div className="dash-cell"><div className="dash-num" style={{color:naPending>0?'var(--orange)':'var(--accent)'}}>{naPending}</div><div className="dash-lbl">N/A PENDING</div></div>
+            <div className="dash-cell"><div className="dash-num" style={{color:'var(--green)'}}>{naApproved}</div><div className="dash-lbl">N/A APPROVED</div></div>
+          </div>
+        </div>
         {flagged.length>0&&<div className="alert a-d"><strong>⚠ FLAG — REVIEW CAREFULLY</strong>{flagged.map(m=>{const cnt=(nonAvail[m.id]||[]).filter(n=>isWkDate(Number(n.date.split('-')[2]))).length;return<div key={m.id}>{dName(m)}: {cnt} weekend N/As.</div>;})}</div>}
         <div className="card">
           <div className="card-title">NON-AVAILABILITY REVIEW</div>
@@ -1001,9 +1141,12 @@ function App(){
       if(pendingDay===null)return;
       const result=await api.pick(pendingDay,currentMid);
       if(result.ok&&result.state){
+        const pickedDay=pendingDay;
+        const wasWk=isWkDate(pickedDay);
         setSt(result.state);
         setPendingDay(null);
-        // Force a fresh poll immediately so freed marine sees correct calendar on their turn
+        setPickConfirmed({day:pickedDay,isWk:wasWk,isDD:!!doubleDuty[currentMid]});
+        setTimeout(()=>setPickConfirmed(null),3500);
         api.getState().then(s=>setSt(s)).catch(()=>{});
       }
       else if(result.error){alert(result.error);setPendingDay(null);}
@@ -1182,6 +1325,33 @@ function App(){
         </div></div>)}
         {isFreed&&<div className="freed-banner" style={{marginTop:10}}><strong>🟢 WEEKEND COVERED</strong>Your weekend obligation has been fulfilled. All available dates are open.</div>}
         {isNcoic&&NcoicControls()}
+        {/* Draft queue */}
+        <div className="card" style={{marginTop:8,marginBottom:6}}>
+          <div className="rowb" style={{cursor:'pointer'}} onClick={()=>setQueueOpen(o=>!o)}>
+            <div className="card-title" style={{fontSize:13}}>DRAFT ORDER</div>
+            <div style={{fontSize:11,color:'var(--muted)'}}>{draftIdx}/{draftOrder.length} complete {queueOpen?'▲':'▼'}</div>
+          </div>
+          {queueOpen&&(
+            <div className="queue-list" style={{maxHeight:220,overflowY:'auto'}}>
+              {draftOrder.map((en,i)=>{
+                const m=marines.find(x=>x.id===en.id);
+                const isDone=i<draftIdx,isNow=i===draftIdx,isNext=i===draftIdx+1;
+                const rowCls=isDone?'done-row':isNow?'now-row':isNext?'next-row':'upcoming-row';
+                return(
+                  <div key={i} className={'queue-row '+rowCls}>
+                    <div className="queue-idx">{i+1}</div>
+                    <div className="queue-name">{m?dName(m):'—'}{en.turn===2?' ✌':''}
+                    </div>
+                    {isDone&&<span style={{fontSize:9,color:'var(--green)'}}>✓</span>}
+                    {isNow&&<span style={{fontSize:9,color:'var(--accent)'}}>● NOW</span>}
+                    {isNext&&<span style={{fontSize:9,color:'var(--muted)'}}>NEXT</span>}
+                    {en.id===activeUser&&!isDone&&<span className="pill p-gold" style={{fontSize:7}}>YOU</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
         <div className={'dbox'+(isPaused?' paused':'')} style={{marginTop:8}}>
           <div className="d-hdr">
             <div>
@@ -1264,6 +1434,23 @@ function App(){
       await patch({phase:'published'});
       await api.addNotif('ROSTER PUBLISHED',`The ${MONTHS[st.month]} ${st.year} duty roster is published. All duties: check your assignment.`,'🔒');
     }
+    function exportRoster(){
+      const allAsgn2={...assignments};
+      Object.entries(preAssigned).forEach(([d,mid])=>{if(!allAsgn2[Number(d)])allAsgn2[Number(d)]=mid;});
+      let txt=`DUTY ROSTER — ${MONTHS[st.month].toUpperCase()} ${st.year}\n`;
+      txt+=`The Commandant's Own · USMC D&B Corps · 8th & I\n`;
+      txt+=`${'─'.repeat(40)}\n\n`;
+      txt+=`SENIORITY ORDER:\n`;
+      marines.forEach((m,i)=>{
+        const days=Object.entries(allAsgn2).filter(([,id])=>id===m.id).map(([d])=>Number(d)).sort((a,b)=>a-b);
+        const flags=[doubleDuty[m.id]?'×2':'',wkAssigneeIds.includes(m.id)?'WK':'',voluntaryWkTakers.includes(m.id)?'VOL':'',freedMarines.includes(m.id)?'FREED':''].filter(Boolean).join(' ');
+        txt+=`${String(i+1).padStart(2,'0')}. ${dName(m).padEnd(22)} ${days.length?days.map(d=>`${MONTHS[st.month].slice(0,3)} ${d}${isWkDate(d)?' ★':''}`).join(', '):'—'}${flags?' ('+flags+')':''}\n`;
+      });
+      txt+=`\n${'─'.repeat(40)}\nPublished via DutyDraft · dutydraft.onrender.com`;
+      const w=window.open('','_blank');
+      w.document.write(`<pre style="font-family:monospace;font-size:13px;padding:20px;background:#07090d;color:#dde4f0;min-height:100vh;">${txt}</pre>`);
+      w.document.title=`Duty Roster ${MONTHS[st.month]} ${st.year}`;
+    }
     return(
       <div>
         {editDModal!==null&&(<div className="overlay"><div className="modal">
@@ -1281,7 +1468,10 @@ function App(){
         <div className="card">
           <div className="rowb" style={{marginBottom:10}}>
             <div><div className="card-title">DUTY ROSTER — {MONTHS[st.month]} {st.year}</div><div className="card-sub">{st.phase==='postdraft'?'Tap date to edit. ':''}★ = weekend · 🔒 = pre-assigned</div></div>
-            {st.phase==='postdraft'&&<button className="btn btn-gold btn-sm" onClick={publish}>🔒 PUBLISH</button>}
+            <div className="row" style={{gap:6}}>
+              <button className="btn btn-ghost btn-sm no-print" onClick={exportRoster}>↗ EXPORT</button>
+              {st.phase==='postdraft'&&<button className="btn btn-gold btn-sm" onClick={publish}>🔒 PUBLISH</button>}
+            </div>
           </div>
           <CalGrid year={st.year} month={st.month} renderCell={d=>{
             const k=dk(st.year,st.month,d),bo=(st.blackouts||[]).includes(k),pa=!!preAssigned[d],mid2=allAsgn[d];
@@ -1418,8 +1608,35 @@ function App(){
     if(tab==='settings')return SettingsView();
   }
 
+  const phaseSteps=['setup','calendar','wkpreview','top5','review','draft','postdraft','published'];
+  const phaseStepLabels={setup:'SETUP',calendar:'CALENDAR',wkpreview:'WK PREVIEW',top5:'SUBMISSIONS',review:'REVIEW',draft:'DRAFT',postdraft:'ROSTER',published:'PUBLISHED'};
+  const currentPhaseIdx=phaseSteps.indexOf(['shortmonth'].includes(st.phase)?'wkpreview':st.phase==='nonavail'?'top5':st.phase==='draft-scheduled'?'draft':st.phase);
+  const instruction=getPhaseInstruction();
+
   return(
     <div className="app">
+      {/* Your turn full-screen takeover */}
+      {myTurnAlert&&(
+        <div className="your-turn-overlay" onClick={()=>setMyTurnAlert(false)}>
+          <div className="your-turn-box">
+            <div className="your-turn-icon">⭐</div>
+            <div className="your-turn-title">YOUR TURN</div>
+            <div className="your-turn-sub">{marines.find(m=>m.id===activeUser)?dName(marines.find(m=>m.id===activeUser)):''}<br/>Go to the DRAFT tab and select your duty date.<br/>The timer is running.</div>
+            <button className="btn btn-gold btn-full" onClick={()=>{setMyTurnAlert(false);setTab('draft');}}>GO TO DRAFT →</button>
+          </div>
+        </div>
+      )}
+      {/* Pick confirmation overlay */}
+      {pickConfirmed&&(
+        <div className="pick-confirm" onClick={()=>setPickConfirmed(null)}>
+          <div className="pick-confirm-box">
+            <div className="pick-confirm-icon">✅</div>
+            <div className="pick-confirm-date">{MONTHS[st.month].slice(0,3).toUpperCase()} {pickConfirmed.day}</div>
+            <div className="pick-confirm-sub">{pickConfirmed.isWk?'Weekend duty day ★':'Weekday duty'}{pickConfirmed.isDD?' · Double duty pick':''}<br/>Locked in. You are confirmed.</div>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setPickConfirmed(null)}>DISMISS</button>
+          </div>
+        </div>
+      )}
       <div className="hdr">
         <div><div className="logo">DUTYDRAFT</div><div className="logo-sub">{MONTHS[st.month]} {st.year} · D&B · 8TH & I</div></div>
         <div className="hdr-right">
@@ -1431,12 +1648,39 @@ function App(){
           <div className="phase-chip">{PL[st.phase]||st.phase.toUpperCase()}</div>
         </div>
       </div>
+      {/* Phase progress bar */}
+      <div className="phase-bar">
+        {phaseSteps.map((p,i)=>{
+          const done=currentPhaseIdx>i,now=currentPhaseIdx===i;
+          return(
+            <div key={p} className="phase-step">
+              {i>0&&<div className={'phase-connector'+(done||now?' done':'')}/>}
+              <div className="phase-step-inner">
+                <div className={'phase-dot'+(done?' done':now?' now':'')}/>
+                <div className={'phase-dot-lbl'+(done?' done':now?' now':'')}>{phaseStepLabels[p]}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
       <div className="tabs">
         {TABS.map(t=>(<button key={t.id} className={'tab'+(tab===t.id?' on':'')} onClick={()=>setTab(t.id)}>
-          {t.id==='notifs'?`🔔${unreadCount>0?` (${unreadCount})`:''}`:t.label}
+          {t.id==='notifs'?<span className={bellPulse?'bell-pulse':''}>🔔{unreadCount>0?` (${unreadCount})`:''}</span>:t.label}
         </button>))}
       </div>
-      <div className="main">{renderContent()}</div>
+      <div className="main" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        {instruction&&(
+          <div className={'now-banner '+(instruction.cls||'')}>
+            <div className="now-banner-icon">{instruction.icon}</div>
+            <div>
+              <div className="now-banner-head">{instruction.head}</div>
+              <div className="now-banner-body">{instruction.body}</div>
+            </div>
+          </div>
+        )}
+        {renderContent()}
+        <div className="last-updated no-print">Updated {Math.round((Date.now()-lastUpdated)/1000)}s ago · auto-refreshes every 3s</div>
+      </div>
     </div>
   );
 }
