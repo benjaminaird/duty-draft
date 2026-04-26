@@ -374,8 +374,9 @@ function App(){
   },[st?.phase]);
 
   function patch(updates){
-    const next={...stRef.current,...updates};
+    const next={...(stRef.current||st),...updates};
     setSt(next);
+    stRef.current=next;
     return api.setState(updates);
   }
 
@@ -566,7 +567,7 @@ function App(){
       const eligCount=marines.filter(m=>!preIds.has(m.id)).length;
       if(remDays<eligCount){
         const roster=computeShortMonthRoster(marines,ad.length,preAssigned,st.history||{});
-        await patch({weekendDates:wk,wkAssigneeIds:wkIds,wkAssignees:wkAsgn,doubleDuty:dd,shortMonth:true,shortRoster:roster,pendingPreAssignNotifs:[],phase:'shortmonth'});
+        await patch({weekendDates:wk,wkAssigneeIds:wkIds,wkAssignees:wkAsgn,doubleDuty:{},shortMonth:true,shortRoster:roster,pendingPreAssignNotifs:[],phase:'shortmonth'});
       } else {
         await patch({weekendDates:wk,wkAssigneeIds:wkIds,wkAssignees:wkAsgn,doubleDuty:dd,shortMonth:false,shortRoster:null,pendingPreAssignNotifs:[],phase:'wkpreview'});
       }
@@ -999,7 +1000,12 @@ function App(){
     async function handleConfirmPick(){
       if(pendingDay===null)return;
       const result=await api.pick(pendingDay,currentMid);
-      if(result.ok&&result.state){setSt(result.state);setPendingDay(null);}
+      if(result.ok&&result.state){
+        setSt(result.state);
+        setPendingDay(null);
+        // Force a fresh poll immediately so freed marine sees correct calendar on their turn
+        api.getState().then(s=>setSt(s)).catch(()=>{});
+      }
       else if(result.error){alert(result.error);setPendingDay(null);}
     }
 
