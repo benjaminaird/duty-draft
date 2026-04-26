@@ -1009,9 +1009,27 @@ function App(){
       else if(result.error){alert(result.error);setPendingDay(null);}
     }
 
-    // Waiting screen
+    // Waiting screen — live calendar
     if(!isNcoic&&!viewingAsCurrent){
       const myAssigned=Object.entries(assignments).filter(([,x])=>x===activeUser).map(([d])=>Number(d));
+      const viewerPrefs=prefs[activeUser]||[];
+      const takenPrefs=viewerPrefs.filter(p=>assignments[p.day]&&assignments[p.day]!==activeUser);
+      const safePrefs=viewerPrefs.filter(p=>!assignments[p.day]);
+
+      function getWaitCellState(d){
+        const k=dk(st.year,st.month,d);
+        if((st.blackouts||[]).includes(k))return'blackout';
+        const takenBy=assignments[d];
+        const myPref=viewerPrefs.find(p=>p.day===d);
+        const isMyDate=takenBy===activeUser;
+        if(isMyDate)return'mine';
+        if(takenBy&&myPref)return'pref-taken'; // preferred date stolen
+        if(takenBy)return'taken';              // taken by someone else
+        if(myPref)return isWkDate(d)?'pref-wk':'pref'; // my pref, still available
+        if(isWkDate(d))return'wk-open';        // weekend, open
+        return'open';
+      }
+
       return(
         <div>
           <div className={'draft-banner'+(isPaused?' paused-banner':'')}>
@@ -1023,13 +1041,103 @@ function App(){
             <div className={'draft-banner-timer'+(secs<=30&&!isPaused?' urg':'')} style={{color:isPaused?'var(--muted)':secs<=30?'var(--red)':'var(--accent)'}}>{isPaused?'⏸':secs+'s'}</div>
           </div>
           {isPaused&&<div className="pause-banner">⏸ DRAFT PAUSED BY NCOIC — STAND BY</div>}
-          <div className="card" style={{marginTop:10}}>
-            <div className="card-title">DRAFT IN PROGRESS</div>
-            <div className="card-sub">Not your turn yet. You will be notified when it is time to select.</div>
-            {dutiesAhead!==null&&<div className="ahead-badge"><div className="ahead-num">{dutiesAhead}</div><div className="ahead-label">DUTIES AHEAD OF YOU</div></div>}
-            {myAssigned.length>0&&<div className="alert a-g mt"><strong>YOUR DATE{myAssigned.length>1?'S':''}</strong>{myAssigned.map(d=><div key={d}>{MONTHS[st.month]} {d}{isWkDate(d)?' ★':''}</div>)}</div>}
-            {wkAssigneeIds.includes(activeUser)&&!freedMarines.includes(activeUser)&&<div className="alert a-w mt"><strong>WEEKEND REMINDER</strong>You must pick a weekend date on your turn.</div>}
-            {doubleDuty[activeUser]&&<div className="alert a-d mt"><strong>DOUBLE DUTY</strong>Two picks on your turn.</div>}
+
+          {/* Status row */}
+          <div className="row" style={{padding:'8px 0 4px',gap:6,flexWrap:'wrap'}}>
+            {dutiesAhead!==null&&(
+              <div className="ahead-badge" style={{flex:'none',padding:'6px 14px'}}>
+                <div className="ahead-num" style={{fontSize:24}}>{dutiesAhead}</div>
+                <div className="ahead-label">AHEAD OF YOU</div>
+              </div>
+            )}
+            {myAssigned.length>0&&(
+              <div className="alert a-g" style={{flex:1,marginBottom:0}}>
+                <strong>YOUR DATE{myAssigned.length>1?'S':''}</strong>
+                {myAssigned.map(d=><span key={d} style={{marginRight:8}}>{MONTHS[st.month]} {d}{isWkDate(d)?' ★':''}</span>)}
+              </div>
+            )}
+            {wkAssigneeIds.includes(activeUser)&&!freedMarines.includes(activeUser)&&(
+              <div className="alert a-w" style={{flex:1,marginBottom:0}}><strong>WEEKEND REMINDER</strong>You must pick a weekend date on your turn.</div>
+            )}
+            {doubleDuty[activeUser]&&(
+              <div className="alert a-d" style={{flex:1,marginBottom:0}}><strong>DOUBLE DUTY</strong>Two picks on your turn.</div>
+            )}
+          </div>
+
+          {/* Pref status chips */}
+          {viewerPrefs.length>0&&(
+            <div className="row" style={{gap:4,margin:'4px 0 6px',flexWrap:'wrap'}}>
+              {viewerPrefs.map(p=>{
+                const taken=assignments[p.day]&&assignments[p.day]!==activeUser;
+                const taker=taken?marines.find(m=>m.id===assignments[p.day]):null;
+                return(
+                  <span key={p.day} className={'pill '+(taken?'p-red':'p-grn')} style={{fontSize:9}}>
+                    #{p.priority} {MONTHS[st.month].slice(0,3)} {p.day}{taken&&taker?' → '+taker.lastName:''}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Live calendar */}
+          <div className="card" style={{marginTop:4}}>
+            <div className="rowb" style={{marginBottom:6}}>
+              <div className="card-title" style={{fontSize:13}}>LIVE DRAFT — {MONTHS[st.month].toUpperCase()} {st.year}</div>
+              <div style={{fontSize:9,color:'var(--muted)',fontFamily:'var(--fh)',letterSpacing:1}}>UPDATES EVERY 3s</div>
+            </div>
+            <div className="row" style={{marginBottom:6,fontSize:9,color:'var(--muted)',gap:8,flexWrap:'wrap'}}>
+              <span style={{color:'var(--green)'}}>■ Your pref</span>
+              <span style={{color:'var(--red)'}}>■ Pref taken</span>
+              <span style={{color:'var(--accent)'}}>■ Weekend open</span>
+              <span style={{color:'#1e2028'}}>■ Taken</span>
+            </div>
+            <CalGrid year={st.year} month={st.month} renderCell={d=>{
+              const state=getWaitCellState(d);
+              const takenBy=assignments[d];
+              const takerName=takenBy?marines.find(m=>m.id===takenBy)?.lastName:'';
+              const myPref=viewerPrefs.find(p=>p.day===d);
+              const isMyDate=takenBy===activeUser;
+
+              let cls='cc';
+              let labelText='';
+              let badgeText='';
+
+              if(state==='blackout'){
+                cls+=' bo';
+              } else if(state==='mine'){
+                cls+=' assigned';
+                labelText='YOU';
+              } else if(state==='pref-taken'){
+                // Preferred date that got taken — red-grey with taker name
+                cls+=' na-red';
+                labelText=takerName||'TAKEN';
+                badgeText='#'+myPref.priority;
+              } else if(state==='taken'){
+                cls+=' grey';
+                labelText=takerName||'';
+              } else if(state==='pref'){
+                cls+=' pref';
+                badgeText='#'+myPref.priority;
+              } else if(state==='pref-wk'){
+                cls+=' pref-wk';
+                badgeText='#'+myPref.priority;
+              } else if(state==='wk-open'){
+                cls+=' avail-wk';
+              } else {
+                cls+=' avail';
+              }
+
+              return(
+                <div key={d} className={cls} style={{cursor:'default'}}>
+                  {badgeText&&<div className="c-prio" style={{color:state==='pref-taken'?'var(--red)':'var(--green)'}}>{badgeText}</div>}
+                  <div className="c-num">{d}</div>
+                  {labelText&&<div className="c-lbl" style={{color:state==='mine'?'var(--green)':state==='pref-taken'?'var(--red)':'var(--muted)'}}>{labelText}</div>}
+                </div>
+              );
+            }}/>
+            <div style={{marginTop:8,fontSize:10,color:'var(--muted)',textAlign:'center'}}>
+              {Object.keys(assignments).length} of {(getAllDates()||[]).length} dates assigned
+            </div>
           </div>
         </div>
       );
@@ -1115,6 +1223,33 @@ function App(){
             <div style={{flex:1}}><div className="confirm-bar-date">{MONTHS[st.month]} {pendingDay}{pickLabel?' — '+pickLabel:''}</div><div className="confirm-bar-sub">Tap CONFIRM to lock in</div></div>
             <button className="btn btn-ghost btn-sm" onClick={()=>setPendingDay(null)}>✕</button>
             <button className="btn btn-gold" onClick={handleConfirmPick}>CONFIRM →</button>
+          </div>
+        )}
+        {/* NCOIC overview: roster filling in real time */}
+        {isNcoic&&(
+          <div className="card" style={{marginTop:8}}>
+            <div className="rowb" style={{marginBottom:6}}>
+              <div className="card-title" style={{fontSize:13}}>ROSTER SO FAR</div>
+              <div style={{fontSize:9,color:'var(--muted)',fontFamily:'var(--fh)',letterSpacing:1}}>{Object.keys(assignments).length} / {(getAllDates()||[]).length} ASSIGNED</div>
+            </div>
+            <CalGrid year={st.year} month={st.month} renderCell={d=>{
+              const k=dk(st.year,st.month,d),bo=(st.blackouts||[]).includes(k);
+              const takenBy=assignments[d];
+              const m=takenBy?marines.find(x=>x.id===takenBy):null;
+              const wk=isWkDate(d);
+              let cls='cc';
+              if(bo)cls+=' bo';
+              else if(takenBy)cls+=' assigned';
+              else if(wk)cls+=' avail-wk';
+              else cls+=' avail';
+              return(
+                <div key={d} className={cls} style={{cursor:'default'}}>
+                  <div className="c-num">{d}</div>
+                  {m&&<div className="c-lbl">{m.lastName}</div>}
+                  {bo&&<div className="c-lbl">BLKOUT</div>}
+                </div>
+              );
+            }}/>
           </div>
         )}
       </div>
