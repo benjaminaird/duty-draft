@@ -53,35 +53,35 @@ function getTargetYear(){const now=new Date();return now.getMonth()===11?now.get
 
 function getDefaultMarines(){
   return [
-    {id:'m1', rank:'GYSGT',lastName:'HARGROVE',  firstName:'',active:true},
-    {id:'m2', rank:'GYSGT',lastName:'DELACROIX', firstName:'',active:true},
-    {id:'m3', rank:'GYSGT',lastName:'OKONKWO',   firstName:'',active:true},
-    {id:'m4', rank:'GYSGT',lastName:'PIETERSEN', firstName:'',active:true},
-    {id:'m5', rank:'GYSGT',lastName:'YAMAMOTO',  firstName:'',active:true},
-    {id:'m6', rank:'SSGT', lastName:'CALDWELL',  firstName:'',active:true},
-    {id:'m7', rank:'SSGT', lastName:'REINHOLT',  firstName:'',active:true},
-    {id:'m8', rank:'SSGT', lastName:'MBEKI',     firstName:'',active:true},
-    {id:'m9', rank:'SSGT', lastName:'TORRIJOS',  firstName:'',active:true},
-    {id:'m10',rank:'SSGT', lastName:'NAKAMURA',  firstName:'',active:true},
-    {id:'m11',rank:'SSGT', lastName:'BERGSTROM', firstName:'',active:true},
-    {id:'m12',rank:'SSGT', lastName:'ODUYA',     firstName:'',active:true},
-    {id:'m13',rank:'SSGT', lastName:'FINNERAN',  firstName:'',active:true},
-    {id:'m14',rank:'SSGT', lastName:'VASQUEZ',   firstName:'',active:true},
-    {id:'m15',rank:'SGT',  lastName:'DRUMMOND',  firstName:'',active:true},
-    {id:'m16',rank:'SGT',  lastName:'KOWALSKI',  firstName:'',active:true},
-    {id:'m17',rank:'SGT',  lastName:'IBRAHIM',   firstName:'',active:true},
-    {id:'m18',rank:'SGT',  lastName:'PELLEGRINO',firstName:'',active:true},
-    {id:'m19',rank:'SGT',  lastName:'ASHFORD',   firstName:'',active:true},
-    {id:'m20',rank:'CPL',  lastName:'TRAN',      firstName:'',active:true},
-    {id:'m21',rank:'CPL',  lastName:'MWANGI',    firstName:'',active:true},
-    {id:'m22',rank:'CPL',  lastName:'ESPOSITO',  firstName:'',active:true},
-    {id:'m23',rank:'CPL',  lastName:'HOFFMANN',  firstName:'',active:true},
-    {id:'m24',rank:'CPL',  lastName:'OSEI',      firstName:'',active:true},
-    {id:'m25',rank:'LCPL', lastName:'DEVEREAUX', firstName:'',active:true},
-    {id:'m26',rank:'LCPL', lastName:'SANTOS',    firstName:'',active:true},
-    {id:'m27',rank:'LCPL', lastName:'NKRUMAH',   firstName:'',active:true},
-    {id:'m28',rank:'LCPL', lastName:'PRZYBYLA',  firstName:'',active:true},
-    {id:'m29',rank:'LCPL', lastName:'QUINTERO',  firstName:'',active:true}
+    {id:'m1', rank:'GYSGT',lastName:'CASPER THE FRIENDLY GHOST',     firstName:'',active:true},
+    {id:'m2', rank:'GYSGT',lastName:'NEARLY HEADLESS NICK',           firstName:'',active:true},
+    {id:'m3', rank:'GYSGT',lastName:'SLIMER',                         firstName:'',active:true},
+    {id:'m4', rank:'GYSGT',lastName:'MOANING MYRTLE',                 firstName:'',active:true},
+    {id:'m5', rank:'GYSGT',lastName:'THE FLYING DUTCHMAN',            firstName:'',active:true},
+    {id:'m6', rank:'SSGT', lastName:'ZERO',                           firstName:'',active:true},
+    {id:'m7', rank:'SSGT', lastName:'BEETLEJUICE',                    firstName:'',active:true},
+    {id:'m8', rank:'SSGT', lastName:'THE HEADLESS HORSEMAN',          firstName:'',active:true},
+    {id:'m9', rank:'SSGT', lastName:'BLACKBEARD',                     firstName:'',active:true},
+    {id:'m10',rank:'SSGT', lastName:'ANNE BOLEYN',                    firstName:'',active:true},
+    {id:'m11',rank:'SSGT', lastName:'JACOB MARLEY',                   firstName:'',active:true},
+    {id:'m12',rank:'SSGT', lastName:'GHOST OF CHRISTMAS PAST',        firstName:'',active:true},
+    {id:'m13',rank:'SSGT', lastName:'GHOST OF CHRISTMAS PRESENT',     firstName:'',active:true},
+    {id:'m14',rank:'SSGT', lastName:'GHOST OF CHRISTMAS YET TO COME', firstName:'',active:true},
+    {id:'m15',rank:'SGT',  lastName:'THE BLOODY BARON',               firstName:'',active:true},
+    {id:'m16',rank:'SGT',  lastName:'PROFESSOR BINNS',                firstName:'',active:true},
+    {id:'m17',rank:'SGT',  lastName:'THE GREY LADY',                  firstName:'',active:true},
+    {id:'m18',rank:'SGT',  lastName:'STRETCHING ROOM GHOSTS',         firstName:'',active:true},
+    {id:'m19',rank:'SGT',  lastName:'PATRICK SWAYZE',                 firstName:'',active:true},
+    {id:'m20',rank:'CPL',  lastName:'BRUCE WILLIS',                   firstName:'',active:true},
+    {id:'m21',rank:'CPL',  lastName:'ICHABOD CRANE',                  firstName:'',active:true},
+    {id:'m22',rank:'CPL',  lastName:'THE GRADY TWINS',                firstName:'',active:true},
+    {id:'m23',rank:'CPL',  lastName:'BANQUO',                         firstName:'',active:true},
+    {id:'m24',rank:'CPL',  lastName:'THE LIBRARIAN GHOST',            firstName:'',active:true},
+    {id:'m25',rank:'LCPL', lastName:'DANNY PHANTOM',                  firstName:'',active:true},
+    {id:'m26',rank:'LCPL', lastName:'BLINKY',                         firstName:'',active:true},
+    {id:'m27',rank:'LCPL', lastName:'INKY',                           firstName:'',active:true},
+    {id:'m28',rank:'LCPL', lastName:'CLYDE',                          firstName:'',active:true},
+    {id:'m29',rank:'LCPL', lastName:'KING HAMLET',                    firstName:'',active:true}
   ];
 }
 
@@ -152,21 +152,21 @@ function doAutoPick(mid,state,asgn){
 // Handle voluntary weekend pick — free next slotted Marine in queue
 function checkVoluntaryWk(pickerMid,day,asgn,state){
   if(!isWkDate(day,state))return state;
+  // If the picker is themselves slotted, this isn't voluntary
   if((state.wkAssigneeIds||[]).includes(pickerMid))return state;
   const newVol=[...(state.voluntaryWkTakers||[])];
   if(!newVol.includes(pickerMid))newVol.push(pickerMid);
-  const allAsgn={...asgn,[day]:pickerMid};
-  const wkCovered=Object.entries(allAsgn).filter(([d,])=>isWkDate(Number(d),state)).length;
-  if(wkCovered<(state.weekendDates||[]).length)return{...state,voluntaryWkTakers:newVol};
   const newFreed=[...(state.freedMarines||[])];
   const order=state.draftOrder||[];
-  // Search from NEXT index — current picker just finished, look ahead
+  // Each voluntary weekend pick frees exactly one slotted Marine downstream
+  // who hasn't yet picked a weekend. One volunteer = one freed. Simple.
   const searchFrom=(state.draftIdx||0)+1;
+  let freedSomeone=false;
   for(let i=searchFrom;i<order.length;i++){
     const mid=order[i].id;
     if(!(state.wkAssigneeIds||[]).includes(mid))continue;
     if(newFreed.includes(mid))continue;
-    const theirDays=Object.entries(allAsgn).filter(([,x])=>x===mid).map(([d])=>Number(d));
+    const theirDays=Object.entries({...asgn,[day]:pickerMid}).filter(([,x])=>x===mid).map(([d])=>Number(d));
     if(!theirDays.some(d=>isWkDate(d,state))){
       newFreed.push(mid);
       const pickerM=(state.marines||[]).find(m=>m.id===pickerMid);
@@ -178,6 +178,7 @@ function checkVoluntaryWk(pickerMid,day,asgn,state){
           '🟢',mid
         );
       }
+      freedSomeone=true;
       break;
     }
   }
