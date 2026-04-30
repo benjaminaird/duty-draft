@@ -143,6 +143,48 @@ function currentNeedsWk(mid,turn,asgn,state){
   return isDD?turn===1:true;
 }
 
+// After every pick, check if any remaining slotted Marines have NO available
+// weekend dates left (all taken). If so, free them automatically so they
+// can pick weekdays instead of being completely locked out.
+function autoFreeBlockedMarines(asgn,state){
+  const order=state.draftOrder||[];
+  const currentIdx=state.draftIdx||0;
+  const newFreed=[...(state.freedMarines||[])];
+  let anyFreed=false;
+
+  // Find all available weekend dates (not yet assigned)
+  const allDates=getAllDates(state);
+  const availableWkDates=allDates.filter(d=>isWkDate(d,state)&&!asgn[d]);
+
+  // For each remaining slotted Marine who hasn't picked a weekend yet,
+  // check if there are any weekend dates they could legally pick
+  for(let i=currentIdx;i<order.length;i++){
+    const mid=order[i].id;
+    if(!(state.wkAssigneeIds||[]).includes(mid))continue;
+    if(newFreed.includes(mid))continue;
+    const myDays=Object.entries(asgn).filter(([,x])=>x===mid).map(([d])=>Number(d));
+    if(myDays.some(d=>isWkDate(d,state)))continue; // already has a weekend
+
+    // Can this Marine actually pick any available weekend date?
+    const canPickWk=availableWkDates.some(d=>isDateValid(mid,d,asgn,state,false));
+    if(!canPickWk){
+      // No available weekends — free them so they can pick a weekday
+      newFreed.push(mid);
+      const m=(state.marines||[]).find(x=>x.id===mid);
+      if(m){
+        addNotif(
+          'WEEKEND OBLIGATION WAIVED',
+          `${dName(m)}: no weekend dates remain available. Weekend obligation waived -- all remaining dates are open on your turn.`,
+          '🟡',mid
+        );
+      }
+      anyFreed=true;
+    }
+  }
+  if(!anyFreed)return state;
+  return{...state,freedMarines:newFreed};
+}
+
 function doAutoPick(mid,state,asgn){
   const allDates=getAllDates(state);
   const e=(state.draftOrder||[])[state.draftIdx||0];
@@ -205,6 +247,9 @@ function advanceDraft(pickedDay,state){
   if(pickedDay!==null)asgn[pickedDay]=mid;
   let next=pickedDay!==null?checkVoluntaryWk(mid,pickedDay,asgn,state):state;
   next={...next,assignments:asgn};
+  // After every pick, check if any remaining slotted Marines are now blocked
+  // (no weekend dates left for them) and free them automatically
+  next=autoFreeBlockedMarines(asgn,next);
   const nextIdx=(state.draftIdx||0)+1;
   if(nextIdx>=(state.draftOrder||[]).length)return finishDraft(next);
   next={...next,draftIdx:nextIdx};
