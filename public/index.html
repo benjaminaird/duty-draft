@@ -590,6 +590,10 @@ function App(){
     const myDays=Object.entries(asgn||{}).filter(([,x])=>x===mid).map(([d])=>Number(d));
     const hasWk=myDays.some(d=>(st.weekendDates||[]).includes(d));
     if(hasWk)return false;
+    // Safety net: if no weekend dates are still available, waive the obligation
+    // (server will also detect this and add to freedMarines on next poll)
+    const availWk=(st.weekendDates||[]).filter(d=>!asgn[d]||asgn[d]===mid);
+    if(!availWk.length)return false;
     return isDD?turn===1:true;
   }
 
