@@ -17,6 +17,11 @@
   --accent:#c8a84b;--a2:#e8c870;--green:#27ae60;--red:#e74c3c;--blue:#3498db;--orange:#e67e22;
   --fh:'Oswald',sans-serif;--fb:'Source Sans 3',sans-serif;--fm:'Courier Prime',monospace;
 }
+body.light{
+  --bg:#f4f1ec;--s1:#ffffff;--s2:#faf8f5;--s3:#ede9e1;
+  --border:#d8d0c4;--border2:#c4bab0;--text:#1a2035;--muted:#6b6560;--dim:#a09890;
+  --accent:#b8962e;--a2:#c8a84b;--green:#1e8a4a;--red:#c0392b;--blue:#2471a3;--orange:#ca6f1e;
+}
 html,body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:16px;min-height:100vh;-webkit-font-smoothing:antialiased;}
 .app{min-height:100vh;display:flex;flex-direction:column;max-width:860px;margin:0 auto;}
 .hdr{background:var(--s1);border-bottom:2px solid var(--accent);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 4px 24px rgba(0,0,0,.7);}
@@ -241,6 +246,18 @@ hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
 /* Bugler illustration */
 .bugler-wrap{text-align:center;padding:16px 0 8px;opacity:0.85;}
 .bugler-img{width:140px;height:140px;object-fit:contain;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.6));}
+/* Theme toggle */
+.theme-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;}
+.theme-toggle-label{font-family:var(--fh);font-size:13px;letter-spacing:1px;color:var(--text);}
+.theme-toggle-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.toggle-switch{position:relative;width:48px;height:26px;flex-shrink:0;}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-track{position:absolute;inset:0;background:var(--s3);border:1px solid var(--border2);border-radius:26px;cursor:pointer;transition:background .2s,border-color .2s;}
+.toggle-track::before{content:'';position:absolute;width:20px;height:20px;left:2px;top:2px;background:var(--muted);border-radius:50%;transition:transform .2s,background .2s;}
+.toggle-switch input:checked+.toggle-track{background:#1a1200;border-color:var(--accent);}
+.toggle-switch input:checked+.toggle-track::before{transform:translateX(22px);background:var(--accent);}
+body.light .toggle-switch input:checked+.toggle-track{background:#f5ecd0;border-color:var(--accent);}
+body.light .toggle-switch input:checked+.toggle-track::before{background:var(--accent);}
 @media(max-width:500px){.cc{min-height:36px;}.c-lbl{display:none;}.d-name{font-size:20px;}.timer-pill{font-size:16px;}.short-split{grid-template-columns:1fr;}}
 .print-only{display:none;}
 </style>
@@ -416,6 +433,9 @@ function App(){
   const [lastUpdated,setLastUpdated]=useState(Date.now());
   const [bellPulse,setBellPulse]=useState(false);
   const [localSecs,setLocalSecs]=useState(0);
+  const [darkMode,setDarkMode]=useState(()=>{
+    try{return localStorage.getItem('dutydraft-theme')!=='light';}catch(e){return true;}
+  });
   const prevUnreadRef=useRef(0);
   const localTimerRef=useRef(null);
   // Drag state
@@ -432,6 +452,16 @@ function App(){
   const stRef=useRef(null);
   const touchStartY=useRef(0);
   useEffect(()=>{stRef.current=st;},[st]);
+
+  useEffect(()=>{
+    if(darkMode){
+      document.body.classList.remove('light');
+      try{localStorage.setItem('dutydraft-theme','dark');}catch(e){}
+    } else {
+      document.body.classList.add('light');
+      try{localStorage.setItem('dutydraft-theme','light');}catch(e){}
+    }
+  },[darkMode]);
 
   const pollRef=useRef(null);
 
@@ -1606,6 +1636,19 @@ function App(){
     async function reset(){await api.reset().then(()=>api.getState().then(s=>{setSt(s);setEditRoster([...s.marines]);setActiveUser('ncoic');setPendingDay(null);}));}
     return(
       <div>
+        <div className="card">
+          <div className="card-title">APPEARANCE</div>
+          <div className="theme-toggle-row">
+            <div>
+              <div className="theme-toggle-label">{darkMode?'🌙 DARK MODE':'☀️ LIGHT MODE'}</div>
+              <div className="theme-toggle-sub">{darkMode?'Switch to light mode':'Switch to dark mode'}</div>
+            </div>
+            <label className="toggle-switch">
+              <input type="checkbox" checked={!darkMode} onChange={()=>setDarkMode(d=>!d)}/>
+              <div className="toggle-track"/>
+            </label>
+          </div>
+        </div>
         <div className="card">
           <div className="card-title">DEMO CONTROLS</div>
           <div className="card-sub">Navigate phases while preserving all data.</div>
