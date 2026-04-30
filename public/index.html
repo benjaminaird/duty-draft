@@ -433,15 +433,13 @@ function App(){
   const touchStartY=useRef(0);
   useEffect(()=>{stRef.current=st;},[st]);
 
-  useEffect(()=>{
-    api.getState().then(s=>{setSt(s);setEditRoster([...s.marines]);setLoading(false);})
-      .catch(()=>{document.getElementById('root').innerHTML='<div style="padding:40px;color:#e74c3c;font-family:monospace;">⚠ Could not connect to server. <a href="/" style="color:#c8a84b;">Retry</a></div>';});
-    const poll=setInterval(()=>api.getState().then(s=>{
-      // Bell pulse check
+  const pollRef=useRef(null);
+
+  function forceRefresh(){
+    api.getState().then(s=>{
       const newUnread=(s.notifications||[]).filter(n=>n.unread&&(activeUser==='ncoic'||!n.targetMid||n.targetMid===activeUser)).length;
       if(newUnread>prevUnreadRef.current){setBellPulse(true);setTimeout(()=>setBellPulse(false),600);}
       prevUnreadRef.current=newUnread;
-      // Your-turn alert - compare against current state via ref
       if(s.draftLive&&!s.draftDone&&activeUser!=='ncoic'){
         const e=(s.draftOrder||[])[s.draftIdx||0];
         const prev=stRef.current;
@@ -450,8 +448,14 @@ function App(){
       }
       setSt(s);
       setLastUpdated(Date.now());
-    }).catch(()=>{}),3000);
-    return()=>clearInterval(poll);
+    }).catch(()=>{});
+  }
+
+  useEffect(()=>{
+    api.getState().then(s=>{setSt(s);setEditRoster([...s.marines]);setLoading(false);})
+      .catch(()=>{document.getElementById('root').innerHTML='<div style="padding:40px;color:#e74c3c;font-family:monospace;">⚠ Could not connect to server. <a href="/" style="color:#c8a84b;">Retry</a></div>';});
+    pollRef.current=setInterval(forceRefresh,3000);
+    return()=>clearInterval(pollRef.current);
   },[]);
 
   useEffect(()=>{
@@ -1193,10 +1197,15 @@ function App(){
         const pickedDay=pendingDay;
         const wasWk=isWkDate(pickedDay);
         setSt(result.state);
+        stRef.current=result.state;
         setPendingDay(null);
         setPickConfirmed({day:pickedDay,isWk:wasWk,isDD:!!doubleDuty[currentMid]});
         setTimeout(()=>setPickConfirmed(null),3500);
-        api.getState().then(s=>setSt(s)).catch(()=>{});
+        // Immediately refresh state on ALL clients by resetting poll
+        // This ensures freedMarines is current before the next Marine's turn renders
+        forceRefresh();
+        // Reset poll interval so next poll is a fresh 3s from now
+        if(pollRef.current){clearInterval(pollRef.current);pollRef.current=setInterval(forceRefresh,3000);}
       }
       else if(result.error){alert(result.error);setPendingDay(null);}
     }
@@ -1671,12 +1680,12 @@ function App(){
     <div className="app">
       {/* Your turn full-screen takeover */}
       {myTurnAlert&&(
-        <div className="your-turn-overlay" onClick={()=>setMyTurnAlert(false)}>
+        <div className="your-turn-overlay" onClick={()=>{setMyTurnAlert(false);forceRefresh();}}>
           <div className="your-turn-box">
             <div className="your-turn-icon">⭐</div>
             <div className="your-turn-title">YOUR TURN</div>
             <div className="your-turn-sub">{marines.find(m=>m.id===activeUser)?dName(marines.find(m=>m.id===activeUser)):''}<br/>Go to the DRAFT tab and select your duty date.<br/>The timer is running.</div>
-            <button className="btn btn-gold btn-full" onClick={()=>{setMyTurnAlert(false);setTab('draft');}}>GO TO DRAFT →</button>
+            <button className="btn btn-gold btn-full" onClick={()=>{setMyTurnAlert(false);forceRefresh();setTab('draft');}}>GO TO DRAFT →</button>
           </div>
         </div>
       )}
