@@ -261,7 +261,7 @@ const GROUP_QUOTA={junior:0.60,ssgt:0.25,gysgt:0.15};
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const PHASE_ORDER=['setup','calendar','wkpreview','top5','nonavail','review','draft-scheduled','draft','postdraft','published'];
-const NA_REASONS=['Approved Leave','On the Roster for a Gig','TAD','Parental Leave','Approved Out of Bounds Liberty','Other — Non-Sensitive Conflict','Other — Please Speak with SNCOIC in Person'];
+const NA_REASONS=['Approved Leave','On the Roster for a Gig','TAD','Parental Leave','Approved Out of Bounds Liberty','Other  --  Non-Sensitive Conflict','Other  --  Please Speak with SNCOIC in Person'];
 const PL={setup:'ROSTER SETUP',calendar:'CAL CONFIG',wkpreview:'WK PREVIEW',shortmonth:'SHORT MONTH',top5:'PD / NA',nonavail:'PD / NA',review:'NCOIC REVIEW','draft-scheduled':'DRAFT SCHED',draft:'LIVE DRAFT',postdraft:'POST-DRAFT',published:'PUBLISHED'};
 const TABS=[{id:'admin',label:'NCOIC'},{id:'pdna',label:'PD / NA'},{id:'draft',label:'DRAFT'},{id:'roster',label:'ROSTER'},{id:'notifs',label:'NOTIFS'},{id:'settings',label:'⚙'}];
 
@@ -430,6 +430,7 @@ function App(){
   const dupFirstRef=useRef(null);
   const editDRef=useRef('');
   const stRef=useRef(null);
+  const touchStartY=useRef(0);
   useEffect(()=>{stRef.current=st;},[st]);
 
   useEffect(()=>{
@@ -466,7 +467,7 @@ function App(){
     }
   },[st?.turnSecsRemaining]);
 
-  // Local tick — counts down every second, server snaps it every 3s
+  // Local tick  --  counts down every second, server snaps it every 3s
   useEffect(()=>{
     if(localTimerRef.current)clearInterval(localTimerRef.current);
     if(!st?.draftLive||st?.draftDone||st?.draftPaused){
@@ -487,7 +488,6 @@ function App(){
   }
 
   // Pull-to-refresh
-  const touchStartY=useRef(0);
   function onTouchStart(e){touchStartY.current=e.touches[0].clientY;}
   function onTouchEnd(e){
     if(e.changedTouches[0].clientY-touchStartY.current>70){
@@ -527,10 +527,10 @@ function App(){
       if(myAsgn.length>0)return{icon:'✅',cls:'nb-green',head:'DATE ASSIGNED',body:`You are assigned ${MONTHS[st.month]} ${myAsgn.join(' & ')}. Watch the calendar fill up on the DRAFT tab.`};
       const idx=(st.draftOrder||[]).findIndex((en,i)=>i>(st.draftIdx||0)&&en.id===mid);
       const ahead=idx===-1?null:idx-(st.draftIdx||0);
-      return{icon:'⏳',cls:'nb-blue',head:'WAITING YOUR TURN',body:ahead!==null?`${ahead} pick${ahead!==1?'s':''} ahead of you. Watch the DRAFT tab — your preferred dates are highlighted.`:'Standby for your turn in the draft.'};
+      return{icon:'⏳',cls:'nb-blue',head:'WAITING YOUR TURN',body:ahead!==null?`${ahead} pick${ahead!==1?'s':''} ahead of you. Watch the DRAFT tab  --  your preferred dates are highlighted.`:'Standby for your turn in the draft.'};
     }
     if(ph==='postdraft'||ph==='published'){
-      if(myAsgn.length>0)return{icon:'✅',cls:'nb-green',head:'YOUR DUTY DATE',body:`${myAsgn.map(d=>`${MONTHS[st.month]} ${d}`).join(' & ')}${myAsgn.some(d=>isWkDate(d))?' — includes a weekend day.':''}`};
+      if(myAsgn.length>0)return{icon:'✅',cls:'nb-green',head:'YOUR DUTY DATE',body:`${myAsgn.map(d=>`${MONTHS[st.month]} ${d}`).join(' & ')}${myAsgn.some(d=>isWkDate(d))?'  --  includes a weekend day.':''}`};
     }
     return null;
   }
@@ -660,7 +660,7 @@ function App(){
             </div>
           ))}
           <hr/>
-          <div className="card-sub">Add Duty — auto-places by rank</div>
+          <div className="card-sub">Add Duty  --  auto-places by rank</div>
           <div className="row">
             <select className="sel" style={{width:70,fontSize:11,padding:'4px 5px'}} value={newMRank} onChange={e=>setNewMRank(e.target.value)}>{RANKS.map(r=><option key={r}>{r}</option>)}</select>
             <input className="ii" style={{flex:1}} placeholder="LAST NAME*" ref={newLastRef}/>
@@ -670,7 +670,7 @@ function App(){
         </div>
         <div className="card">
           <div className="card-title">TURN TIMER</div>
-          <div className="card-sub">Minutes per pick. Timer runs server-side — tamper-proof. Default is 3.</div>
+          <div className="card-sub">Minutes per pick. Timer runs server-side  --  tamper-proof. Default is 3.</div>
           <div className="timer-pills">
             {[1,2,3,4,5].map(n=>(<div key={n} className={'timer-pill'+(st.turnMins===n?' selected':'')} onClick={()=>patch({turnMins:n})}>{n}<div className="timer-pill-label">MIN</div></div>))}
           </div>
@@ -740,11 +740,11 @@ function App(){
     return(
       <div>
         {preAssignModal&&(<div className="overlay"><div className="modal">
-          <div className="modal-title">ASSIGN — {MONTHS[st.month]} {preAssignModal.day}</div>
+          <div className="modal-title">ASSIGN  --  {MONTHS[st.month]} {preAssignModal.day}</div>
           <div className="card-sub">Notification will be sent when you hit CONFIRM on the calendar screen.</div>
           <div className="field"><label className="lbl">Duty</label>
             <select className="sel" defaultValue="" onChange={e=>{preAssignMarineRef.current=e.target.value;}}>
-              <option value="">— Select —</option>
+              <option value=""> --  Select  -- </option>
               {marines.map(m=><option key={m.id} value={m.id}>{dName(m)}</option>)}
             </select>
           </div>
@@ -752,7 +752,7 @@ function App(){
           <div className="row mt"><button className="btn btn-gold" onClick={savePreAssign}>ASSIGN</button><button className="btn btn-ghost" onClick={()=>setPreAssignModal(null)}>CANCEL</button></div>
         </div></div>)}
         <div className="card">
-          <div className="card-title">CALENDAR — {MONTHS[st.month].toUpperCase()} {st.year}</div>
+          <div className="card-title">CALENDAR  --  {MONTHS[st.month].toUpperCase()} {st.year}</div>
           <div className="card-sub">Tap a mode then tap dates. Pre-assign notifications send when you hit CONFIRM.</div>
           <div className="row mt" style={{marginBottom:10,gap:5,flexWrap:'wrap'}}>
             {[['blackout','BLACKOUT','btn-red'],['extra','WEEKEND-STYLE','btn-gold'],['workday','WORKDAY',null],['assign','ASSIGN',null]].map(([mode,label,cls])=>(
@@ -786,7 +786,7 @@ function App(){
             {Object.entries(preAssigned).map(([d,mid])=>{const m=marines.find(x=>x.id===mid);return(
               <div key={d} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 0',borderBottom:'1px solid var(--border)'}}>
                 <span style={{fontFamily:'var(--fm)',fontSize:11,minWidth:55}}>{MONTHS[st.month].slice(0,3)} {d}</span>
-                <span style={{flex:1,fontSize:11}}>{m?dName(m):'—'}</span>
+                <span style={{flex:1,fontSize:11}}>{m?dName(m):' -- '}</span>
                 <span style={{color:'var(--muted)',fontSize:10,flex:1}}>{preAssignReasons[d]||''}</span>
                 <button className="btn btn-red btn-sm" onClick={()=>removePreAssign(Number(d))}>✕</button>
               </div>
@@ -817,7 +817,7 @@ function App(){
       const wkIds=[...wkAsgn.junior,...wkAsgn.ssgt,...wkAsgn.gysgt].map(m=>m.id);
       const dd=computeDoubleDuty(activeMariners,ad.length,preAssigned,st.history||{});
       await patch({marines:activeMariners,weekendDates:wk,wkAssigneeIds:wkIds,wkAssignees:wkAsgn,doubleDuty:dd,phase:'wkpreview'});
-      for(const m of sitting)await api.addNotif('ROSTER UPDATE',`${dName(m)}: limited duty days this month — not on the roster for ${MONTHS[st.month]}. Rotation maintained.`,'📋',m.id);
+      for(const m of sitting)await api.addNotif('ROSTER UPDATE',`${dName(m)}: limited duty days this month  --  not on the roster for ${MONTHS[st.month]}. Rotation maintained.`,'📋',m.id);
     }
     return(
       <div>
@@ -850,7 +850,7 @@ function App(){
   }
 
   function WkPreview(){
-    const groups=[{label:'E1–E5 (JUNIOR)',key:'junior',quota:GROUP_QUOTA.junior,color:'var(--blue)'},{label:'E6 (SSGT)',key:'ssgt',quota:GROUP_QUOTA.ssgt,color:'var(--accent)'},{label:'E7 (GYSGT)',key:'gysgt',quota:GROUP_QUOTA.gysgt,color:'var(--orange)'}];
+    const groups=[{label:'E1-E5 (JUNIOR)',key:'junior',quota:GROUP_QUOTA.junior,color:'var(--blue)'},{label:'E6 (SSGT)',key:'ssgt',quota:GROUP_QUOTA.ssgt,color:'var(--accent)'},{label:'E7 (GYSGT)',key:'gysgt',quota:GROUP_QUOTA.gysgt,color:'var(--orange)'}];
     return(
       <div>
         <div className="card">
@@ -858,7 +858,7 @@ function App(){
           <div className="card-sub">{MONTHS[st.month]} {st.year} · {weekendDates.length} weekend day{weekendDates.length!==1?'s':''} · 1 slotted duty per date</div>
           {groups.map(g=>{const assigned=wkAssignees[g.key]||[];return(
             <div key={g.key} className="wk-group">
-              <div className="wk-group-title" style={{color:g.color}}>{g.label} — {Math.round(g.quota*100)}% = {assigned.length} day{assigned.length!==1?'s':''}</div>
+              <div className="wk-group-title" style={{color:g.color}}>{g.label}  --  {Math.round(g.quota*100)}% = {assigned.length} day{assigned.length!==1?'s':''}</div>
               {!assigned.length&&<div style={{color:'var(--muted)',fontSize:11}}>None this month.</div>}
               {assigned.map((m,i)=>(<div key={m.id} className="wk-marine-row">
                 <span style={{fontFamily:'var(--fh)',fontSize:11,flex:1}}>{dName(m)}</span>
@@ -868,7 +868,7 @@ function App(){
             </div>
           );})}
           {Object.keys(doubleDuty).length>0&&<div className="alert a-w mt"><strong>DOUBLE DUTY</strong>{Object.keys(doubleDuty).map(mid=>{const m=marines.find(x=>x.id===mid);return m?<div key={mid}>{dName(m)}</div>:null;})}</div>}
-          {Object.keys(preAssigned).length>0&&<div className="alert a-i mt"><strong>PRE-ASSIGNED</strong>{Object.entries(preAssigned).map(([d,mid])=>{const m=marines.find(x=>x.id===mid);return<div key={d}>{MONTHS[st.month].slice(0,3)} {d}: {m?dName(m):'—'} — {preAssignReasons[d]||''}</div>;})}</div>}
+          {Object.keys(preAssigned).length>0&&<div className="alert a-i mt"><strong>PRE-ASSIGNED</strong>{Object.entries(preAssigned).map(([d,mid])=>{const m=marines.find(x=>x.id===mid);return<div key={d}>{MONTHS[st.month].slice(0,3)} {d}: {m?dName(m):' -- '}  --  {preAssignReasons[d]||''}</div>;})}</div>}
         </div>
         <div className="rowb mt">
           {BackBtn()}
@@ -902,7 +902,7 @@ function App(){
       );
     }
 
-    // Marine view — pill switch between PD and NA
+    // Marine view  --  pill switch between PD and NA
     const marine=marines.find(m=>m.id===mid);
 
     function PdView(){
@@ -959,8 +959,8 @@ function App(){
         else{setNaReason(NA_REASONS[0]);setNaModal({date:k,day:d,mid});}
       }
       async function saveNA(){
-        const isOtherNS=naReason==='Other — Non-Sensitive Conflict';
-        const isOtherIP=naReason==='Other — Please Speak with SNCOIC in Person';
+        const isOtherNS=naReason==='Other  --  Non-Sensitive Conflict';
+        const isOtherIP=naReason==='Other  --  Please Speak with SNCOIC in Person';
         const otherText=(naOtherRef.current?.value||'').trim();
         if(isOtherNS&&!otherText)return;
         const reason=isOtherNS?`Other (Non-Sensitive): ${otherText}`:naReason;
@@ -971,8 +971,8 @@ function App(){
       async function clearAll(){
         await patch({nonAvail:{...nonAvail,[mid]:[]}});setClearModal(null);
       }
-      const isOtherNS=naReason==='Other — Non-Sensitive Conflict';
-      const isOtherIP=naReason==='Other — Please Speak with SNCOIC in Person';
+      const isOtherNS=naReason==='Other  --  Non-Sensitive Conflict';
+      const isOtherIP=naReason==='Other  --  Please Speak with SNCOIC in Person';
       return(
         <div>
           {clearModal?.type==='na'&&(<div className="overlay"><div className="modal">
@@ -1057,7 +1057,7 @@ function App(){
             <div className="dash-cell"><div className="dash-num" style={{color:'var(--green)'}}>{naApproved}</div><div className="dash-lbl">N/A APPROVED</div></div>
           </div>
         </div>
-        {flagged.length>0&&<div className="alert a-d"><strong>⚠ FLAG — REVIEW CAREFULLY</strong>{flagged.map(m=>{const cnt=(nonAvail[m.id]||[]).filter(n=>isWkDate(Number(n.date.split('-')[2]))).length;return<div key={m.id}>{dName(m)}: {cnt} weekend N/As.</div>;})}</div>}
+        {flagged.length>0&&<div className="alert a-d"><strong>⚠ FLAG  --  REVIEW CAREFULLY</strong>{flagged.map(m=>{const cnt=(nonAvail[m.id]||[]).filter(n=>isWkDate(Number(n.date.split('-')[2]))).length;return<div key={m.id}>{dName(m)}: {cnt} weekend N/As.</div>;})}</div>}
         <div className="card">
           <div className="card-title">NON-AVAILABILITY REVIEW</div>
           <div className="card-sub">Only APPROVED requests become constraints in the draft.</div>
@@ -1201,7 +1201,7 @@ function App(){
       else if(result.error){alert(result.error);setPendingDay(null);}
     }
 
-    // Waiting screen — live calendar
+    // Waiting screen  --  live calendar
     if(!isNcoic&&!viewingAsCurrent){
       const myAssigned=Object.entries(assignments).filter(([,x])=>x===activeUser).map(([d])=>Number(d));
       const viewerPrefs=prefs[activeUser]||[];
@@ -1226,13 +1226,13 @@ function App(){
         <div>
           <div className={'draft-banner'+(isPaused?' paused-banner':'')}>
             <div>
-              <div className="draft-banner-sub">{isPaused?'DRAFT PAUSED':marine.rank+' — NOW SELECTING'}</div>
+              <div className="draft-banner-sub">{isPaused?'DRAFT PAUSED':marine.rank+'  --  NOW SELECTING'}</div>
               <div className="draft-banner-name" style={{color:isPaused?'var(--muted)':'var(--accent)'}}>{marine.lastName}</div>
               {isDD&&!isPaused&&<div className="draft-banner-pick">{e.turn===1?'Pick 1 of 2':'Pick 2 of 2'}</div>}
             </div>
             <div className={'draft-banner-timer'+(secs<=30&&!isPaused?' urg':'')} style={{color:isPaused?'var(--muted)':secs<=30?'var(--red)':'var(--accent)'}}>{isPaused?'⏸':secs+'s'}</div>
           </div>
-          {isPaused&&<div className="pause-banner">⏸ DRAFT PAUSED BY NCOIC — STAND BY</div>}
+          {isPaused&&<div className="pause-banner">⏸ DRAFT PAUSED BY NCOIC  --  STAND BY</div>}
 
           {/* Bugler illustration */}
           {!isPaused&&<div className="bugler-wrap">
@@ -1279,7 +1279,7 @@ function App(){
           {/* Live calendar */}
           <div className="card" style={{marginTop:4}}>
             <div className="rowb" style={{marginBottom:6}}>
-              <div className="card-title" style={{fontSize:13}}>LIVE DRAFT — {MONTHS[st.month].toUpperCase()} {st.year}</div>
+              <div className="card-title" style={{fontSize:13}}>LIVE DRAFT  --  {MONTHS[st.month].toUpperCase()} {st.year}</div>
               <div style={{fontSize:9,color:'var(--muted)',fontFamily:'var(--fh)',letterSpacing:1}}>UPDATES EVERY 3s</div>
             </div>
             <div className="row" style={{marginBottom:6,fontSize:9,color:'var(--muted)',gap:8,flexWrap:'wrap'}}>
@@ -1305,7 +1305,7 @@ function App(){
                 cls+=' assigned';
                 labelText='YOU';
               } else if(state==='pref-taken'){
-                // Preferred date that got taken — red-grey with taker name
+                // Preferred date that got taken  --  red-grey with taker name
                 cls+=' na-red';
                 labelText=takerName||'TAKEN';
                 badgeText='#'+myPref.priority;
@@ -1361,16 +1361,16 @@ function App(){
       <div>
         <div className={'draft-banner'+(isPaused?' paused-banner':'')}>
           <div>
-            <div className="draft-banner-sub">{isPaused?'DRAFT PAUSED':(isNcoic?marine.rank+' — NOW SELECTING':'YOUR TURN — NOW SELECTING')}</div>
+            <div className="draft-banner-sub">{isPaused?'DRAFT PAUSED':(isNcoic?marine.rank+'  --  NOW SELECTING':'YOUR TURN  --  NOW SELECTING')}</div>
             <div className="draft-banner-name" style={{color:isPaused?'var(--muted)':'var(--accent)'}}>{marine.lastName}</div>
             {isDD&&<div className="draft-banner-pick">{e.turn===1?'Pick 1 of 2':'Pick 2 of 2'}</div>}
           </div>
           <div className={'draft-banner-timer'+(secs<=30&&!isPaused?' urg':'')} style={{color:isPaused?'var(--muted)':secs<=30?'var(--red)':'var(--accent)'}}>{isPaused?'⏸':secs+'s'}</div>
         </div>
-        {isPaused&&<div className="pause-banner">⏸ DRAFT PAUSED BY NCOIC — STAND BY</div>}
+        {isPaused&&<div className="pause-banner">⏸ DRAFT PAUSED BY NCOIC  --  STAND BY</div>}
         {wkWarnModal&&(<div className="overlay"><div className="modal">
           <div className="modal-title">⚠ WEEKEND DATE</div>
-          <div style={{color:'var(--muted)',fontSize:12,margin:'6px 0 12px',lineHeight:1.6}}>You are about to select <strong style={{color:'var(--accent)'}}>{MONTHS[st.month]} {wkWarnModal.day}</strong> — a weekend duty date.</div>
+          <div style={{color:'var(--muted)',fontSize:12,margin:'6px 0 12px',lineHeight:1.6}}>You are about to select <strong style={{color:'var(--accent)'}}>{MONTHS[st.month]} {wkWarnModal.day}</strong>  --  a weekend duty date.</div>
           {wkWarnModal.isSecondDD
             ?<div className="alert a-w" style={{marginBottom:14}}><strong>ALREADY FULFILLED</strong>Your weekend obligation is met. A second weekend pick will free another slotted duty and update the rotation.</div>
             :<div className="alert a-w" style={{marginBottom:14}}><strong>NOT REQUIRED OF YOU</strong>Another duty is already slotted for a weekend. Selecting this date frees them and takes their weekend obligation.</div>
@@ -1394,7 +1394,7 @@ function App(){
                 return(
                   <div key={i} className={'queue-row '+rowCls}>
                     <div className="queue-idx">{i+1}</div>
-                    <div className="queue-name">{m?dName(m):'—'}{en.turn===2?' ✌':''}
+                    <div className="queue-name">{m?dName(m):' -- '}{en.turn===2?' ✌':''}
                     </div>
                     {isDone&&<span style={{fontSize:9,color:'var(--green)'}}>✓</span>}
                     {isNow&&<span style={{fontSize:9,color:'var(--accent)'}}>● NOW</span>}
@@ -1422,7 +1422,7 @@ function App(){
           </div>
         </div>
         <div className="card">
-          <div className="card-title">SELECT DATE{pickLabel?' — '+pickLabel:''}</div>
+          <div className="card-title">SELECT DATE{pickLabel?'  --  '+pickLabel:''}</div>
           <div className="row" style={{marginBottom:8,fontSize:9,color:'var(--muted)',gap:8}}>
             <span style={{color:'var(--green)'}}>■ Pref</span><span>■ Avail</span><span style={{color:'var(--red)'}}>■ N/A</span><span style={{color:'#1e2028'}}>■ Taken</span>
             {isPaused&&<span style={{color:'var(--muted)'}}>⏸ Draft paused</span>}
@@ -1444,7 +1444,7 @@ function App(){
         </div>
         {pendingDay!==null&&!isPaused&&(
           <div className="confirm-bar">
-            <div style={{flex:1}}><div className="confirm-bar-date">{MONTHS[st.month]} {pendingDay}{pickLabel?' — '+pickLabel:''}</div><div className="confirm-bar-sub">Tap CONFIRM to lock in</div></div>
+            <div style={{flex:1}}><div className="confirm-bar-date">{MONTHS[st.month]} {pendingDay}{pickLabel?'  --  '+pickLabel:''}</div><div className="confirm-bar-sub">Tap CONFIRM to lock in</div></div>
             <button className="btn btn-ghost btn-sm" onClick={()=>setPendingDay(null)}>✕</button>
             <button className="btn btn-gold" onClick={handleConfirmPick}>CONFIRM →</button>
           </div>
@@ -1491,14 +1491,14 @@ function App(){
     function exportRoster(){
       const allAsgn2={...assignments};
       Object.entries(preAssigned).forEach(([d,mid])=>{if(!allAsgn2[Number(d)])allAsgn2[Number(d)]=mid;});
-      let txt=`DUTY ROSTER — ${MONTHS[st.month].toUpperCase()} ${st.year}\n`;
+      let txt=`DUTY ROSTER  --  ${MONTHS[st.month].toUpperCase()} ${st.year}\n`;
       txt+=`The Commandant's Own · USMC D&B Corps · 8th & I\n`;
       txt+=`${'─'.repeat(40)}\n\n`;
       txt+=`SENIORITY ORDER:\n`;
       marines.forEach((m,i)=>{
         const days=Object.entries(allAsgn2).filter(([,id])=>id===m.id).map(([d])=>Number(d)).sort((a,b)=>a-b);
         const flags=[doubleDuty[m.id]?'×2':'',wkAssigneeIds.includes(m.id)?'WK':'',voluntaryWkTakers.includes(m.id)?'VOL':'',freedMarines.includes(m.id)?'FREED':''].filter(Boolean).join(' ');
-        txt+=`${String(i+1).padStart(2,'0')}. ${dName(m).padEnd(22)} ${days.length?days.map(d=>`${MONTHS[st.month].slice(0,3)} ${d}${isWkDate(d)?' ★':''}`).join(', '):'—'}${flags?' ('+flags+')':''}\n`;
+        txt+=`${String(i+1).padStart(2,'0')}. ${dName(m).padEnd(22)} ${days.length?days.map(d=>`${MONTHS[st.month].slice(0,3)} ${d}${isWkDate(d)?' ★':''}`).join(', '):' -- '}${flags?' ('+flags+')':''}\n`;
       });
       txt+=`\n${'─'.repeat(40)}\nPublished via DutyDraft · dutydraft.onrender.com`;
       const w=window.open('','_blank');
@@ -1508,7 +1508,7 @@ function App(){
     return(
       <div>
         {editDModal!==null&&(<div className="overlay"><div className="modal">
-          <div className="modal-title">EDIT — {MONTHS[st.month]} {editDModal}</div>
+          <div className="modal-title">EDIT  --  {MONTHS[st.month]} {editDModal}</div>
           <div className="field"><label className="lbl">Assignment</label><input className="inp" defaultValue={editDRef.current} onChange={e=>{editDRef.current=e.target.value.toUpperCase();}} placeholder="SGT HALLAM"/></div>
           <div className="row mt">
             <button className="btn btn-gold" onClick={async()=>{
@@ -1521,7 +1521,7 @@ function App(){
         </div></div>)}
         <div className="card">
           <div className="rowb" style={{marginBottom:10}}>
-            <div><div className="card-title">DUTY ROSTER — {MONTHS[st.month]} {st.year}</div><div className="card-sub">{st.phase==='postdraft'?'Tap date to edit. ':''}★ = weekend · 🔒 = pre-assigned</div></div>
+            <div><div className="card-title">DUTY ROSTER  --  {MONTHS[st.month]} {st.year}</div><div className="card-sub">{st.phase==='postdraft'?'Tap date to edit. ':''}★ = weekend · 🔒 = pre-assigned</div></div>
             <div className="row" style={{gap:6}}>
               <button className="btn btn-ghost btn-sm no-print" onClick={exportRoster}>↗ EXPORT</button>
               {st.phase==='postdraft'&&<button className="btn btn-gold btn-sm" onClick={publish}>🔒 PUBLISH</button>}
@@ -1555,7 +1555,7 @@ function App(){
                       {MONTHS[st.month].slice(0,3)} {d}{isWkDate(d)?<span className="seniority-wk"> ★</span>:''}
                     </span>
                   ))}
-                  {!assignedDay.length&&<span style={{color:'var(--muted)',fontSize:10}}>—</span>}
+                  {!assignedDay.length&&<span style={{color:'var(--muted)',fontSize:10}}> -- </span>}
                   {doubleDuty[m.id]&&<span className="pill p-org">×2</span>}
                   {wkAssigneeIds.includes(m.id)&&<span className="pill p-gold">WK</span>}
                   {voluntaryWkTakers.includes(m.id)&&<span className="pill p-blue">VOL</span>}
@@ -1576,7 +1576,7 @@ function App(){
     return(
       <div className="card">
         <div className="rowb" style={{marginBottom:10}}>
-          <div className="card-title">NOTIFICATIONS{activeUser!=='ncoic'?` — ${marines.find(m=>m.id===activeUser)?.lastName||''}`:''}</div>
+          <div className="card-title">NOTIFICATIONS{activeUser!=='ncoic'?`  --  ${marines.find(m=>m.id===activeUser)?.lastName||''}`:''}</div>
           <button className="btn btn-ghost btn-sm" onClick={()=>api.markRead(activeUser==='ncoic'?'all':activeUser).then(()=>api.getState().then(setSt))}>MARK READ</button>
         </div>
         <div className="nlist">
