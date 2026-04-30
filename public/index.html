@@ -458,14 +458,14 @@ function App(){
     if(!st)return;
     const map={setup:'admin',calendar:'admin',wkpreview:'admin',shortmonth:'admin',review:'admin','draft-scheduled':'draft',top5:'pdna',nonavail:'pdna',draft:'draft',postdraft:'roster',published:'roster'};
     setTab(map[st.phase]||'admin');
-  },[st?.phase]);
+  },[st && st.phase]);
 
   // Snap localSecs to server value whenever server sends a new value
   useEffect(()=>{
     if(st?.draftLive&&!st?.draftDone){
       setLocalSecs(st.turnSecsRemaining||0);
     }
-  },[st?.turnSecsRemaining]);
+  },[st && st.turnSecsRemaining]);
 
   // Local tick  --  counts down every second, server snaps it every 3s
   useEffect(()=>{
@@ -478,7 +478,7 @@ function App(){
       setLocalSecs(s=>Math.max(0,s-1));
     },1000);
     return()=>{if(localTimerRef.current)clearInterval(localTimerRef.current);};
-  },[st?.draftLive,st?.draftDone,st?.draftPaused,st?.draftIdx]);
+  },[st && st.draftLive,st && st.draftDone,st && st.draftPaused,st && st.draftIdx]);
 
   function patch(updates){
     const next={...(stRef.current||st),...updates};
