@@ -125,11 +125,15 @@ function currentNeedsWk(mid,turn,asgn,state){
   const isDD=!!(state.doubleDuty||{})[mid];
   const isWkSlotted=(state.wkAssigneeIds||[]).includes(mid);
   const isFreed=(state.freedMarines||[]).includes(mid);
-  if(!isWkSlotted||isFreed)return false;
-  const myDays=Object.entries(asgn||{}).filter(([,x])=>x===mid).map(([d])=>Number(d));
-  const hasWk=myDays.some(d=>isWkDate(d,state));
-  if(hasWk)return false;
-  return isDD?turn===1:true;
+  const result=(()=>{
+    if(!isWkSlotted||isFreed)return false;
+    const myDays=Object.entries(asgn||{}).filter(([,x])=>x===mid).map(([d])=>Number(d));
+    const hasWk=myDays.some(d=>isWkDate(d,state));
+    if(hasWk)return false;
+    return isDD?turn===1:true;
+  })();
+  console.log(`[NEEDS-WK] mid=${mid} isWkSlotted=${isWkSlotted} isFreed=${isFreed} isDD=${isDD} turn=${turn} result=${result}`);
+  return result;
 }
 
 function doAutoPick(mid,state,asgn){
@@ -151,6 +155,7 @@ function doAutoPick(mid,state,asgn){
 
 // Handle voluntary weekend pick — free next slotted Marine in queue
 function checkVoluntaryWk(pickerMid,day,asgn,state){
+  console.log(`[VOL-WK] pickerMid=${pickerMid} day=${day} isWk=${isWkDate(day,state)} pickerSlotted=${(state.wkAssigneeIds||[]).includes(pickerMid)}`);
   if(!isWkDate(day,state))return state;
   // If the picker is themselves slotted, this isn't voluntary
   if((state.wkAssigneeIds||[]).includes(pickerMid))return state;
@@ -158,19 +163,23 @@ function checkVoluntaryWk(pickerMid,day,asgn,state){
   if(!newVol.includes(pickerMid))newVol.push(pickerMid);
   const newFreed=[...(state.freedMarines||[])];
   const order=state.draftOrder||[];
-  // Each voluntary weekend pick frees exactly one slotted Marine downstream
-  // who hasn't yet picked a weekend. One volunteer = one freed. Simple.
   const searchFrom=(state.draftIdx||0)+1;
+  console.log(`[VOL-WK] searchFrom=${searchFrom} orderLen=${order.length} wkAssigneeIds=${JSON.stringify(state.wkAssigneeIds)} alreadyFreed=${JSON.stringify(newFreed)}`);
   let freedSomeone=false;
   for(let i=searchFrom;i<order.length;i++){
     const mid=order[i].id;
-    if(!(state.wkAssigneeIds||[]).includes(mid))continue;
-    if(newFreed.includes(mid))continue;
+    const isSlotted=(state.wkAssigneeIds||[]).includes(mid);
+    const alreadyFreed=newFreed.includes(mid);
     const theirDays=Object.entries({...asgn,[day]:pickerMid}).filter(([,x])=>x===mid).map(([d])=>Number(d));
-    if(!theirDays.some(d=>isWkDate(d,state))){
+    const alreadyHasWk=theirDays.some(d=>isWkDate(d,state));
+    console.log(`[VOL-WK]   i=${i} mid=${mid} isSlotted=${isSlotted} alreadyFreed=${alreadyFreed} theirDays=${JSON.stringify(theirDays)} alreadyHasWk=${alreadyHasWk}`);
+    if(!isSlotted)continue;
+    if(alreadyFreed)continue;
+    if(!alreadyHasWk){
       newFreed.push(mid);
       const pickerM=(state.marines||[]).find(m=>m.id===pickerMid);
       const freedM=(state.marines||[]).find(m=>m.id===mid);
+      console.log(`[VOL-WK] FREED: ${freedM?dName(freedM):'?'} freed by ${pickerM?dName(pickerM):'?'}`);
       if(freedM&&pickerM){
         addNotif(
           'WEEKEND OBLIGATION COVERED',
@@ -182,6 +191,7 @@ function checkVoluntaryWk(pickerMid,day,asgn,state){
       break;
     }
   }
+  console.log(`[VOL-WK] freedSomeone=${freedSomeone} newFreed=${JSON.stringify(newFreed)}`);
   return{...state,voluntaryWkTakers:newVol,freedMarines:newFreed};
 }
 
