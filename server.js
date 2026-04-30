@@ -5,6 +5,17 @@ const path = require('path');
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
+
+// Explicit favicon routes — Safari requires correct MIME type
+app.get('/favicon.png',(req,res)=>{
+  res.setHeader('Content-Type','image/png');
+  res.sendFile(path.join(__dirname,'public','favicon.png'));
+});
+app.get('/apple-touch-icon.png',(req,res)=>{
+  res.setHeader('Content-Type','image/png');
+  res.sendFile(path.join(__dirname,'public','apple-touch-icon.png'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
