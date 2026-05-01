@@ -1582,199 +1582,281 @@ function App(){
     size: letter portrait;
     margin: 0;
   }
-  html, body {
+
+  html,
+  body {
     margin: 0;
     padding: 0;
-    background: #ffffff;
-    color: #000000;
+    background: white;
+    color: black;
     font-family: "Times New Roman", Times, serif;
     font-size: 12pt;
-    line-height: 1.12;
+    line-height: 1.18;
   }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .page,
+  .page * {
+    visibility: visible;
+  }
+
   .no-print,
+  .no-print *,
   button,
-  .print-button,
-  .save-pdf-button {
+  nav,
+  header,
+  footer {
+    visibility: hidden !important;
     display: none !important;
   }
+
   .page {
+    position: relative;
     width: 8.5in;
     height: 11in;
-    position: relative;
-    background: white;
     box-sizing: border-box;
-    padding-top: 0.55in;
+    padding-top: 0.62in;
     padding-left: 1.05in;
-    padding-right: 0.85in;
+    padding-right: 0.82in;
+    padding-bottom: 0.55in;
+    background: white;
+    overflow: hidden;
   }
+
   .letterhead {
+    width: 4.75in;
+    margin: 0 auto;
     text-align: center;
     font-size: 11pt;
     line-height: 1.05;
-    width: 4.8in;
-    margin: 0 auto;
   }
+
   .letterhead-main {
     font-family: Arial, Helvetica, sans-serif;
     font-weight: 700;
     font-size: 11pt;
     line-height: 1.05;
   }
+
   .reply-block {
     position: absolute;
-    top: 0.58in;
+    top: 0.62in;
     right: 0.78in;
-    width: 1.25in;
+    width: 1.18in;
     text-align: left;
-    font-size: 9pt;
-    line-height: 1.1;
+    font-size: 8.5pt;
+    line-height: 1.05;
   }
+
   .memo {
-    margin-top: 0.35in;
+    margin-top: 0.38in;
     font-size: 12pt;
+    line-height: 1.18;
   }
+
   .memo-title {
-    margin-bottom: 0.12in;
+    margin-bottom: 0.13in;
   }
+
   .from-to {
-    margin-bottom: 0.14in;
+    margin-bottom: 0.16in;
   }
+
   .label {
     display: inline-block;
-    width: 0.42in;
+    width: 0.43in;
   }
+
   .subject {
-    margin-bottom: 0.14in;
+    margin-bottom: 0.16in;
   }
+
   .paragraph {
-    width: 6.15in;
-    margin-bottom: 0.12in;
+    width: 6.25in;
+    margin-bottom: 0.15in;
   }
+
   .roster-title {
     font-weight: bold;
-    margin-top: 0.04in;
-    margin-bottom: 0;
+    font-size: 12pt;
+    margin-top: 0;
+    margin-bottom: 0.01in;
   }
+
   .roster-rule {
     border-top: 1px solid black;
     width: 6.35in;
-    margin-top: 0;
-    margin-bottom: 0.02in;
+    margin: 0 0 0.03in 0;
   }
+
   table.roster-table {
     width: 6.35in;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     table-layout: fixed;
-    font-size: 11pt;
-    line-height: 1.12;
+    font-size: 10.5pt;
+    line-height: 1.13;
   }
+
   table.roster-table td {
-    padding: 0;
+    padding-top: 0;
+    padding-bottom: 0.018in;
     vertical-align: top;
   }
+
   .date-col {
-    width: 0.34in;
+    width: 0.38in;
     text-align: right;
-    padding-right: 0.07in !important;
     white-space: nowrap;
+    padding-right: 0.10in !important;
   }
+
   .name-col-left {
-    width: 2.55in;
+    width: 2.56in;
     text-align: left;
     white-space: nowrap;
+    padding-right: 0.25in !important;
   }
+
   .date-col-right {
-    width: 0.40in;
+    width: 0.42in;
     text-align: right;
-    padding-right: 0.07in !important;
     white-space: nowrap;
+    padding-right: 0.10in !important;
   }
+
   .name-col-right {
-    width: 3.06in;
+    width: 2.64in;
     text-align: left;
     white-space: nowrap;
   }
+
   .table-header {
     text-decoration: underline;
     font-weight: normal;
+    font-size: 10.5pt;
   }
+
   .month-label td {
-    padding-bottom: 0.02in !important;
+    padding-bottom: 0.025in !important;
   }
+
   .footnote {
-    margin-top: 0.08in;
+    margin-top: 0.09in;
     font-size: 12pt;
   }
+
   .signature {
     text-align: center;
-    margin-top: 0.28in;
+    margin-top: 0.32in;
     font-size: 12pt;
   }
+
   @media screen {
-    body { background: #e0e0e0; }
-    .page { margin: 0.25in auto; box-shadow: 0 2px 12px rgba(0,0,0,.25); }
-    .no-print { display: block !important; }
-    button { display: inline-block !important; }
+    body * {
+      visibility: visible;
+    }
+
+    body {
+      background: #f5f5f5;
+    }
+
+    .page {
+      margin: 0 auto;
+      box-shadow: none;
+    }
+
+    .no-print {
+      display: block !important;
+      visibility: visible !important;
+    }
+
+    .no-print * {
+      visibility: visible !important;
+    }
   }
+
   @media print {
-    html, body { width: 8.5in; height: 11in; background: white; }
-    .page { margin: 0; box-shadow: none; }
-    .no-print, button, .print-button, .save-pdf-button { display: none !important; }
+    html,
+    body {
+      width: 8.5in;
+      height: 11in;
+      overflow: hidden;
+    }
+
+    .page {
+      position: absolute;
+      left: 0;
+      top: 0;
+      margin: 0;
+      box-shadow: none;
+    }
+
+    .no-print,
+    .no-print *,
+    button {
+      display: none !important;
+      visibility: hidden !important;
+    }
   }
 </style>
 </head>
 <body>
-<div class="no-print" style="background:#1a1a1a;padding:10px 20px;display:flex;align-items:center;gap:12px;">
+<div class="no-print" style="background:#1a1a1a;padding:10px 20px;display:flex;align-items:center;gap:12px;position:fixed;top:0;left:0;right:0;z-index:9999;">
   <button onclick="window.print()" style="background:#c8a84b;color:#000;border:none;border-radius:3px;padding:8px 18px;font-size:12px;font-weight:bold;cursor:pointer;letter-spacing:1px;">PRINT / SAVE AS PDF</button>
   <button onclick="window.close()" style="background:#333;color:#ccc;border:1px solid #555;border-radius:3px;padding:8px 18px;font-size:12px;cursor:pointer;">CLOSE</button>
-  <span style="color:#888;font-size:11px;font-family:Arial,sans-serif;">Use browser Print dialog and select "Save as PDF" for a PDF file.</span>
+  <span style="color:#888;font-size:11px;font-family:Arial,sans-serif;">Print settings: Paper=Letter, Scale=100%, Margins=None, Headers/Footers=OFF</span>
 </div>
+<div style="height:50px" class="no-print"></div>
 <div class="page">
-<div class="letterhead">
-<div class="letterhead-main">UNITED STATES MARINE CORPS</div>
-<div>THE UNITED STATES MARINE DRUM &amp; BUGLE CORPS</div>
-<div>MARINE BARRACKS</div>
-<div>8TH &amp; I STREETS SE</div>
-<div>WASHINGTON, DC 20390-5000</div>
-</div>
-<div class="reply-block">
-<div>IN REPLY REFER TO:</div>
-<div>1601.2</div>
-<div>D&amp;B</div>
-<div>${pubDate}</div>
-</div>
-<div class="memo">
-<div class="memo-title">MEMORANDUM</div>
-<div class="from-to">
-<div><span class="label">From:</span> Commanding Officer, Drum &amp; Bugle Corps Company</div>
-<div><span class="label">To:</span> Duty Musics, Drum &amp; Bugle Corps Company</div>
-</div>
-<div class="subject">Subj:&nbsp;&nbsp;DUTY MUSIC ROSTER FOR THE MONTH OF ${monthUpper}, ${st.year}.</div>
-<div class="paragraph">1.&nbsp;&nbsp;The following comprises the Duty Music assignments for the month of ${monthTitle}, ${st.year}.</div>
-<div class="roster-title">DUTY MUSIC</div>
-<div class="roster-rule"></div>
-<table class="roster-table">
-<colgroup>
-<col style="width:0.34in"/>
-<col style="width:2.55in"/>
-<col style="width:0.40in"/>
-<col style="width:3.06in"/>
-</colgroup>
-<tr>
-<td class="date-col table-header">DATE</td>
-<td class="name-col-left table-header">NAME</td>
-<td class="date-col-right table-header">DATE</td>
-<td class="name-col-right table-header">NAME</td>
-</tr>
-<tr class="month-label">
-<td class="date-col">${monthUpper}</td>
-<td></td><td></td><td></td>
-</tr>
-${rows}
-</table>
-<div class="footnote">* denotes weekend day</div>
-<div class="signature">${coName}</div>
-</div>
+  <div class="letterhead">
+    <div class="letterhead-main">UNITED STATES MARINE CORPS</div>
+    <div>THE UNITED STATES MARINE DRUM &amp; BUGLE CORPS</div>
+    <div>MARINE BARRACKS</div>
+    <div>8TH &amp; I STREETS SE</div>
+    <div>WASHINGTON, DC 20390-5000</div>
+  </div>
+  <div class="reply-block">
+    <div>IN REPLY REFER TO:</div>
+    <div>1601.2</div>
+    <div>D&amp;B</div>
+    <div>${pubDate}</div>
+  </div>
+  <div class="memo">
+    <div class="memo-title">MEMORANDUM</div>
+    <div class="from-to">
+      <div><span class="label">From:</span> Commanding Officer, Drum &amp; Bugle Corps Company</div>
+      <div><span class="label">To:</span> Duty Musics, Drum &amp; Bugle Corps Company</div>
+    </div>
+    <div class="subject">Subj:&nbsp;&nbsp;DUTY MUSIC ROSTER FOR THE MONTH OF ${monthUpper}, ${st.year}.</div>
+    <div class="paragraph">1.&nbsp;&nbsp;The following comprises the Duty Music assignments for the month of ${monthTitle}, ${st.year}.</div>
+    <div class="roster-title">DUTY MUSIC</div>
+    <div class="roster-rule"></div>
+    <table class="roster-table">
+      <colgroup>
+        <col style="width:0.38in"/>
+        <col style="width:2.56in"/>
+        <col style="width:0.42in"/>
+        <col style="width:2.64in"/>
+      </colgroup>
+      <tr>
+        <td class="date-col table-header">DATE</td>
+        <td class="name-col-left table-header">NAME</td>
+        <td class="date-col-right table-header">DATE</td>
+        <td class="name-col-right table-header">NAME</td>
+      </tr>
+      <tr class="month-label">
+        <td class="date-col">${monthUpper}</td>
+        <td></td><td></td><td></td>
+      </tr>
+      ${rows}
+    </table>
+    <div class="footnote">* denotes weekend day</div>
+    <div class="signature">${coName}</div>
+  </div>
 </div>
 </body>
 </html>`;
