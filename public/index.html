@@ -437,6 +437,9 @@ function App(){
   const [darkMode,setDarkMode]=useState(()=>{
     try{return localStorage.getItem('dutydraft-theme')!=='light';}catch(e){return true;}
   });
+  const [coName,setCoName]=useState(()=>{
+    try{return localStorage.getItem('dutydraft-coname')||'N. D. MORRIS';}catch(e){return 'N. D. MORRIS';}
+  });
   const prevUnreadRef=useRef(0);
   const localTimerRef=useRef(null);
   // Drag state
@@ -1535,19 +1538,135 @@ function App(){
     function exportRoster(){
       const allAsgn2={...assignments};
       Object.entries(preAssigned).forEach(([d,mid])=>{if(!allAsgn2[Number(d)])allAsgn2[Number(d)]=mid;});
-      let txt=`DUTY ROSTER  --  ${MONTHS[st.month].toUpperCase()} ${st.year}\n`;
-      txt+=`The Commandant's Own · USMC D&B Corps · 8th & I\n`;
-      txt+=`${'─'.repeat(40)}\n\n`;
-      txt+=`SENIORITY ORDER:\n`;
-      marines.forEach((m,i)=>{
-        const days=Object.entries(allAsgn2).filter(([,id])=>id===m.id).map(([d])=>Number(d)).sort((a,b)=>a-b);
-        const flags=[doubleDuty[m.id]?'×2':'',wkAssigneeIds.includes(m.id)?'WK':'',voluntaryWkTakers.includes(m.id)?'VOL':'',freedMarines.includes(m.id)?'FREED':''].filter(Boolean).join(' ');
-        txt+=`${String(i+1).padStart(2,'0')}. ${dName(m).padEnd(22)} ${days.length?days.map(d=>`${MONTHS[st.month].slice(0,3)} ${d}${isWkDate(d)?' ★':''}`).join(', '):' -- '}${flags?' ('+flags+')':''}\n`;
-      });
-      txt+=`\n${'─'.repeat(40)}\nPublished via DutyDraft · dutydraft.onrender.com`;
+
+      const totalDays=getDIM(st.year,st.month);
+      const leftCount=totalDays===31?16:totalDays===30?15:Math.ceil(totalDays/2);
+      const rightCount=totalDays-leftCount;
+      const rowCount=Math.max(leftCount,rightCount);
+
+      // Publication date formatted like "30 Apr 26"
+      const now=new Date();
+      const pubDate=`${now.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()]} ${String(now.getFullYear()).slice(2)}`;
+      const monthUpper=MONTHS[st.month].toUpperCase();
+      const monthTitle=MONTHS[st.month].charAt(0)+MONTHS[st.month].slice(1).toLowerCase();
+
+      // Build roster rows
+      let rows='';
+      for(let i=0;i<rowCount;i++){
+        const ld=i<leftCount?i+1:null;
+        const rd=i<rightCount?leftCount+i+1:null;
+        const ldStr=ld?(isNatWk(st.year,st.month,ld)||isWkDate(ld)?'*':'')+ld:'';
+        const rdStr=rd?(isNatWk(st.year,st.month,rd)||isWkDate(rd)?'*':'')+rd:'';
+        const lmid=ld?allAsgn2[ld]:null;
+        const rmid=rd?allAsgn2[rd]:null;
+        const ln=lmid?dName(marines.find(m=>m.id===lmid)||{rank:'',lastName:'',firstName:''}):'';
+        const rn=rmid?dName(marines.find(m=>m.id===rmid)||{rank:'',lastName:'',firstName:''}):'';
+        // Long name gets smaller font
+        const lStyle=ln.length>30?'font-size:10pt':'';
+        const rStyle=rn.length>30?'font-size:10pt':'';
+        rows+=`<tr>
+  <td class="date-col">${ldStr}</td>
+  <td class="name-col-left"${lStyle?` style="${lStyle}"`:''}>${ln}</td>
+  <td class="date-col-right">${rdStr}</td>
+  <td class="name-col-right"${rStyle?` style="${rStyle}"`:''}>${rn}</td>
+</tr>\n`;
+      }
+
+      const html=`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<title>Duty Music Roster</title>
+<style>
+@page{size:letter portrait;margin:0.65in 0.75in 0.6in 0.75in;}
+body{margin:0;padding:0;background:white;color:black;font-family:"Times New Roman",Times,serif;font-size:12pt;line-height:1.15;}
+.page{width:7in;min-height:9.75in;margin:0 auto;position:relative;background:white;}
+.top-section{position:relative;min-height:1.05in;}
+.letterhead{text-align:center;font-size:10.5pt;line-height:1.12;padding-top:0.08in;}
+.letterhead-main{font-family:Arial,Helvetica,sans-serif;font-weight:700;font-size:12pt;letter-spacing:0.2px;}
+.reply-block{position:absolute;top:0;right:0;width:1.35in;text-align:left;font-size:10.5pt;line-height:1.12;}
+.memo{margin-top:0.12in;font-size:12pt;}
+.memo-title{margin-bottom:0.12in;}
+.from-to{margin-bottom:0.16in;}
+.label{display:inline-block;width:0.45in;}
+.subject{margin-bottom:0.16in;}
+.paragraph{margin-bottom:0.16in;}
+.roster-title{font-weight:bold;text-align:left;margin-top:0.04in;margin-bottom:0.02in;}
+.roster-rule{border-top:1px solid black;width:100%;margin-bottom:0.04in;}
+table.roster-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12pt;line-height:1.16;}
+.date-col{width:0.42in;text-align:right;padding-right:0.08in;white-space:nowrap;vertical-align:top;}
+.name-col-left{width:2.65in;text-align:left;white-space:nowrap;vertical-align:top;}
+.date-col-right{width:0.47in;text-align:right;padding-right:0.08in;white-space:nowrap;vertical-align:top;}
+.name-col-right{width:2.95in;text-align:left;white-space:nowrap;vertical-align:top;}
+.table-header{text-decoration:underline;font-weight:normal;}
+.month-label td{padding-top:0.02in;padding-bottom:0.02in;}
+table.roster-table td{padding-top:0;padding-bottom:0.015in;}
+.footnote{margin-top:0.08in;font-size:12pt;}
+.signature{text-align:center;margin-top:0.28in;font-size:12pt;}
+.print-btn{position:fixed;bottom:24px;right:24px;background:#c8a84b;color:#000;border:none;border-radius:4px;padding:10px 20px;font-size:13px;font-weight:bold;cursor:pointer;letter-spacing:1px;box-shadow:0 2px 8px rgba(0,0,0,.3);}
+.print-btn:hover{background:#e8c870;}
+@media print{.no-print{display:none!important;}.page{margin:0;width:auto;}}
+</style>
+</head>
+<body>
+<div class="page">
+<div class="top-section">
+<div class="letterhead">
+<div class="letterhead-main">UNITED STATES MARINE CORPS</div>
+<div>THE UNITED STATES MARINE DRUM &amp; BUGLE CORPS</div>
+<div>MARINE BARRACKS</div>
+<div>8TH &amp; I STREETS SE</div>
+<div>WASHINGTON, DC 20390-5000</div>
+</div>
+<div class="reply-block">
+<div>IN REPLY REFER TO:</div>
+<div>1601.2</div>
+<div>D&amp;B</div>
+<div>${pubDate}</div>
+</div>
+</div>
+<div class="memo">
+<div class="memo-title">MEMORANDUM</div>
+<div class="from-to">
+<div><span class="label">From:</span> Commanding Officer, Drum &amp; Bugle Corps Company</div>
+<div><span class="label">To:</span> Duty Musics, Drum &amp; Bugle Corps Company</div>
+</div>
+<div class="subject">Subj:&nbsp; DUTY MUSIC ROSTER FOR THE MONTH OF ${monthUpper}, ${st.year}.</div>
+<div class="paragraph">1.&nbsp; The following comprises the Duty Music assignments for the month of ${monthTitle}, ${st.year}.</div>
+<div class="roster-title">DUTY MUSIC</div>
+<div class="roster-rule"></div>
+<table class="roster-table">
+<colgroup>
+<col class="date-col"/>
+<col class="name-col-left"/>
+<col class="date-col-right"/>
+<col class="name-col-right"/>
+</colgroup>
+<tr>
+<td class="date-col table-header">DATE</td>
+<td class="name-col-left table-header">NAME</td>
+<td class="date-col-right table-header">DATE</td>
+<td class="name-col-right table-header">NAME</td>
+</tr>
+<tr class="month-label">
+<td class="date-col">${monthUpper}</td>
+<td></td><td></td><td></td>
+</tr>
+${rows}
+</table>
+<div class="footnote">* denotes weekend day</div>
+<div class="signature">${coName}</div>
+</div>
+</div>
+<button class="print-btn no-print" onclick="window.print()">🖨 PRINT / SAVE AS PDF</button>
+</body>
+</html>`;
+
       const w=window.open('','_blank');
-      w.document.write(`<pre style="font-family:monospace;font-size:13px;padding:20px;background:#07090d;color:#dde4f0;min-height:100vh;">${txt}</pre>`);
-      w.document.title=`Duty Roster ${MONTHS[st.month]} ${st.year}`;
+      if(!w){alert('Pop-up blocked. Allow pop-ups for this site and try again.');return;}
+      w.document.write(html);
+      w.document.close();
+      w.document.title=`Duty Music Roster ${monthTitle} ${st.year}`;
     }
     return(
       <div>
@@ -1567,7 +1686,7 @@ function App(){
           <div className="rowb" style={{marginBottom:10}}>
             <div><div className="card-title">DUTY ROSTER  --  {MONTHS[st.month]} {st.year}</div><div className="card-sub">{st.phase==='postdraft'?'Tap date to edit. ':''}★ = weekend · 🔒 = pre-assigned</div></div>
             <div className="row" style={{gap:6}}>
-              <button className="btn btn-ghost btn-sm no-print" onClick={exportRoster}>↗ EXPORT</button>
+              <button className="btn btn-ghost btn-sm no-print" onClick={exportRoster}>📄 PREVIEW ROSTER</button>
               {st.phase==='postdraft'&&<button className="btn btn-gold btn-sm" onClick={publish}>🔒 PUBLISH</button>}
             </div>
           </div>
@@ -1641,6 +1760,20 @@ function App(){
     async function reset(){await api.reset().then(()=>api.getState().then(s=>{setSt(s);setEditRoster([...s.marines]);setActiveUser('ncoic');setPendingDay(null);}));}
     return(
       <div>
+        <div className="card">
+          <div className="card-title">COMMANDING OFFICER</div>
+          <div className="card-sub">Name appears on the published duty roster. Saved automatically.</div>
+          <div className="field">
+            <label className="lbl">SIGNATURE NAME</label>
+            <input className="inp" value={coName} placeholder="N. D. MORRIS"
+              onChange={e=>{
+                const v=e.target.value.toUpperCase();
+                setCoName(v);
+                try{localStorage.setItem('dutydraft-coname',v);}catch(err){}
+              }}/>
+          </div>
+          <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>Preview: <span style={{color:'var(--accent)',fontFamily:'var(--fm)'}}>{coName||'N. D. MORRIS'}</span></div>
+        </div>
         <div className="card">
           <div className="card-title">APPEARANCE</div>
           <div className="theme-toggle-row">
