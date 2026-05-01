@@ -34,7 +34,7 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size
 .demo-sel{background:var(--s3);border:1px solid var(--orange);border-radius:3px;color:var(--orange);font-family:var(--fh);font-size:9px;padding:3px 6px;outline:none;cursor:pointer;max-width:130px;}
 .tabs{display:flex;background:var(--s1);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
 .tabs::-webkit-scrollbar{display:none;}
-.tab{font-family:var(--fh);font-size:10px;letter-spacing:1px;padding:9px 11px;border:none;background:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;}
+.tab{font-family:var(--fh);font-size:13px;letter-spacing:1px;padding:10px 13px;border:none;background:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;}
 .tab.on{color:var(--accent);border-bottom-color:var(--accent);}
 .main{flex:1;padding:12px;overflow-y:auto;}
 .card{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:10px;}
@@ -281,7 +281,7 @@ const DAYS_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const PHASE_ORDER=['setup','calendar','wkpreview','top5','nonavail','review','draft-scheduled','draft','postdraft','published'];
 const NA_REASONS=['Approved Leave','On the Roster for a Gig','TAD','Parental Leave','Approved Out of Bounds Liberty','Other  --  Non-Sensitive Conflict','Other  --  Please Speak with SNCOIC in Person'];
 const PL={setup:'ROSTER SETUP',calendar:'CAL CONFIG',wkpreview:'WK PREVIEW',shortmonth:'SHORT MONTH',top5:'PD / NA',nonavail:'PD / NA',review:'NCOIC REVIEW','draft-scheduled':'DRAFT SCHED',draft:'LIVE DRAFT',postdraft:'POST-DRAFT',published:'PUBLISHED'};
-const TABS=[{id:'admin',label:'NCOIC'},{id:'pdna',label:'PD / NA'},{id:'draft',label:'DRAFT'},{id:'roster',label:'ROSTER'},{id:'notifs',label:'NOTIFS'},{id:'settings',label:'⚙'}];
+const TABS=[{id:'admin',label:'NCOIC'},{id:'pdna',label:'PD / NA'},{id:'draft',label:'DRAFT'},{id:'roster',label:'ROSTER'},{id:'notifs',label:'🔔'},{id:'settings',label:'⚙️'}];
 
 const gradeOf=r=>RANK_TO_GRADE[r]||'E1';
 const groupOf=r=>BURDEN_GROUP[gradeOf(r)]||'junior';
@@ -1281,13 +1281,17 @@ function App(){
           </div>
           {isPaused&&<div className="pause-banner">⏸ DRAFT PAUSED BY NCOIC  --  STAND BY</div>}
 
-          {/* Bugler illustration */}
-          {!isPaused&&<div className="bugler-wrap">
-            <img className="bugler-img" src="/bugler.jpg" alt="Marine bugler"/>
-          </div>}
+          {/* Bugler — large transparent background, behind all content */}
+          <div style={{position:'relative'}}>
+            {!isPaused&&<img src="/bugler.jpg" alt="" aria-hidden="true" style={{
+              position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',
+              width:'85%',maxWidth:420,opacity:0.07,
+              pointerEvents:'none',userSelect:'none',zIndex:0,
+              filter:'grayscale(30%)'
+            }}/>}
 
           {/* Status row */}
-          <div className="row" style={{padding:'8px 0 4px',gap:6,flexWrap:'wrap'}}>
+          <div className="row" style={{position:'relative',zIndex:1,padding:'8px 0 4px',gap:6,flexWrap:'wrap'}}>
             {dutiesAhead!==null&&(
               <div className="ahead-badge" style={{flex:'none',padding:'6px 14px'}}>
                 <div className="ahead-num" style={{fontSize:24}}>{dutiesAhead}</div>
@@ -1310,7 +1314,7 @@ function App(){
 
           {/* Pref status chips */}
           {viewerPrefs.length>0&&(
-            <div className="row" style={{gap:4,margin:'4px 0 6px',flexWrap:'wrap'}}>
+            <div className="row" style={{position:'relative',zIndex:1,gap:4,margin:'4px 0 6px',flexWrap:'wrap'}}>
               {viewerPrefs.map(p=>{
                 const taken=assignments[p.day]&&assignments[p.day]!==activeUser;
                 const taker=taken?marines.find(m=>m.id===assignments[p.day]):null;
@@ -1324,7 +1328,7 @@ function App(){
           )}
 
           {/* Live calendar */}
-          <div className="card" style={{marginTop:4}}>
+          <div className="card" style={{marginTop:4,position:'relative',zIndex:1}}>
             <div className="rowb" style={{marginBottom:6}}>
               <div className="card-title" style={{fontSize:13}}>LIVE DRAFT  --  {MONTHS[st.month].toUpperCase()} {st.year}</div>
               <div style={{fontSize:9,color:'var(--muted)',fontFamily:'var(--fh)',letterSpacing:1}}>UPDATES EVERY 3s</div>
@@ -1383,6 +1387,7 @@ function App(){
               {Object.keys(assignments).length} of {(getAllDates()||[]).length} dates assigned
             </div>
           </div>
+          </div>{/* end bugler wrapper */}
         </div>
       );
     }
@@ -1557,18 +1562,22 @@ function App(){
         const rd=i<rightCount?leftCount+i+1:null;
         const ldStr=ld?(isNatWk(st.year,st.month,ld)||isWkDate(ld)?'*':'')+ld:'';
         const rdStr=rd?(isNatWk(st.year,st.month,rd)||isWkDate(rd)?'*':'')+rd:'';
+        const ldKey=ld?dk(st.year,st.month,ld):null;
+        const rdKey=rd?dk(st.year,st.month,rd):null;
+        const ldBlkout=ldKey&&(blackouts||[]).includes(ldKey);
+        const rdBlkout=rdKey&&(blackouts||[]).includes(rdKey);
         const lmid=ld?allAsgn2[ld]:null;
         const rmid=rd?allAsgn2[rd]:null;
-        const ln=lmid?dName(marines.find(m=>m.id===lmid)||{rank:'',lastName:'',firstName:''}):'';
-        const rn=rmid?dName(marines.find(m=>m.id===rmid)||{rank:'',lastName:'',firstName:''}):'';
+        const ln=ldBlkout?'NCOIC':lmid?dName(marines.find(m=>m.id===lmid)||{rank:'',lastName:'',firstName:''}):'';
+        const rn=rdBlkout?'NCOIC':rmid?dName(marines.find(m=>m.id===rmid)||{rank:'',lastName:'',firstName:''}):'';
         // Long name gets smaller font
         const lStyle=ln.length>30?'font-size:10pt':'';
         const rStyle=rn.length>30?'font-size:10pt':'';
         rows+=`<tr>
-  <td class="date-col">${ldStr}</td>
-  <td class="name-col-left"${lStyle?` style="${lStyle}"`:''}>${ln}</td>
-  <td class="date-col-right">${rdStr}</td>
-  <td class="name-col-right"${rStyle?` style="${rStyle}"`:''}>${rn}</td>
+  <td class="dc">${ldStr}</td>
+  <td class="nc"${lStyle?` style="${lStyle}"`:''}>${ln}</td>
+  <td class="dc2">${rdStr}</td>
+  <td class="nc2"${rStyle?` style="${rStyle}"`:''}>${rn}</td>
 </tr>\n`;
       }
 
@@ -1578,285 +1587,206 @@ function App(){
 <meta charset="UTF-8"/>
 <title>Duty Music Roster</title>
 <style>
-  @page {
-    size: letter portrait;
-    margin: 0;
-  }
-
-  html,
-  body {
-    margin: 0;
-    padding: 0;
-    background: white;
-    color: black;
-    font-family: "Times New Roman", Times, serif;
-    font-size: 12pt;
-    line-height: 1.18;
-  }
-
-  body * {
-    visibility: hidden;
-  }
-
-  .page,
-  .page * {
-    visibility: visible;
-  }
-
-  .no-print,
-  .no-print *,
-  button,
-  nav,
-  header,
-  footer {
-    visibility: hidden !important;
-    display: none !important;
-  }
-
-  .page {
-    position: relative;
-    width: 8.5in;
-    height: 11in;
-    box-sizing: border-box;
-    padding-top: 0.62in;
-    padding-left: 1.05in;
-    padding-right: 0.82in;
-    padding-bottom: 0.55in;
-    background: white;
-    overflow: hidden;
-  }
-
-  .letterhead {
-    width: 4.75in;
-    margin: 0 auto;
-    text-align: center;
-    font-size: 11pt;
-    line-height: 1.05;
-  }
-
-  .letterhead-main {
-    font-family: Arial, Helvetica, sans-serif;
-    font-weight: 700;
-    font-size: 11pt;
-    line-height: 1.05;
-  }
-
-  .reply-block {
-    position: absolute;
-    top: 0.62in;
-    right: 0.78in;
-    width: 1.18in;
-    text-align: left;
-    font-size: 8.5pt;
-    line-height: 1.05;
-  }
-
-  .memo {
-    margin-top: 0.38in;
-    font-size: 12pt;
-    line-height: 1.18;
-  }
-
-  .memo-title {
-    margin-bottom: 0.13in;
-  }
-
-  .from-to {
-    margin-bottom: 0.16in;
-  }
-
-  .label {
-    display: inline-block;
-    width: 0.43in;
-  }
-
-  .subject {
-    margin-bottom: 0.16in;
-  }
-
-  .paragraph {
-    width: 6.25in;
-    margin-bottom: 0.15in;
-  }
-
-  .roster-title {
-    font-weight: bold;
-    font-size: 12pt;
-    margin-top: 0;
-    margin-bottom: 0.01in;
-  }
-
-  .roster-rule {
-    border-top: 1px solid black;
-    width: 6.35in;
-    margin: 0 0 0.03in 0;
-  }
-
-  table.roster-table {
-    width: 6.35in;
-    border-collapse: separate;
-    border-spacing: 0;
-    table-layout: fixed;
-    font-size: 10.5pt;
-    line-height: 1.13;
-  }
-
-  table.roster-table td {
-    padding-top: 0;
-    padding-bottom: 0.018in;
-    vertical-align: top;
-  }
-
-  .date-col {
-    width: 0.38in;
-    text-align: right;
-    white-space: nowrap;
-    padding-right: 0.10in !important;
-  }
-
-  .name-col-left {
-    width: 2.56in;
-    text-align: left;
-    white-space: nowrap;
-    padding-right: 0.25in !important;
-  }
-
-  .date-col-right {
-    width: 0.42in;
-    text-align: right;
-    white-space: nowrap;
-    padding-right: 0.10in !important;
-  }
-
-  .name-col-right {
-    width: 2.64in;
-    text-align: left;
-    white-space: nowrap;
-  }
-
-  .table-header {
-    text-decoration: underline;
-    font-weight: normal;
-    font-size: 10.5pt;
-  }
-
-  .month-label td {
-    padding-bottom: 0.025in !important;
-  }
-
-  .footnote {
-    margin-top: 0.09in;
-    font-size: 12pt;
-  }
-
-  .signature {
-    text-align: center;
-    margin-top: 0.32in;
-    font-size: 12pt;
-  }
-
-  @media screen {
-    body * {
-      visibility: visible;
-    }
-
-    body {
-      background: #f5f5f5;
-    }
-
-    .page {
-      margin: 0 auto;
-      box-shadow: none;
-    }
-
-    .no-print {
-      display: block !important;
-      visibility: visible !important;
-    }
-
-    .no-print * {
-      visibility: visible !important;
-    }
-  }
-
-  @media print {
-    html,
-    body {
-      width: 8.5in;
-      height: 11in;
-      overflow: hidden;
-    }
-
-    .page {
-      position: absolute;
-      left: 0;
-      top: 0;
-      margin: 0;
-      box-shadow: none;
-    }
-
-    .no-print,
-    .no-print *,
-    button {
-      display: none !important;
-      visibility: hidden !important;
-    }
-  }
+@page { size: letter portrait; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { margin: 0; padding: 0; background: white; }
+.no-print { background: #1a1a1a; padding: 8px 16px; display: flex; align-items: center; gap: 10px; }
+.no-print button { border: none; border-radius: 3px; padding: 6px 14px; font-size: 11px; font-weight: bold; cursor: pointer; letter-spacing: 0.5px; }
+.btn-print { background: #c8a84b; color: #000; }
+.btn-close  { background: #333; color: #ccc; border: 1px solid #555 !important; }
+.no-print span { color: #888; font-size: 10px; font-family: Arial, sans-serif; }
+.page {
+  position: relative;
+  width: 8.5in;
+  height: 11in;
+  background: white;
+  overflow: hidden;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 10.5pt;
+  line-height: 1.05;
+}
+.letterhead {
+  position: absolute;
+  top: 0.56in;
+  left: 1.85in;
+  width: 4.75in;
+  text-align: center;
+  font-size: 9.5pt;
+  line-height: 1.02;
+  font-family: "Times New Roman", Times, serif;
+}
+.lh-main {
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+  font-size: 9.5pt;
+  line-height: 1.02;
+}
+.reply-block {
+  position: absolute;
+  top: 0.53in;
+  left: 6.52in;
+  width: 1.25in;
+  text-align: left;
+  font-size: 8pt;
+  line-height: 1.02;
+  font-family: "Times New Roman", Times, serif;
+}
+.memo-title {
+  position: absolute;
+  top: 1.70in;
+  left: 0.95in;
+  font-size: 10.5pt;
+  font-family: "Times New Roman", Times, serif;
+}
+.from-to {
+  position: absolute;
+  top: 2.03in;
+  left: 0.95in;
+  font-size: 10.5pt;
+  line-height: 1.08;
+  font-family: "Times New Roman", Times, serif;
+}
+.from-to .lbl { display: inline-block; width: 0.40in; }
+.subject {
+  position: absolute;
+  top: 2.43in;
+  left: 0.95in;
+  font-size: 10.5pt;
+  font-family: "Times New Roman", Times, serif;
+}
+.paragraph {
+  position: absolute;
+  top: 2.78in;
+  left: 0.95in;
+  width: 6.4in;
+  font-size: 10.5pt;
+  line-height: 1.08;
+  font-family: "Times New Roman", Times, serif;
+}
+.roster-title {
+  position: absolute;
+  top: 3.18in;
+  left: 0.95in;
+  font-size: 10.5pt;
+  font-weight: bold;
+  font-family: "Times New Roman", Times, serif;
+}
+.roster-rule {
+  position: absolute;
+  top: 3.34in;
+  left: 0.95in;
+  width: 6.35in;
+  border-top: 1px solid black;
+}
+.roster-table {
+  position: absolute;
+  top: 3.38in;
+  left: 0.95in;
+  width: 6.35in;
+  font-size: 9.2pt;
+  line-height: 1.08;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-family: "Times New Roman", Times, serif;
+}
+.roster-table td { padding: 0; vertical-align: top; border: none; }
+.dc  { width: 0.36in; text-align: right;  padding-right: 0.09in; white-space: nowrap; }
+.nc  { width: 2.72in; text-align: left;   white-space: nowrap; padding-right: 0.18in; }
+.dc2 { width: 0.42in; text-align: right;  padding-right: 0.09in; white-space: nowrap; }
+.nc2 { width: 2.85in; text-align: left;   white-space: nowrap; }
+.th  { text-decoration: underline; font-weight: normal; }
+.ml  { /* month label row — no extra spacing */ }
+.footnote {
+  position: absolute;
+  top: 6.18in;
+  left: 0.95in;
+  font-size: 10.5pt;
+  font-family: "Times New Roman", Times, serif;
+}
+.signature {
+  position: absolute;
+  top: 6.55in;
+  left: 0;
+  width: 8.5in;
+  text-align: center;
+  font-size: 10.5pt;
+  font-family: "Times New Roman", Times, serif;
+}
+@media print {
+  .no-print { display: none !important; }
+  html, body { width: 8.5in; height: 11in; overflow: hidden; background: white; }
+  .page { position: absolute; top: 0; left: 0; margin: 0; }
+}
+@media screen {
+  body { background: #ccc; }
+  .page { margin: 0.3in auto; box-shadow: 0 2px 16px rgba(0,0,0,.4); }
+}
 </style>
 </head>
 <body>
-<div class="no-print" style="background:#1a1a1a;padding:10px 20px;display:flex;align-items:center;gap:12px;position:fixed;top:0;left:0;right:0;z-index:9999;">
-  <button onclick="window.print()" style="background:#c8a84b;color:#000;border:none;border-radius:3px;padding:8px 18px;font-size:12px;font-weight:bold;cursor:pointer;letter-spacing:1px;">PRINT / SAVE AS PDF</button>
-  <button onclick="window.close()" style="background:#333;color:#ccc;border:1px solid #555;border-radius:3px;padding:8px 18px;font-size:12px;cursor:pointer;">CLOSE</button>
-  <span style="color:#888;font-size:11px;font-family:Arial,sans-serif;">Print settings: Paper=Letter, Scale=100%, Margins=None, Headers/Footers=OFF</span>
+<div class="no-print">
+  <button class="btn-print" onclick="window.print()">PRINT / SAVE AS PDF</button>
+  <button class="btn-close" onclick="window.close()">CLOSE</button>
+  <span>Paper: Letter &nbsp;|&nbsp; Scale: 100% &nbsp;|&nbsp; Margins: None &nbsp;|&nbsp; Headers &amp; Footers: OFF</span>
 </div>
-<div style="height:50px" class="no-print"></div>
 <div class="page">
+
   <div class="letterhead">
-    <div class="letterhead-main">UNITED STATES MARINE CORPS</div>
+    <div class="lh-main">UNITED STATES MARINE CORPS</div>
     <div>THE UNITED STATES MARINE DRUM &amp; BUGLE CORPS</div>
     <div>MARINE BARRACKS</div>
     <div>8TH &amp; I STREETS SE</div>
     <div>WASHINGTON, DC 20390-5000</div>
   </div>
+
   <div class="reply-block">
     <div>IN REPLY REFER TO:</div>
     <div>1601.2</div>
     <div>D&amp;B</div>
     <div>${pubDate}</div>
   </div>
-  <div class="memo">
-    <div class="memo-title">MEMORANDUM</div>
-    <div class="from-to">
-      <div><span class="label">From:</span> Commanding Officer, Drum &amp; Bugle Corps Company</div>
-      <div><span class="label">To:</span> Duty Musics, Drum &amp; Bugle Corps Company</div>
-    </div>
-    <div class="subject">Subj:&nbsp;&nbsp;DUTY MUSIC ROSTER FOR THE MONTH OF ${monthUpper}, ${st.year}.</div>
-    <div class="paragraph">1.&nbsp;&nbsp;The following comprises the Duty Music assignments for the month of ${monthTitle}, ${st.year}.</div>
-    <div class="roster-title">DUTY MUSIC</div>
-    <div class="roster-rule"></div>
-    <table class="roster-table">
-      <colgroup>
-        <col style="width:0.38in"/>
-        <col style="width:2.56in"/>
-        <col style="width:0.42in"/>
-        <col style="width:2.64in"/>
-      </colgroup>
-      <tr>
-        <td class="date-col table-header">DATE</td>
-        <td class="name-col-left table-header">NAME</td>
-        <td class="date-col-right table-header">DATE</td>
-        <td class="name-col-right table-header">NAME</td>
-      </tr>
-      <tr class="month-label">
-        <td class="date-col">${monthUpper}</td>
-        <td></td><td></td><td></td>
-      </tr>
-      ${rows}
-    </table>
-    <div class="footnote">* denotes weekend day</div>
-    <div class="signature">${coName}</div>
+
+  <div class="memo-title">MEMORANDUM</div>
+
+  <div class="from-to">
+    <div><span class="lbl">From:</span> Commanding Officer, Drum &amp; Bugle Corps Company</div>
+    <div><span class="lbl">To:</span> Duty Musics, Drum &amp; Bugle Corps Company</div>
   </div>
+
+  <div class="subject">Subj:&nbsp;&nbsp;DUTY MUSIC ROSTER FOR THE MONTH OF ${monthUpper}, ${st.year}.</div>
+
+  <div class="paragraph">1.&nbsp;&nbsp;The following comprises the Duty Music assignments for the month of ${monthTitle}, ${st.year}.</div>
+
+  <div class="roster-title">DUTY MUSIC</div>
+
+  <div class="roster-rule"></div>
+
+  <table class="roster-table">
+    <colgroup>
+      <col style="width:0.36in"/>
+      <col style="width:2.72in"/>
+      <col style="width:0.42in"/>
+      <col style="width:2.85in"/>
+    </colgroup>
+    <tr>
+      <td class="dc th">DATE</td>
+      <td class="nc th">NAME</td>
+      <td class="dc2 th">DATE</td>
+      <td class="nc2 th">NAME</td>
+    </tr>
+    <tr class="ml">
+      <td class="dc">${monthUpper}</td>
+      <td class="nc"></td>
+      <td class="dc2"></td>
+      <td class="nc2"></td>
+    </tr>
+    ${rows}
+  </table>
+
+  <div class="footnote">* denotes weekend day</div>
+
+  <div class="signature">${coName}</div>
+
 </div>
 </body>
 </html>`;
@@ -1960,20 +1890,6 @@ function App(){
     return(
       <div>
         <div className="card">
-          <div className="card-title">COMMANDING OFFICER</div>
-          <div className="card-sub">Name appears on the published duty roster. Saved automatically.</div>
-          <div className="field">
-            <label className="lbl">SIGNATURE NAME</label>
-            <input className="inp" value={coName} placeholder="N. D. MORRIS"
-              onChange={e=>{
-                const v=e.target.value.toUpperCase();
-                setCoName(v);
-                try{localStorage.setItem('dutydraft-coname',v);}catch(err){}
-              }}/>
-          </div>
-          <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>Preview: <span style={{color:'var(--accent)',fontFamily:'var(--fm)'}}>{coName||'N. D. MORRIS'}</span></div>
-        </div>
-        <div className="card">
           <div className="card-title">APPEARANCE</div>
           <div className="theme-toggle-row">
             <div>
@@ -2004,6 +1920,20 @@ function App(){
               {p===st.phase&&<span className="pill p-gold">NOW</span>}
             </div>
           ))}
+        </div>
+        <div className="card">
+          <div className="card-title">COMMANDING OFFICER</div>
+          <div className="card-sub">Name appears on the published duty roster. Saved automatically.</div>
+          <div className="field">
+            <label className="lbl">SIGNATURE NAME</label>
+            <input className="inp" value={coName} placeholder="N. D. MORRIS"
+              onChange={e=>{
+                const v=e.target.value.toUpperCase();
+                setCoName(v);
+                try{localStorage.setItem('dutydraft-coname',v);}catch(err){}
+              }}/>
+          </div>
+          <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>Preview: <span style={{color:'var(--accent)',fontFamily:'var(--fm)'}}>{coName||'N. D. MORRIS'}</span></div>
         </div>
       </div>
     );
@@ -2081,7 +2011,7 @@ function App(){
         </div>
       )}
       <div className="hdr">
-        <div><div className="logo">DUTYDRAFT</div><div className="logo-sub">{MONTHS[st.month]} {st.year} · D&B · 8TH & I</div></div>
+        <div><div className="logo">DUTYDRAFT</div><div className="logo-sub">D&B · MBW</div></div>
         <div className="hdr-right">
           <span className="demo-label">👤</span>
           <select className="demo-sel" value={activeUser} onChange={e=>setActiveUser(e.target.value)}>
@@ -2108,7 +2038,11 @@ function App(){
       </div>
       <div className="tabs">
         {TABS.map(t=>(<button key={t.id} className={'tab'+(tab===t.id?' on':'')} onClick={()=>setTab(t.id)}>
-          {t.id==='notifs'?<span className={bellPulse?'bell-pulse':''}>🔔{unreadCount>0?` (${unreadCount})`:''}</span>:t.label}
+          {t.id==='notifs'
+            ?<span className={bellPulse?'bell-pulse':''} style={{fontSize:16}}>🔔{unreadCount>0?<span style={{fontSize:12}}> ({unreadCount})</span>:''}</span>
+            :t.id==='settings'
+            ?<span style={{fontSize:18}}>⚙️</span>
+            :t.label}
         </button>))}
       </div>
       <div className="main" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
