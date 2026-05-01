@@ -1578,39 +1578,158 @@ function App(){
 <meta charset="UTF-8"/>
 <title>Duty Music Roster</title>
 <style>
-@page{size:letter portrait;margin:0.65in 0.75in 0.6in 0.75in;}
-body{margin:0;padding:0;background:white;color:black;font-family:"Times New Roman",Times,serif;font-size:12pt;line-height:1.15;}
-.page{width:7in;min-height:9.75in;margin:0 auto;position:relative;background:white;}
-.top-section{position:relative;min-height:1.05in;}
-.letterhead{text-align:center;font-size:10.5pt;line-height:1.12;padding-top:0.08in;}
-.letterhead-main{font-family:Arial,Helvetica,sans-serif;font-weight:700;font-size:12pt;letter-spacing:0.2px;}
-.reply-block{position:absolute;top:0;right:0;width:1.35in;text-align:left;font-size:10.5pt;line-height:1.12;}
-.memo{margin-top:0.12in;font-size:12pt;}
-.memo-title{margin-bottom:0.12in;}
-.from-to{margin-bottom:0.16in;}
-.label{display:inline-block;width:0.45in;}
-.subject{margin-bottom:0.16in;}
-.paragraph{margin-bottom:0.16in;}
-.roster-title{font-weight:bold;text-align:left;margin-top:0.04in;margin-bottom:0.02in;}
-.roster-rule{border-top:1px solid black;width:100%;margin-bottom:0.04in;}
-table.roster-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12pt;line-height:1.16;}
-.date-col{width:0.42in;text-align:right;padding-right:0.08in;white-space:nowrap;vertical-align:top;}
-.name-col-left{width:2.65in;text-align:left;white-space:nowrap;vertical-align:top;}
-.date-col-right{width:0.47in;text-align:right;padding-right:0.08in;white-space:nowrap;vertical-align:top;}
-.name-col-right{width:2.95in;text-align:left;white-space:nowrap;vertical-align:top;}
-.table-header{text-decoration:underline;font-weight:normal;}
-.month-label td{padding-top:0.02in;padding-bottom:0.02in;}
-table.roster-table td{padding-top:0;padding-bottom:0.015in;}
-.footnote{margin-top:0.08in;font-size:12pt;}
-.signature{text-align:center;margin-top:0.28in;font-size:12pt;}
-.print-btn{position:fixed;bottom:24px;right:24px;background:#c8a84b;color:#000;border:none;border-radius:4px;padding:10px 20px;font-size:13px;font-weight:bold;cursor:pointer;letter-spacing:1px;box-shadow:0 2px 8px rgba(0,0,0,.3);}
-.print-btn:hover{background:#e8c870;}
-@media print{.no-print{display:none!important;}.page{margin:0;width:auto;}}
+  @page {
+    size: letter portrait;
+    margin: 0;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    color: #000000;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt;
+    line-height: 1.12;
+  }
+  .no-print,
+  button,
+  .print-button,
+  .save-pdf-button {
+    display: none !important;
+  }
+  .page {
+    width: 8.5in;
+    height: 11in;
+    position: relative;
+    background: white;
+    box-sizing: border-box;
+    padding-top: 0.55in;
+    padding-left: 1.05in;
+    padding-right: 0.85in;
+  }
+  .letterhead {
+    text-align: center;
+    font-size: 11pt;
+    line-height: 1.05;
+    width: 4.8in;
+    margin: 0 auto;
+  }
+  .letterhead-main {
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: 700;
+    font-size: 11pt;
+    line-height: 1.05;
+  }
+  .reply-block {
+    position: absolute;
+    top: 0.58in;
+    right: 0.78in;
+    width: 1.25in;
+    text-align: left;
+    font-size: 9pt;
+    line-height: 1.1;
+  }
+  .memo {
+    margin-top: 0.35in;
+    font-size: 12pt;
+  }
+  .memo-title {
+    margin-bottom: 0.12in;
+  }
+  .from-to {
+    margin-bottom: 0.14in;
+  }
+  .label {
+    display: inline-block;
+    width: 0.42in;
+  }
+  .subject {
+    margin-bottom: 0.14in;
+  }
+  .paragraph {
+    width: 6.15in;
+    margin-bottom: 0.12in;
+  }
+  .roster-title {
+    font-weight: bold;
+    margin-top: 0.04in;
+    margin-bottom: 0;
+  }
+  .roster-rule {
+    border-top: 1px solid black;
+    width: 6.35in;
+    margin-top: 0;
+    margin-bottom: 0.02in;
+  }
+  table.roster-table {
+    width: 6.35in;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 11pt;
+    line-height: 1.12;
+  }
+  table.roster-table td {
+    padding: 0;
+    vertical-align: top;
+  }
+  .date-col {
+    width: 0.34in;
+    text-align: right;
+    padding-right: 0.07in !important;
+    white-space: nowrap;
+  }
+  .name-col-left {
+    width: 2.55in;
+    text-align: left;
+    white-space: nowrap;
+  }
+  .date-col-right {
+    width: 0.40in;
+    text-align: right;
+    padding-right: 0.07in !important;
+    white-space: nowrap;
+  }
+  .name-col-right {
+    width: 3.06in;
+    text-align: left;
+    white-space: nowrap;
+  }
+  .table-header {
+    text-decoration: underline;
+    font-weight: normal;
+  }
+  .month-label td {
+    padding-bottom: 0.02in !important;
+  }
+  .footnote {
+    margin-top: 0.08in;
+    font-size: 12pt;
+  }
+  .signature {
+    text-align: center;
+    margin-top: 0.28in;
+    font-size: 12pt;
+  }
+  @media screen {
+    body { background: #e0e0e0; }
+    .page { margin: 0.25in auto; box-shadow: 0 2px 12px rgba(0,0,0,.25); }
+    .no-print { display: block !important; }
+    button { display: inline-block !important; }
+  }
+  @media print {
+    html, body { width: 8.5in; height: 11in; background: white; }
+    .page { margin: 0; box-shadow: none; }
+    .no-print, button, .print-button, .save-pdf-button { display: none !important; }
+  }
 </style>
 </head>
 <body>
+<div class="no-print" style="background:#1a1a1a;padding:10px 20px;display:flex;align-items:center;gap:12px;">
+  <button onclick="window.print()" style="background:#c8a84b;color:#000;border:none;border-radius:3px;padding:8px 18px;font-size:12px;font-weight:bold;cursor:pointer;letter-spacing:1px;">PRINT / SAVE AS PDF</button>
+  <button onclick="window.close()" style="background:#333;color:#ccc;border:1px solid #555;border-radius:3px;padding:8px 18px;font-size:12px;cursor:pointer;">CLOSE</button>
+  <span style="color:#888;font-size:11px;font-family:Arial,sans-serif;">Use browser Print dialog and select "Save as PDF" for a PDF file.</span>
+</div>
 <div class="page">
-<div class="top-section">
 <div class="letterhead">
 <div class="letterhead-main">UNITED STATES MARINE CORPS</div>
 <div>THE UNITED STATES MARINE DRUM &amp; BUGLE CORPS</div>
@@ -1624,23 +1743,22 @@ table.roster-table td{padding-top:0;padding-bottom:0.015in;}
 <div>D&amp;B</div>
 <div>${pubDate}</div>
 </div>
-</div>
 <div class="memo">
 <div class="memo-title">MEMORANDUM</div>
 <div class="from-to">
 <div><span class="label">From:</span> Commanding Officer, Drum &amp; Bugle Corps Company</div>
 <div><span class="label">To:</span> Duty Musics, Drum &amp; Bugle Corps Company</div>
 </div>
-<div class="subject">Subj:&nbsp; DUTY MUSIC ROSTER FOR THE MONTH OF ${monthUpper}, ${st.year}.</div>
-<div class="paragraph">1.&nbsp; The following comprises the Duty Music assignments for the month of ${monthTitle}, ${st.year}.</div>
+<div class="subject">Subj:&nbsp;&nbsp;DUTY MUSIC ROSTER FOR THE MONTH OF ${monthUpper}, ${st.year}.</div>
+<div class="paragraph">1.&nbsp;&nbsp;The following comprises the Duty Music assignments for the month of ${monthTitle}, ${st.year}.</div>
 <div class="roster-title">DUTY MUSIC</div>
 <div class="roster-rule"></div>
 <table class="roster-table">
 <colgroup>
-<col class="date-col"/>
-<col class="name-col-left"/>
-<col class="date-col-right"/>
-<col class="name-col-right"/>
+<col style="width:0.34in"/>
+<col style="width:2.55in"/>
+<col style="width:0.40in"/>
+<col style="width:3.06in"/>
 </colgroup>
 <tr>
 <td class="date-col table-header">DATE</td>
@@ -1658,7 +1776,6 @@ ${rows}
 <div class="signature">${coName}</div>
 </div>
 </div>
-<button class="print-btn no-print" onclick="window.print()">🖨 PRINT / SAVE AS PDF</button>
 </body>
 </html>`;
 
