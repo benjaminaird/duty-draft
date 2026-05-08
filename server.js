@@ -37,8 +37,6 @@ const isConsec=(d,list)=>list.some(a=>Math.abs(d-a)===1);
 const consecPrev=(d,last,y,m)=>{if(last==null)return false;const lm=m===0?getDIM(y-1,11):getDIM(y,m-1);return last===lm&&d===1;};
 
 // ─── IN-MEMORY STATE ──────────────────────────────────────────────────────────
-// appState is loaded from DB on startup and kept in sync.
-// The timer lives only in memory — it is always restarted fresh on boot.
 let appState = null;
 const draftTimer={running:false,paused:false,turnEndsAt:null,pausedRemaining:null,interval:null};
 
@@ -56,6 +54,15 @@ function getInitialState(){
     draftOrder:[],draftIdx:0,draftLive:false,draftPaused:false,draftDone:false,
     draftScheduled:null,turnSecsRemaining:0,
     voluntaryWkTakers:[],freedMarines:[],
+    // ── Funeral roster state ─────────────────────────────────────────────────
+    funeralPhase:'idle',
+    funeralMarines:[],
+    funeralBlackouts:[],
+    funeralExtraWk:[],
+    funeralWorkdays:[],
+    funeralAssignments:{},
+    funeralConflictDays:[],
+    funeralHistory:{burden:[],lastFuneralDay:{}},
     notifications:[{id:1,title:'DUTYDRAFT READY',body:'Roster loaded. NCOIC: begin setup for next month.',icon:'🛡',unread:true,targetMid:null,ts:Date.now()}]
   };
 }
@@ -98,7 +105,6 @@ function getDefaultMarines(){
 }
 
 // ─── PERSIST HELPER ───────────────────────────────────────────────────────────
-// Call this after every mutation so the DB stays in sync with memory.
 async function persist(){
   try{ await saveState(appState); }
   catch(err){ console.error('persist error:',err.message); }
@@ -252,52 +258,33 @@ function finishDraft(state){
   const asgn={...state.assignments};
   const totalDays=getDIM(state.year,state.month);
   const unassigned=[];
-
-  // Find all days that are unassigned and not blacked out
   for(let d=1;d<=totalDays;d++){
     const k=dk(state.year,state.month,d);
     if((state.blackouts||[]).includes(k))continue;
     if(asgn[d])continue;
     unassigned.push(d);
   }
-
   if(unassigned.length>0){
-    // For each unassigned day, find the Marine with the fewest assignments
-    // who is active, not consecutive, and not pre-assigned to someone else
     const activeMarines=(state.marines||[]).filter(m=>m.active);
     for(const d of unassigned){
-      // Count current assignments per Marine
       const counts={};
       activeMarines.forEach(m=>{counts[m.id]=0;});
       Object.values(asgn).forEach(mid=>{if(counts[mid]!==undefined)counts[mid]++;});
-
-      // Find eligible Marines sorted by fewest assignments
       const eligible=activeMarines
         .filter(m=>isDateValid(m.id,d,asgn,state,false))
         .sort((a,b)=>counts[a.id]-counts[b.id]);
-
       if(eligible.length>0){
         asgn[d]=eligible[0].id;
         const m=eligible[0];
-        addNotif(
-          'AUTO-ASSIGNED',
-          `${dName(m)}: ${MONTHS[state.month]} ${d} was unassigned after the draft and has been auto-assigned to you. Contact NCOIC if you have a conflict.`,
-          '📋',m.id
-        );
+        addNotif('AUTO-ASSIGNED',`${dName(m)}: ${MONTHS[state.month]} ${d} was unassigned after the draft and has been auto-assigned to you. Contact NCOIC if you have a conflict.`,'📋',m.id);
       } else {
-        // No eligible Marine found — flag for NCOIC
-        addNotif(
-          'UNASSIGNED DAY',
-          `${MONTHS[state.month]} ${d} could not be auto-assigned. Manual assignment required in post-draft.`,
-          '⚠️',null
-        );
+        addNotif('UNASSIGNED DAY',`${MONTHS[state.month]} ${d} could not be auto-assigned. Manual assignment required in post-draft.`,'⚠️',null);
       }
     }
     addNotif('DRAFT COMPLETE',`All picks complete. ${unassigned.length} day(s) were auto-assigned after the draft. NCOIC: review and publish the roster.`,'✅');
   } else {
     addNotif('DRAFT COMPLETE','All duty dates assigned. NCOIC: review and publish the roster.','✅');
   }
-
   return{...state,assignments:asgn,draftLive:false,draftDone:true};
 }
 
@@ -346,6 +333,128 @@ function resumeTimer(){
   appState.draftPaused=false;
 }
 
+// ─── FUNERAL AUTO-ASSIGN ENGINE ───────────────────────────────────────────────
+function autoAssignFuneral(state){
+  const {year,month,funeralMarines=[],funeralBlackouts=[],funeralExtraWk=[],funeralWorkdays=[],assignments:dutyAssignments={},nonAvail={}} = state;
+  const funeralHistory = state.funeralHistory || {burden:[],lastFuneralDay:{}};
+  let burden = [...(funeralHistory.burden||[])];
+  const lastFuneralDay = {...(funeralHistory.lastFuneralDay||{})};
+  const totalDays = getDIM(year,month);
+
+  // Build weekend set for funeral calendar
+  const wkSet = new Set();
+  for(let d=1;d<=totalDays;d++){
+    if(isNatWk(year,month,d)) wkSet.add(d);
+  }
+  for(const dkey of funeralExtraWk){
+    const d=parseInt(dkey.split('-').pop()); if(!isNaN(d)) wkSet.add(d);
+  }
+  for(const dkey of funeralWorkdays){
+    const d=parseInt(dkey.split('-').pop()); if(!isNaN(d)) wkSet.delete(d);
+  }
+  const blackoutSet = new Set();
+  for(const dkey of funeralBlackouts){
+    const d=parseInt(dkey.split('-').pop()); if(!isNaN(d)) blackoutSet.add(d);
+  }
+
+  // Build duty assignment map for conflict checks (day -> duty marine id)
+  // We need to map funeral marine -> duty marine id by matching lastName
+  const funeralToDutyId = {};
+  for(const fm of funeralMarines){
+    const match = (state.marines||[]).find(m=>m.lastName&&fm.lastName&&m.lastName.toUpperCase()===fm.lastName.toUpperCase());
+    if(match) funeralToDutyId[fm.id] = match.id;
+  }
+
+  // Build N/A sets per duty marine
+  const naByDutyId = {};
+  for(const [mid,naList] of Object.entries(nonAvail)){
+    naByDutyId[mid] = new Set();
+    for(const entry of naList){
+      if(entry.approved===true){
+        const d=parseInt(entry.date.split('-').pop());
+        if(!isNaN(d)) naByDutyId[mid].add(d);
+      }
+    }
+  }
+
+  // Duty assignment map: day -> duty marine id
+  const dutyDayMap = {};
+  for(const [dayStr,mid] of Object.entries(dutyAssignments)){
+    dutyDayMap[parseInt(dayStr)] = mid;
+  }
+
+  // Initialize burden queue — add any funeral marines not already in it
+  const inBurden = new Set(burden);
+  for(const fm of funeralMarines){
+    if(!inBurden.has(fm.id)) burden.push(fm.id);
+  }
+  // Remove stale ids (marines removed from funeral roster)
+  const funeralIds = new Set(funeralMarines.map(m=>m.id));
+  burden = burden.filter(id=>funeralIds.has(id));
+
+  const funeralAssignments = {};
+  const conflictDays = [];
+  const assignedDaysThisRun = {}; // fmid -> last assigned day this run
+
+  for(let day=1;day<=totalDays;day++){
+    // SNCOIC days — weekends, blackouts, extra-weekend-style
+    if(wkSet.has(day)||blackoutSet.has(day)){
+      funeralAssignments[day]='SNCOIC';
+      continue;
+    }
+
+    // Try to assign from burden queue
+    let assigned = null;
+    const queueLen = burden.length;
+    let searchCount = 0;
+
+    while(searchCount < queueLen){
+      const candidateId = burden[0];
+      const dutyId = funeralToDutyId[candidateId] || candidateId;
+      let eligible = true;
+
+      // Rule: no same-day duty conflict
+      if(dutyDayMap[day]===dutyId) eligible=false;
+
+      // Rule: no approved N/A
+      if(eligible && naByDutyId[dutyId]?.has(day)) eligible=false;
+
+      // Rule: no consecutive days (within month or cross-month)
+      if(eligible){
+        const lastDayThisRun = assignedDaysThisRun[candidateId];
+        const lastDayCrossMonth = lastFuneralDay[candidateId];
+        const lastDay = lastDayThisRun !== undefined ? lastDayThisRun : lastDayCrossMonth;
+        if(lastDay !== undefined){
+          if(day - lastDay === 1) eligible=false;
+          // Cross-month: if last day was final day of prev month and this is day 1
+          if(day===1 && lastDay>=totalDays-1) eligible=false;
+        }
+      }
+
+      if(eligible){
+        assigned = candidateId;
+        burden.shift();
+        burden.push(assigned);
+        break;
+      } else {
+        burden.push(burden.shift());
+        searchCount++;
+      }
+    }
+
+    if(assigned){
+      funeralAssignments[day]=assigned;
+      assignedDaysThisRun[assigned]=day;
+      lastFuneralDay[assigned]=day;
+    } else {
+      conflictDays.push(day);
+      funeralAssignments[day]=null;
+    }
+  }
+
+  return {assignments:funeralAssignments, conflictDays, updatedBurden:burden, updatedLastFuneralDay:lastFuneralDay};
+}
+
 // ─── API ROUTES ───────────────────────────────────────────────────────────────
 app.get('/api/state',(req,res)=>{
   if(appState.draftLive&&!appState.draftDone&&!appState.draftPaused&&draftTimer.turnEndsAt){
@@ -390,7 +499,7 @@ app.post('/api/draft/pick',async(req,res)=>{
   if(!e||e.id!==mid)return res.status(400).json({error:'Not your turn'});
   const m=(appState.marines||[]).find(x=>x.id===mid);
   const isDD=!!(appState.doubleDuty||{})[mid];
-  const lbl=isDD?(e.turn===2?' (Day 2)':' (Day 1)'):'';
+  const lbl=isDD?(e.turn===2?' (Day 2)':' (Day 1)'):''
   if(m)addNotif('SELECTION CONFIRMED',`${dName(m)}${lbl}: ${MONTHS[appState.month]} ${day} confirmed.`,'✅',mid);
   appState=advanceDraft(day,appState);
   await persist();
@@ -448,13 +557,130 @@ app.get('/api/health',(req,res)=>{
   res.json({ok:true,phase:appState.phase,draftLive:appState.draftLive,ts:Date.now()});
 });
 
-// Advance to next month — preserves history, clears cycle data
+// ─── FUNERAL ROSTER API ───────────────────────────────────────────────────────
+
+// GET funeral state subset
+app.get('/api/funeral/state',(req,res)=>{
+  res.json({
+    funeralPhase: appState.funeralPhase||'idle',
+    funeralMarines: appState.funeralMarines||[],
+    funeralBlackouts: appState.funeralBlackouts||[],
+    funeralExtraWk: appState.funeralExtraWk||[],
+    funeralWorkdays: appState.funeralWorkdays||[],
+    funeralAssignments: appState.funeralAssignments||{},
+    funeralConflictDays: appState.funeralConflictDays||[],
+    funeralHistory: appState.funeralHistory||{burden:[],lastFuneralDay:{}},
+    // Pass duty calendar for pre-population
+    blackouts: appState.blackouts||[],
+    extraWk: appState.extraWk||[],
+    workdays: appState.workdays||[],
+    year: appState.year,
+    month: appState.month,
+    phase: appState.phase,
+  });
+});
+
+// PATCH funeral state
+app.post('/api/funeral/state',async(req,res)=>{
+  const allowed=['funeralPhase','funeralMarines','funeralBlackouts','funeralExtraWk','funeralWorkdays','funeralAssignments','funeralConflictDays','funeralHistory'];
+  for(const key of allowed){
+    if(req.body[key]!==undefined) appState[key]=req.body[key];
+  }
+  await persist();
+  res.json({ok:true});
+});
+
+// POST auto-assign funeral roster
+app.post('/api/funeral/auto-assign',async(req,res)=>{
+  const result=autoAssignFuneral(appState);
+  appState.funeralAssignments=result.assignments;
+  appState.funeralConflictDays=result.conflictDays;
+  appState.funeralHistory={burden:result.updatedBurden,lastFuneralDay:result.updatedLastFuneralDay};
+  appState.funeralPhase='assigned';
+  await persist();
+  res.json({assignments:result.assignments,conflictDays:result.conflictDays});
+});
+
+// POST manually assign a conflict day
+app.post('/api/funeral/manual-assign',async(req,res)=>{
+  const{day,marineId}=req.body;
+  if(!day||!marineId)return res.status(400).json({error:'day and marineId required'});
+  appState.funeralAssignments[day]=marineId;
+  appState.funeralConflictDays=(appState.funeralConflictDays||[]).filter(d=>d!==day);
+  await persist();
+  res.json({ok:true});
+});
+
+// POST publish funeral roster + notify Marines
+app.post('/api/funeral/publish',async(req,res)=>{
+  appState.funeralPhase='published';
+  const monthUpper=MONTHS[appState.month].toUpperCase();
+  const year=appState.year;
+
+  for(const [dayStr,mid] of Object.entries(appState.funeralAssignments||{})){
+    if(!mid||mid==='SNCOIC') continue;
+    const fm=(appState.funeralMarines||[]).find(m=>m.id===mid);
+    if(!fm) continue;
+    // Find the duty marine id for notification routing
+    const dutyMarine=(appState.marines||[]).find(m=>m.lastName&&fm.lastName&&m.lastName.toUpperCase()===fm.lastName.toUpperCase());
+    const targetId=dutyMarine?dutyMarine.id:null;
+    if(targetId){
+      addNotif('FUNERAL BUGLER ASSIGNED',`${fm.rank} ${fm.lastName}: you are assigned as Funeral Bugler on ${monthUpper} ${dayStr}, ${year}.`,'🎺',targetId);
+    }
+  }
+
+  await persist();
+  res.json({ok:true});
+});
+
+// POST export funeral roster PDF
+app.post('/api/export-funeral-roster',async(req,res)=>{
+  const {execFile}=require('child_process');
+  const os=require('os');
+  const fs=require('fs');
+
+  const {left_rows,right_rows}=req.body;
+  const year=appState.year;
+  const month=appState.month;
+  const monthName=MONTHS[month];
+  const monthUpper=monthName.toUpperCase();
+  const MON_ABBR=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const now=new Date();
+  const pubDate=`${now.getDate()} ${MON_ABBR[now.getMonth()]} ${String(now.getFullYear()).slice(2)}`;
+
+  const payload={
+    roster_type:'funeral',
+    year,
+    month_name:monthName,
+    month_upper:monthUpper,
+    pub_date:pubDate,
+    left_rows,
+    right_rows,
+    co_name:req.body.co_name||'N. D. MORRIS'
+  };
+
+  const tmpFile=path.join(os.tmpdir(),`funeral_roster_${Date.now()}.pdf`);
+  const jsonInput=JSON.stringify(payload);
+
+  execFile('python3',['generate_roster.py',jsonInput,tmpFile],(err,stdout,stderr)=>{
+    if(err){
+      console.error('Funeral roster generation failed:',stderr);
+      return res.status(500).send('PDF generation failed: '+stderr);
+    }
+    res.setHeader('Content-Type','application/pdf');
+    res.setHeader('Content-Disposition',`attachment; filename="FuneralRoster_${monthUpper}_${year}.pdf"`);
+    const stream=fs.createReadStream(tmpFile);
+    stream.pipe(res);
+    stream.on('close',()=>fs.unlink(tmpFile,()=>{}));
+  });
+});
+
+// ─── NEXT MONTH ───────────────────────────────────────────────────────────────
 app.post('/api/next-month',async(req,res)=>{
   stopTimer();
   const nextMonth=appState.month===11?0:appState.month+1;
   const nextYear=appState.month===11?appState.year+1:appState.year;
 
-  // ── Compute who stood weekends this cycle ─────────────────────────────────
   const prevHistory=appState.history||{};
   const newWb={
     junior:[...(prevHistory.weekendBurden?.junior||[])],
@@ -468,7 +694,6 @@ app.post('/api/next-month',async(req,res)=>{
     gysgt:[...(prevHistory.dutyHistory?.gysgt||[])],
   };
 
-  // Who stood a weekend this cycle?
   const allAsgn={...appState.assignments};
   Object.entries(appState.preAssigned||{}).forEach(([d,mid])=>{
     if(!allAsgn[Number(d)])allAsgn[Number(d)]=mid;
@@ -481,38 +706,30 @@ app.post('/api/next-month',async(req,res)=>{
       newWb[g].push(mid);
     }
   });
-
-  // Who doubled this cycle?
   Object.entries(appState.doubleDuty||{}).forEach(([mid,count])=>{
     if(count>=2)newEd.push(mid);
   });
-
-  // Who stood duty at all this cycle (for short month sit-out rotation)?
   Object.values(allAsgn).forEach(mid=>{
     const m=(appState.marines||[]).find(x=>x.id===mid);
     if(!m)return;
     const g=groupOf(m.rank);
     if(!newDh[g].includes(mid))newDh[g].push(mid);
   });
-
-  // lastDutyDay — carry forward from this cycle's assignments
   const lastDutyDay={...((prevHistory.lastDutyDay)||{})};
   Object.entries(allAsgn).forEach(([day,mid])=>{
     const d=Number(day);
     if(!lastDutyDay[mid]||d>lastDutyDay[mid])lastDutyDay[mid]=d;
   });
 
+  // Carry forward funeral history
+  const prevFuneralHistory=appState.funeralHistory||{burden:[],lastFuneralDay:{}};
+
   appState={
     phase:'setup',
     year:nextYear,
     month:nextMonth,
     marines:appState.marines,
-    history:{
-      weekendBurden:newWb,
-      extraDuty:newEd,
-      dutyHistory:newDh,
-      lastDutyDay
-    },
+    history:{weekendBurden:newWb,extraDuty:newEd,dutyHistory:newDh,lastDutyDay},
     turnMins:appState.turnMins||3,
     blackouts:[],extraWk:[],workdays:[],
     preAssigned:{},preAssignReasons:{},pendingPreAssignNotifs:[],
@@ -522,32 +739,43 @@ app.post('/api/next-month',async(req,res)=>{
     draftOrder:[],draftIdx:0,draftLive:false,draftPaused:false,draftDone:false,
     draftScheduled:null,turnSecsRemaining:0,
     voluntaryWkTakers:[],freedMarines:[],
+    // Funeral: carry burden and lastFuneralDay, reset everything else
+    funeralPhase:'idle',
+    funeralMarines:[],
+    funeralBlackouts:[],
+    funeralExtraWk:[],
+    funeralWorkdays:[],
+    funeralAssignments:{},
+    funeralConflictDays:[],
+    funeralHistory:{
+      burden:prevFuneralHistory.burden||[],
+      lastFuneralDay:prevFuneralHistory.lastFuneralDay||{},
+    },
     notifications:[{id:Date.now(),title:'NEW MONTH',body:`${MONTHS[nextMonth]} ${nextYear} cycle started. Fairness history carried forward.`,icon:'📅',unread:true,targetMid:null,ts:Date.now()}]
   };
   await persist();
   res.json({ok:true});
 });
 
-// Roster PDF export — server-side via Python/reportlab
-app.post('/api/export-roster', async (req, res) => {
-  const { execFile } = require('child_process');
-  const os = require('os');
-  const fs = require('fs');
-  const path = require('path');
-
-  const tmpFile = path.join(os.tmpdir(), `roster_${Date.now()}.pdf`);
-  const jsonInput = JSON.stringify(req.body);
-
-  execFile('python3', ['generate_roster.py', jsonInput, tmpFile], (err, stdout, stderr) => {
-    if (err) {
-      console.error('Roster generation failed:', stderr);
-      return res.status(500).send('PDF generation failed: ' + stderr);
+// ─── DUTY ROSTER PDF EXPORT ───────────────────────────────────────────────────
+app.post('/api/export-roster',async(req,res)=>{
+  const {execFile}=require('child_process');
+  const os=require('os');
+  const fs=require('fs');
+  // Add roster_type: 'duty' to the payload passed from the frontend
+  const payload={...req.body,roster_type:'duty'};
+  const tmpFile=path.join(os.tmpdir(),`roster_${Date.now()}.pdf`);
+  const jsonInput=JSON.stringify(payload);
+  execFile('python3',['generate_roster.py',jsonInput,tmpFile],(err,stdout,stderr)=>{
+    if(err){
+      console.error('Roster generation failed:',stderr);
+      return res.status(500).send('PDF generation failed: '+stderr);
     }
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename="DutyRoster.pdf"');
-    const stream = fs.createReadStream(tmpFile);
+    res.setHeader('Content-Type','application/pdf');
+    res.setHeader('Content-Disposition','attachment; filename="DutyRoster.pdf"');
+    const stream=fs.createReadStream(tmpFile);
     stream.pipe(res);
-    stream.on('close', () => fs.unlink(tmpFile, () => {}));
+    stream.on('close',()=>fs.unlink(tmpFile,()=>{}));
   });
 });
 
@@ -560,28 +788,34 @@ const PORT=process.env.PORT||3000;
 
 async function start(){
   try {
-    const saved = await getState();
+    const saved=await getState();
     if(saved){
-      appState = saved;
+      appState=saved;
+      // Ensure funeral fields exist on older saved states
+      if(appState.funeralPhase===undefined) appState.funeralPhase='idle';
+      if(appState.funeralMarines===undefined) appState.funeralMarines=[];
+      if(appState.funeralBlackouts===undefined) appState.funeralBlackouts=[];
+      if(appState.funeralExtraWk===undefined) appState.funeralExtraWk=[];
+      if(appState.funeralWorkdays===undefined) appState.funeralWorkdays=[];
+      if(appState.funeralAssignments===undefined) appState.funeralAssignments={};
+      if(appState.funeralConflictDays===undefined) appState.funeralConflictDays=[];
+      if(appState.funeralHistory===undefined) appState.funeralHistory={burden:[],lastFuneralDay:{}};
       console.log('State loaded from database. Phase:',appState.phase);
-      // If a draft was live when the server last stopped, mark it paused
-      // so Marines aren't locked out on reconnect
-      if(appState.draftLive && !appState.draftDone){
-        appState.draftPaused = true;
-        appState.turnSecsRemaining = (appState.turnMins||3)*60;
+      if(appState.draftLive&&!appState.draftDone){
+        appState.draftPaused=true;
+        appState.turnSecsRemaining=(appState.turnMins||3)*60;
         await persist();
         console.log('Draft was live on restart — marked paused. NCOIC must resume.');
       }
     } else {
-      appState = getInitialState();
+      appState=getInitialState();
       await persist();
       console.log('No saved state found — initialized fresh.');
     }
   } catch(err){
     console.error('Failed to load state from DB, using initial state:',err.message);
-    appState = getInitialState();
+    appState=getInitialState();
   }
-
   app.listen(PORT,()=>console.log(`DutyDraft running on port ${PORT}`));
 }
 

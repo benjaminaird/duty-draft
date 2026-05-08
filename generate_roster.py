@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 """
 generate_roster.py
-Generates a USMC Duty Music Roster PDF using exact coordinates
-measured from the official May 2026 roster.
+Generates USMC Duty Music or Funeral Music Roster PDFs using exact coordinates
+measured from official May 2026 rosters.
 
 Usage:
     python3 generate_roster.py <json_input> <output_path>
 
 json_input is a JSON string with:
 {
+  "roster_type": "duty" | "funeral",   (default: "duty")
   "year": 2026,
   "month_name": "June",
   "month_upper": "JUNE",
   "pub_date": "1 May 26",
-  "left_rows": [["1","SGT CAMPA"], ["*2","SGT ROSIE"], ...],
+  "left_rows": [["1","SGT CAMPA"], ["*2","SNCOIC"], ...],
   "right_rows": [["17","GYSGT MCCREARY"], ...],
   "co_name": "N. D. MORRIS"
 }
@@ -70,10 +71,11 @@ LEFT_NAME_X      = 88.4   # left column names left-start here
 RIGHT_DATE_RIGHT = 354.0  # right column dates right-align here
 RIGHT_NAME_X     = 358.3  # right column names left-start here
 MEMO_X           = 54.7   # left margin for memo text
-RULE_RIGHT       = 557.3  # right end of horizontal rule (PAGE_W - MEMO_X)
+RULE_RIGHT       = 557.3  # right end of horizontal rule
 
 
 def build_roster(data, output_path):
+    roster_type = data.get("roster_type", "duty")  # "duty" or "funeral"
     year        = data["year"]
     month_name  = data["month_name"]
     month_upper = data["month_upper"]
@@ -81,6 +83,16 @@ def build_roster(data, output_path):
     left_rows   = data["left_rows"]
     right_rows  = data["right_rows"]
     co_name     = data["co_name"]
+
+    # ── Wording differs by roster type ──────────────────────────────────────
+    if roster_type == "funeral":
+        title_text = "FUNERAL MUSIC"
+        subj_text  = f"FUNERAL BUGLER ROSTER FOR THE MONTH OF {month_upper}, {year}."
+        para_text  = f"1.  The following comprises the Funeral Bugler assignments for the month of {month_name}, {year}."
+    else:
+        title_text = "DUTY MUSIC"
+        subj_text  = f"DUTY MUSIC ROSTER FOR THE MONTH OF {month_upper}, {year}."
+        para_text  = f"1.  The following comprises the Duty Music assignments for the month of {month_name}, {year}."
 
     c = canvas.Canvas(output_path, pagesize=letter)
 
@@ -116,13 +128,11 @@ def build_roster(data, output_path):
     dt("MEMORANDUM", MEMO_X, Y_MEMORANDUM, FONT_TIMES_BOLD, SIZE_BODY)
     dt("From:  Commanding Officer, Drum & Bugle Corps Company", MEMO_X, Y_FROM, FONT_TIMES, SIZE_BODY)
     dt("To:      Duty Musics, Drum & Bugle Corps Company",      MEMO_X, Y_TO,   FONT_TIMES, SIZE_BODY)
-    dt(f"Subj:    DUTY MUSIC ROSTER FOR THE MONTH OF {month_upper}, {year}.",
-       MEMO_X, Y_SUBJ, FONT_TIMES, SIZE_BODY)
-    dt(f"1.  The following comprises the Duty Music assignments for the month of {month_name}, {year}.",
-       MEMO_X, Y_PARA, FONT_TIMES, SIZE_BODY)
+    dt(f"Subj:    {subj_text}", MEMO_X, Y_SUBJ, FONT_TIMES, SIZE_BODY)
+    dt(para_text, MEMO_X, Y_PARA, FONT_TIMES, SIZE_BODY)
 
-    # ── DUTY MUSIC title + horizontal rule ───────────────────────────────────
-    dt("DUTY MUSIC", MEMO_X, Y_DUTY_MUSIC, FONT_TIMES, SIZE_BODY)
+    # ── Music title + horizontal rule ────────────────────────────────────────
+    dt(title_text, MEMO_X, Y_DUTY_MUSIC, FONT_TIMES, SIZE_BODY)
     c.setLineWidth(0.5)
     c.line(MEMO_X, Y_RULE, RULE_RIGHT, Y_RULE)
 
@@ -143,7 +153,7 @@ def build_roster(data, output_path):
     # ── Month label ──────────────────────────────────────────────────────────
     dtr(month_upper, LEFT_DATE_RIGHT, Y_MONTH, FONT_TIMES, SIZE_BODY)
 
-    # ── Roster rows — date and name always drawn separately ──────────────────
+    # ── Roster rows ──────────────────────────────────────────────────────────
     row_count = max(len(left_rows), len(right_rows))
     for i in range(row_count):
         row_y = Y_ROW1 - i * ROW_GAP

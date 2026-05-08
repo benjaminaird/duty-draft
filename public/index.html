@@ -281,7 +281,7 @@ const DAYS_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const PHASE_ORDER=['setup','calendar','wkpreview','top5','nonavail','review','draft-scheduled','draft','postdraft','published'];
 const NA_REASONS=['Approved Leave','On the Roster for a Gig','TAD','Parental Leave','Approved Out of Bounds Liberty','Other  --  Non-Sensitive Conflict','Other  --  Please Speak with SNCOIC in Person'];
 const PL={setup:'ROSTER SETUP',calendar:'CAL CONFIG',wkpreview:'WK PREVIEW',shortmonth:'SHORT MONTH',top5:'PD / NA',nonavail:'PD / NA',review:'NCOIC REVIEW','draft-scheduled':'DRAFT SCHED',draft:'LIVE DRAFT',postdraft:'POST-DRAFT',published:'PUBLISHED'};
-const TABS=[{id:'admin',label:'NCOIC'},{id:'pdna',label:'PD / NA'},{id:'draft',label:'DRAFT'},{id:'roster',label:'ROSTER'},{id:'history',label:'HISTORY'},{id:'notifs',label:'🔔'},{id:'settings',label:'⚙️'}];
+const TABS=[{id:'admin',label:'NCOIC'},{id:'pdna',label:'PD / NA'},{id:'draft',label:'DRAFT'},{id:'roster',label:'ROSTER'},{id:'funeral',label:'FUNERAL'},{id:'history',label:'HISTORY'},{id:'notifs',label:'🔔'},{id:'settings',label:'⚙️'}];
 
 const gradeOf=r=>RANK_TO_GRADE[r]||'E1';
 const groupOf=r=>BURDEN_GROUP[gradeOf(r)]||'junior';
@@ -1551,7 +1551,7 @@ function App(){
       }
       function nameFor(d){
         const k=dk(st.year,st.month,d);
-        if((blackouts||[]).includes(k))return'NCOIC';
+        if((blackouts||[]).includes(k))return'SNCOIC';
         const mid=allAsgn2[d];
         if(!mid)return'';
         const m=marines.find(x=>x.id===mid);
@@ -1875,6 +1875,11 @@ function App(){
     if(tab==='pdna')return(st.phase==='top5'||st.phase==='nonavail'||activeUser!=='ncoic')?PdNaView():<div className="card"><div className="card-sub">Preferred dates and non-availability submission is not open yet.</div></div>;
     if(tab==='draft')return(st.phase==='draft'||st.phase==='draft-scheduled'||st.draftDone)?DraftView():<div className="card"><div className="card-sub">Draft not started yet.</div></div>;
     if(tab==='roster')return(st.phase==='postdraft'||st.phase==='published')?RosterView():<div className="card"><div className="card-sub">Roster not available yet.</div></div>;
+    if(tab==='funeral'){
+      if(activeUser!=='ncoic')return <div className="card"><div className="card-sub">Funeral roster management is for the SNCOIC only.</div></div>;
+      if(st.phase!=='published')return <div className="card"><div className="card-sub">The funeral roster is available after the duty roster is published.</div></div>;
+      return <FuneralRosterTab appState={st} coName={coName}/>;
+    }
     if(tab==='notifs')return NotifsView();
     if(tab==='history')return HistoryView();
     if(tab==='settings')return SettingsView();
@@ -1957,6 +1962,291 @@ function App(){
         {renderContent()}
         <div className="last-updated no-print">Updated {Math.round((Date.now()-lastUpdated)/1000)}s ago · auto-refreshes every 3s</div>
       </div>
+    </div>
+  );
+}
+
+// ── DEMO FUNERAL MARINES ─────────────────────────────────────────────────────
+const DEMO_FUNERAL_MARINES=[
+  {id:'f1', rank:'SSGT',lastName:'THE HEADLESS HORSEMAN',   firstName:''},
+  {id:'f2', rank:'SSGT',lastName:'BLACKBEARD',              firstName:''},
+  {id:'f3', rank:'SSGT',lastName:'GHOST OF CHRISTMAS PAST', firstName:''},
+  {id:'f4', rank:'SGT', lastName:'THE BLOODY BARON',        firstName:''},
+  {id:'f5', rank:'CPL', lastName:'BRUCE WILLIS',            firstName:''},
+  {id:'f6', rank:'CPL', lastName:'ICHABOD CRANE',           firstName:''},
+  {id:'f7', rank:'CPL', lastName:'THE GRADY TWINS',         firstName:''},
+  {id:'f8', rank:'LCPL',lastName:'DANNY PHANTOM',           firstName:''},
+  {id:'f9', rank:'LCPL',lastName:'BLINKY',                  firstName:''},
+  {id:'f10',rank:'LCPL',lastName:'INKY',                    firstName:''},
+];
+
+const funeralApi=(endpoint,body)=>fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+const getFuneralState=()=>fetch('/api/funeral/state').then(r=>r.json());
+const fRankOrder=r=>{const o={GYSGT:0,SSGT:1,SGT:2,CPL:3,LCPL:4,PFC:5,PVT:6};return o[r]!==undefined?o[r]:99;};
+const fdk2=(y,m,d)=>`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+const fIsNatWk2=(y,m,d)=>{const w=new Date(y,m,d).getDay();return w===0||w===6;};
+function fBuildWkSet(year,month,extraWk,workdays){
+  const total=new Date(year,month+1,0).getDate();
+  const s=new Set();
+  for(let d=1;d<=total;d++){if(fIsNatWk2(year,month,d))s.add(d);}
+  for(const dkey of (extraWk||[])){const d=parseInt(dkey.split('-').pop());if(!isNaN(d))s.add(d);}
+  for(const dkey of (workdays||[])){const d=parseInt(dkey.split('-').pop());if(!isNaN(d))s.delete(d);}
+  return s;
+}
+
+function FuneralRosterTab({appState,coName}){
+  const [fState,setFState]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState(null);
+  const load=()=>{setLoading(true);getFuneralState().then(s=>{setFState(s);setLoading(false);}).catch(e=>{setError(e.message);setLoading(false);});};
+  useEffect(()=>{load();},[]);
+  if(loading)return <div style={{padding:'2rem',color:'var(--muted)',textAlign:'center'}}>Loading funeral roster…</div>;
+  if(error)return <div style={{padding:'2rem',color:'var(--red)'}}>Error: {error}</div>;
+  if(!fState)return null;
+  const onUpdate=async(patch)=>{await funeralApi('/api/funeral/state',patch);load();};
+  const ph=fState.funeralPhase;
+  if(ph==='idle'||ph==='setup')return <FuneralSetup fState={fState} appState={appState} onUpdate={onUpdate} onRefresh={load}/>;
+  if(ph==='calendar')return <FuneralCalendar fState={fState} appState={appState} onUpdate={onUpdate} onRefresh={load}/>;
+  if(ph==='assigned')return <FuneralRoster fState={fState} appState={appState} onUpdate={onUpdate} onRefresh={load}/>;
+  if(ph==='published')return <FuneralPublished fState={fState} appState={appState} coName={coName} onRefresh={load}/>;
+  return null;
+}
+
+function FuneralSetup({fState,appState,onUpdate,onRefresh}){
+  const [roster,setRoster]=useState(fState.funeralMarines&&fState.funeralMarines.length>0?fState.funeralMarines:DEMO_FUNERAL_MARINES);
+  const [saving,setSaving]=useState(false);
+  const allDuty=appState.marines||[];
+  const addable=allDuty.filter(dm=>!roster.find(fm=>fm.lastName&&dm.lastName&&fm.lastName.toUpperCase()===dm.lastName.toUpperCase()));
+  const addMarine=dm=>setRoster(r=>[...r,{id:'f'+Date.now(),rank:dm.rank,lastName:dm.lastName,firstName:dm.firstName||''}]);
+  const removeMarine=id=>setRoster(r=>r.filter(m=>m.id!==id));
+  const sorted=[...roster].sort((a,b)=>fRankOrder(a.rank)-fRankOrder(b.rank)||a.lastName.localeCompare(b.lastName));
+  const proceed=async()=>{setSaving(true);await onUpdate({funeralMarines:roster,funeralPhase:'calendar'});setSaving(false);};
+  return(
+    <div className="card">
+      <div className="card-title">FUNERAL BUGLER SETUP</div>
+      <div className="card-sub">Select Marines for the funeral roster — {MONTHS[appState.month]} {appState.year}.</div>
+      <div style={{marginBottom:12}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:'4px 8px',padding:'5px 8px',background:'var(--s3)',borderRadius:4,marginBottom:4,fontSize:10,fontFamily:'var(--fh)',letterSpacing:1,color:'var(--muted)'}}>
+          <span>MARINE</span><span>REMOVE</span>
+        </div>
+        {sorted.map(fm=>(
+          <div key={fm.id} style={{display:'grid',gridTemplateColumns:'1fr auto',alignItems:'center',padding:'6px 8px',background:'var(--s1)',border:'1px solid var(--border)',borderRadius:4,marginBottom:3}}>
+            <span style={{fontFamily:'var(--fh)',fontSize:12,letterSpacing:.5}}>{fm.rank} {fm.lastName}</span>
+            <button className="btn btn-red btn-sm" onClick={()=>removeMarine(fm.id)}>✕</button>
+          </div>
+        ))}
+        {!roster.length&&<div style={{color:'var(--muted)',fontSize:12,padding:'8px 0'}}>No Marines selected.</div>}
+      </div>
+      {addable.length>0&&(
+        <div style={{marginBottom:12}}>
+          <div style={{fontFamily:'var(--fh)',fontSize:10,letterSpacing:1,color:'var(--muted)',marginBottom:6}}>ADD FROM DUTY ROSTER</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+            {addable.sort((a,b)=>fRankOrder(a.rank)-fRankOrder(b.rank)).map(m=>(
+              <button key={m.id} className="btn btn-ghost btn-sm" onClick={()=>addMarine(m)}>+ {m.rank} {m.lastName}</button>
+            ))}
+          </div>
+        </div>
+      )}
+      <button className="btn btn-gold" disabled={!roster.length||saving} onClick={proceed}>{saving?'SAVING…':'PROCEED TO CALENDAR →'}</button>
+    </div>
+  );
+}
+
+function FuneralCalendar({fState,appState,onUpdate,onRefresh}){
+  const {year,month}=appState;
+  const [blackouts,setBlackouts]=useState(new Set(fState.funeralBlackouts&&fState.funeralBlackouts.length?fState.funeralBlackouts:(appState.blackouts||[])));
+  const [extraWk,setExtraWk]=useState(new Set(fState.funeralExtraWk&&fState.funeralExtraWk.length?fState.funeralExtraWk:(appState.extraWk||[])));
+  const [workdays2,setWorkdays2]=useState(new Set(fState.funeralWorkdays&&fState.funeralWorkdays.length?fState.funeralWorkdays:(appState.workdays||[])));
+  const [mode,setMode]=useState('blackout');
+  const [saving,setSaving]=useState(false);
+  const wkSet=fBuildWkSet(year,month,[...extraWk],[...workdays2]);
+  const total=new Date(year,month+1,0).getDate();
+  const firstDow=new Date(year,month,1).getDay();
+  const toggle=d=>{
+    const k=fdk2(year,month,d);
+    if(mode==='blackout'){setBlackouts(p=>{const n=new Set(p);n.has(k)?n.delete(k):n.add(k);return n;});}
+    else if(mode==='extrawk'&&!fIsNatWk2(year,month,d)){setExtraWk(p=>{const n=new Set(p);n.has(k)?n.delete(k):n.add(k);return n;});}
+    else if(mode==='workday'&&fIsNatWk2(year,month,d)){setWorkdays2(p=>{const n=new Set(p);n.has(k)?n.delete(k):n.add(k);return n;});}
+  };
+  const generate=async()=>{
+    setSaving(true);
+    await funeralApi('/api/funeral/state',{funeralBlackouts:[...blackouts],funeralExtraWk:[...extraWk],funeralWorkdays:[...workdays2],funeralPhase:'calendar'});
+    await funeralApi('/api/funeral/auto-assign',{});
+    setSaving(false);
+    onRefresh();
+  };
+  const goBack=async()=>{await onUpdate({funeralPhase:'setup'});onRefresh();};
+  const cells=[];
+  for(let i=0;i<firstDow;i++)cells.push(null);
+  for(let d=1;d<=total;d++)cells.push(d);
+  return(
+    <div className="card">
+      <div className="card-title">FUNERAL CALENDAR  --  {MONTHS[month].toUpperCase()} {year}</div>
+      <div className="card-sub">Pre-populated from duty calendar. Blackout and weekend-style dates show SNCOIC on the roster.</div>
+      <div className="row mt" style={{marginBottom:10,gap:5,flexWrap:'wrap'}}>
+        {[['blackout','BLACKOUT','btn-red'],['extrawk','WEEKEND-STYLE','btn-gold'],['workday','WORKDAY',null]].map(([mk,ml,mc])=>(
+          <button key={mk} className={'btn btn-sm '+(mode===mk?(mc||'btn-ghost'):'btn-ghost')}
+            style={mode===mk&&!mc?{borderColor:'var(--blue)',color:'var(--blue)'}:{}}
+            onClick={()=>setMode(m=>m===mk?null:mk)}>{mode===mk?'● ':''}{ml}</button>
+        ))}
+      </div>
+      <div className="cal-wrap">
+        <div className="cal-grid">
+          {DAYS_SHORT.map(d=><div key={d} className="cal-dow">{d}</div>)}
+          {cells.map((day,i)=>{
+            if(!day)return <div key={'fe'+i} className="cc empty"/>;
+            const k=fdk2(year,month,day);
+            const isWk=wkSet.has(day),isBo=blackouts.has(k),isEW=extraWk.has(k),isWD=workdays2.has(k);
+            let cls='cc'+(isBo?' bo':isEW?' wk-cfg':isWD?' workday':isWk?' wk-cfg':' avail');
+            return(
+              <div key={day} className={cls} onClick={()=>toggle(day)}>
+                <div className="c-num">{isWk&&!isWD?'*':''}{day}</div>
+                {isBo&&<div className="c-lbl">BLKOUT</div>}
+                {isEW&&!isBo&&<div className="c-lbl">WKS</div>}
+                {isWD&&<div className="c-lbl">WKDAY</div>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="row mt" style={{fontSize:10,color:'var(--muted)',gap:10,flexWrap:'wrap',marginBottom:12}}>
+        <span style={{color:'var(--accent)'}}>■ Weekend (SNCOIC)</span>
+        <span style={{color:'var(--blue)'}}>■ Workday</span>
+        <span style={{color:'#331010'}}>■ Blackout (SNCOIC)</span>
+      </div>
+      <div className="row">
+        <button className="btn btn-ghost btn-sm" onClick={goBack}>← BACK</button>
+        <button className="btn btn-gold" disabled={saving} onClick={generate}>{saving?'GENERATING…':'GENERATE ROSTER →'}</button>
+      </div>
+    </div>
+  );
+}
+
+function FuneralRoster({fState,appState,onUpdate,onRefresh}){
+  const {year,month}=appState;
+  const total=new Date(year,month+1,0).getDate();
+  const [assignments,setAssignments]=useState({...(fState.funeralAssignments||{})});
+  const [conflicts,setConflicts]=useState(fState.funeralConflictDays||[]);
+  const [manualDay,setManualDay]=useState(null);
+  const [publishing,setPublishing]=useState(false);
+  const funeralMarines=fState.funeralMarines||[];
+  const wkSet=fBuildWkSet(year,month,fState.funeralExtraWk||[],fState.funeralWorkdays||[]);
+  const blackoutSet=new Set((fState.funeralBlackouts||[]).map(k=>parseInt(k.split('-').pop())));
+  const getDisplayName=mid=>{
+    if(!mid)return'—';if(mid==='SNCOIC')return'SNCOIC';
+    const fm=funeralMarines.find(m=>m.id===mid);return fm?`${fm.rank} ${fm.lastName}`:mid;
+  };
+  const manualAssign=async(day,marineId)=>{
+    const r=await funeralApi('/api/funeral/manual-assign',{day,marineId});
+    if(r.ok){setAssignments(p=>({...p,[day]:marineId}));setConflicts(p=>p.filter(d=>d!==day));setManualDay(null);}
+  };
+  const publish=async()=>{
+    if(conflicts.length>0){alert(`Resolve conflict days first: ${conflicts.join(', ')}`);return;}
+    setPublishing(true);
+    await funeralApi('/api/funeral/publish',{});
+    await onUpdate({funeralPhase:'published'});
+    setPublishing(false);
+    onRefresh();
+  };
+  const goBack=async()=>{await onUpdate({funeralPhase:'calendar'});onRefresh();};
+  return(
+    <div>
+      {conflicts.length>0&&(
+        <div className="alert a-d" style={{marginBottom:10}}>
+          <strong>⚠ CONFLICT DAYS  --  MANUAL ASSIGNMENT REQUIRED</strong>
+          All Marines had conflicts for these days. Click a highlighted day below.
+          <div style={{marginTop:4,fontFamily:'var(--fm)',fontSize:11}}>Days: {conflicts.join(', ')}</div>
+        </div>
+      )}
+      <div className="card">
+        <div className="rowb" style={{marginBottom:10}}>
+          <div><div className="card-title">FUNERAL ROSTER  --  {MONTHS[month].toUpperCase()} {year}</div><div className="card-sub">★ = weekend / blackout (SNCOIC)</div></div>
+          <div className="row" style={{gap:6}}>
+            <button className="btn btn-ghost btn-sm" onClick={goBack}>← BACK</button>
+            <button className="btn btn-gold btn-sm" disabled={publishing||conflicts.length>0} onClick={publish}>{publishing?'PUBLISHING…':'🔒 PUBLISH & NOTIFY'}</button>
+          </div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'2px 24px'}}>
+          {Array.from({length:total},(_,i)=>i+1).map(day=>{
+            const mid=assignments[day],isConflict=conflicts.includes(day),isSNCOIC=mid==='SNCOIC',isWk=wkSet.has(day)||blackoutSet.has(day);
+            return(
+              <div key={day} onClick={()=>isConflict&&setManualDay(day)}
+                style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'4px 6px',borderRadius:4,border:isConflict?'1px solid var(--red)':'1px solid transparent',background:isConflict?'#130303':'transparent',cursor:isConflict?'pointer':'default'}}>
+                <span style={{fontFamily:'var(--fm)',fontSize:11,color:isWk?'var(--accent)':'var(--text)',minWidth:28}}>{isWk?'*':''}{day}</span>
+                <span style={{fontSize:11,color:isConflict?'var(--red)':isSNCOIC?'var(--muted)':'var(--text)',fontStyle:isConflict?'italic':'normal'}}>{isConflict?'UNASSIGNED ▶':getDisplayName(mid)}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {manualDay!==null&&(
+        <div className="overlay"><div className="modal">
+          <div className="modal-title">ASSIGN  --  {MONTHS[month]} {manualDay}</div>
+          <div className="card-sub">All Marines had conflicts. Select one to override:</div>
+          <div style={{display:'flex',flexDirection:'column',gap:4,margin:'10px 0'}}>
+            {[...funeralMarines].sort((a,b)=>fRankOrder(a.rank)-fRankOrder(b.rank)).map(fm=>(
+              <button key={fm.id} className="btn btn-ghost" style={{textAlign:'left',fontSize:11}} onClick={()=>manualAssign(manualDay,fm.id)}>{fm.rank} {fm.lastName}</button>
+            ))}
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={()=>setManualDay(null)}>CANCEL</button>
+        </div></div>
+      )}
+    </div>
+  );
+}
+
+function FuneralPublished({fState,appState,coName,onRefresh}){
+  const {year,month}=appState;
+  const total=new Date(year,month+1,0).getDate();
+  const [exporting,setExporting]=useState(false);
+  const funeralMarines=fState.funeralMarines||[];
+  const assignments=fState.funeralAssignments||{};
+  const wkSet=fBuildWkSet(year,month,fState.funeralExtraWk||[],fState.funeralWorkdays||[]);
+  const blackoutSet=new Set((fState.funeralBlackouts||[]).map(k=>parseInt(k.split('-').pop())));
+  const getDisplayName=mid=>{
+    if(!mid)return'—';if(mid==='SNCOIC')return'SNCOIC';
+    const fm=funeralMarines.find(m=>m.id===mid);return fm?`${fm.rank} ${fm.lastName}`:mid;
+  };
+  const exportPDF=async()=>{
+    setExporting(true);
+    const monthTitle=MONTHS[month].charAt(0)+MONTHS[month].slice(1).toLowerCase();
+    const leftCount=total===31?16:total===30?15:Math.ceil(total/2);
+    const rightCount=total-leftCount;
+    const MON_ABBR=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const now=new Date();
+    const pubDate=`${now.getDate()} ${MON_ABBR[now.getMonth()]} ${String(now.getFullYear()).slice(2)}`;
+    const dayStr=d=>(wkSet.has(d)||blackoutSet.has(d)?'*':'')+String(d);
+    const nameFor=d=>{const mid=assignments[d];if(!mid)return'';if(mid==='SNCOIC')return'SNCOIC';const fm=funeralMarines.find(m=>m.id===mid);return fm?`${fm.rank} ${fm.lastName}`:'';}
+    const leftRows=Array.from({length:leftCount},(_,i)=>[dayStr(i+1),nameFor(i+1)]);
+    const rightRows=Array.from({length:rightCount},(_,i)=>[dayStr(leftCount+i+1),nameFor(leftCount+i+1)]);
+    try{
+      const resp=await fetch('/api/export-funeral-roster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({left_rows:leftRows,right_rows:rightRows,co_name:coName||'N. D. MORRIS'})});
+      if(!resp.ok)throw new Error(await resp.text());
+      const blob=await resp.blob();
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download=`FuneralRoster_${monthTitle}_${year}.pdf`;a.click();URL.revokeObjectURL(url);
+    }catch(e){alert('PDF export failed: '+e.message);}
+    setExporting(false);
+  };
+  return(
+    <div className="card">
+      <div className="rowb" style={{marginBottom:10}}>
+        <div><div className="card-title">FUNERAL ROSTER  --  {MONTHS[month].toUpperCase()} {year}</div><div className="card-sub">Published · ★ = weekend / blackout (SNCOIC)</div></div>
+        <button className="btn btn-gold btn-sm" disabled={exporting} onClick={exportPDF}>{exporting?'EXPORTING…':'📄 EXPORT PDF'}</button>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'2px 24px'}}>
+        {Array.from({length:total},(_,i)=>i+1).map(day=>{
+          const mid=assignments[day],isSNCOIC=mid==='SNCOIC',isWk=wkSet.has(day)||blackoutSet.has(day);
+          return(
+            <div key={day} style={{display:'flex',justifyContent:'space-between',padding:'4px 6px'}}>
+              <span style={{fontFamily:'var(--fm)',fontSize:11,color:isWk?'var(--accent)':'var(--text)',minWidth:28}}>{isWk?'*':''}{day}</span>
+              <span style={{fontSize:11,color:isSNCOIC?'var(--muted)':'var(--text)'}}>{getDisplayName(mid)}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{marginTop:8,fontSize:10,color:'var(--muted)'}}>* denotes weekend day</div>
     </div>
   );
 }
