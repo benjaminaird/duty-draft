@@ -88,6 +88,7 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size
 .cc.pref-wk{background:#0f1a05;border-color:#4a8020;color:#8fbc44;cursor:pointer;}
 .cc.grey{background:#090a0d;border-color:#111318;color:#1e2028;cursor:not-allowed;}
 .cc.na-red{background:#130303;border-color:#3a0a0a;color:var(--red);cursor:not-allowed;}
+.cc.na-blocked{background:#130e00;border-color:#3a2a00;color:#8a6a20;cursor:not-allowed;}
 .cc.bo{background:#100606;border-color:#280e0e;color:#331010;cursor:not-allowed;}
 .cc.wk-cfg{background:#181208;border-color:#3d2e08;color:#c8a84b;cursor:pointer;}
 .cc.workday{background:var(--s3);border-color:var(--blue);color:var(--blue);cursor:pointer;}
@@ -1468,7 +1469,7 @@ function App(){
         <div className="card">
           <div className="card-title">SELECT DATE{pickLabel?'  --  '+pickLabel:''}</div>
           <div className="row" style={{marginBottom:8,fontSize:9,color:'var(--muted)',gap:8}}>
-            <span style={{color:'var(--green)'}}>■ Pref</span><span>■ Avail</span><span style={{color:'var(--red)'}}>■ N/A</span><span style={{color:'#1e2028'}}>■ Taken</span>
+            <span style={{color:'var(--green)'}}>■ Pref</span><span>■ Avail</span><span style={{color:'var(--red)'}}>■ Pref taken</span><span style={{color:'#8a6a20'}}>■ Your N/A</span><span style={{color:'#1e2028'}}>■ Taken</span>
             {isPaused&&<span style={{color:'var(--muted)'}}>⏸ Draft paused</span>}
           </div>
           <CalGrid year={st.year} month={st.month} renderCell={d=>{
@@ -1476,13 +1477,14 @@ function App(){
             const isPref=myPrefs.find(p=>p.day===d);
             const takenBy=assignments[d];
             const takenName=takenBy&&takenBy!==currentMid?marines.find(m=>m.id===takenBy)?.lastName:'';
-            const cls='cc'+(state==='grey'?' grey':state==='mine'?' assigned':state==='na'?' na-red':state==='pending'?' pending':state==='paused'?' paused':state==='pref'?' pref':state==='pref-wk'?' pref-wk':state==='avail-wk'?' avail-wk':' avail');
+            const cls='cc'+(state==='grey'?' grey':state==='mine'?' assigned':state==='na'?' na-blocked':state==='pending'?' pending':state==='paused'?' paused':state==='pref'?' pref':state==='pref-wk'?' pref-wk':state==='avail-wk'?' avail-wk':' avail');
             const clickable=!isPaused&&['avail','avail-wk','pref','pref-wk','pending'].includes(state);
             return(<div key={d} className={cls} onClick={()=>clickable&&handleDayClick(d)}>
               {isPref&&!['grey','na','paused'].includes(state)&&<div className="c-prio">#{isPref.priority}</div>}
               <div className="c-num">{d}</div>
               {takenName&&<div className="c-lbl">{takenName}</div>}
               {state==='mine'&&<div className="c-lbl">MINE</div>}
+              {state==='na'&&<div className="c-lbl">N/A</div>}
             </div>);
           }}/>
         </div>
