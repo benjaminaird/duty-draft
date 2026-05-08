@@ -88,6 +88,7 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size
 .cc.pref-wk{background:#0f1a05;border-color:#4a8020;color:#8fbc44;cursor:pointer;}
 .cc.grey{background:#090a0d;border-color:#111318;color:#1e2028;cursor:not-allowed;}
 .cc.na-red{background:#130303;border-color:#3a0a0a;color:var(--red);cursor:not-allowed;}
+.cc.na-blocked{background:#1a1200;border-color:#7a5500;color:var(--accent);cursor:not-allowed;}
 .cc.bo{background:#100606;border-color:#280e0e;color:#331010;cursor:not-allowed;}
 .cc.wk-cfg{background:#181208;border-color:#3d2e08;color:#c8a84b;cursor:pointer;}
 .cc.workday{background:var(--s3);border-color:var(--blue);color:var(--blue);cursor:pointer;}
@@ -1264,6 +1265,9 @@ function App(){
         if(isMyDate)return'mine';
         if(takenBy&&myPref)return'pref-taken'; // preferred date stolen
         if(takenBy)return'taken';              // taken by someone else
+        // N/A approved dates — show as blocked (gold/amber)
+        const viewerApprovedNA=new Set(((st.nonAvail||{})[activeUser]||[]).filter(n=>n.approved===true).map(n=>n.date));
+        if(viewerApprovedNA.has(k))return'na-blocked';
         if(myPref)return isWkDate(d)?'pref-wk':'pref'; // my pref, still available
         if(isWkDate(d))return'wk-open';        // weekend, open
         return'open';
@@ -1329,6 +1333,7 @@ function App(){
               <span style={{color:'var(--green)'}}>■ Your pref</span>
               <span style={{color:'var(--red)'}}>■ Pref taken</span>
               <span style={{color:'var(--accent)'}}>■ Weekend open</span>
+              <span style={{color:'var(--orange)'}}>■ Your N/A</span>
               <span style={{color:'#1e2028'}}>■ Taken</span>
             </div>
             <CalGrid year={st.year} month={st.month} renderCell={d=>{
@@ -1348,13 +1353,15 @@ function App(){
                 cls+=' assigned';
                 labelText='YOU';
               } else if(state==='pref-taken'){
-                // Preferred date that got taken  --  red-grey with taker name
                 cls+=' na-red';
                 labelText=takerName||'TAKEN';
                 badgeText='#'+myPref.priority;
               } else if(state==='taken'){
                 cls+=' grey';
                 labelText=takerName||'';
+              } else if(state==='na-blocked'){
+                cls+=' na-blocked';
+                labelText='N/A';
               } else if(state==='pref'){
                 cls+=' pref';
                 badgeText='#'+myPref.priority;
@@ -2167,16 +2174,27 @@ function FuneralRoster({fState,appState,onUpdate,onRefresh}){
           </div>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'2px 24px'}}>
-          {Array.from({length:total},(_,i)=>i+1).map(day=>{
-            const mid=assignments[day],isConflict=conflicts.includes(day),isSNCOIC=mid==='SNCOIC',isWk=wkSet.has(day)||blackoutSet.has(day);
+          {(()=>{
+            const leftCount=total===31?15:total===30?15:Math.ceil(total/2);
+            const leftDays=Array.from({length:leftCount},(_,i)=>i+1);
+            const rightDays=Array.from({length:total-leftCount},(_,i)=>leftCount+i+1);
+            const renderDay=day=>{
+              const mid=assignments[day],isConflict=conflicts.includes(day),isSNCOIC=mid==='SNCOIC',isWk=wkSet.has(day)||blackoutSet.has(day);
+              return(
+                <div key={day} onClick={()=>isConflict&&setManualDay(day)}
+                  style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'4px 6px',borderRadius:4,border:isConflict?'1px solid var(--red)':'1px solid transparent',background:isConflict?'#130303':'transparent',cursor:isConflict?'pointer':'default'}}>
+                  <span style={{fontFamily:'var(--fm)',fontSize:11,color:isWk?'var(--accent)':'var(--text)',minWidth:28}}>{isWk?'*':''}{day}</span>
+                  <span style={{fontSize:11,color:isConflict?'var(--red)':isSNCOIC?'var(--muted)':'var(--text)',fontStyle:isConflict?'italic':'normal'}}>{isConflict?'UNASSIGNED ▶':getDisplayName(mid)}</span>
+                </div>
+              );
+            };
             return(
-              <div key={day} onClick={()=>isConflict&&setManualDay(day)}
-                style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'4px 6px',borderRadius:4,border:isConflict?'1px solid var(--red)':'1px solid transparent',background:isConflict?'#130303':'transparent',cursor:isConflict?'pointer':'default'}}>
-                <span style={{fontFamily:'var(--fm)',fontSize:11,color:isWk?'var(--accent)':'var(--text)',minWidth:28}}>{isWk?'*':''}{day}</span>
-                <span style={{fontSize:11,color:isConflict?'var(--red)':isSNCOIC?'var(--muted)':'var(--text)',fontStyle:isConflict?'italic':'normal'}}>{isConflict?'UNASSIGNED ▶':getDisplayName(mid)}</span>
-              </div>
+              <>
+                <div>{leftDays.map(renderDay)}</div>
+                <div>{rightDays.map(renderDay)}</div>
+              </>
             );
-          })}
+          })()}
         </div>
       </div>
       {manualDay!==null&&(
@@ -2236,15 +2254,21 @@ function FuneralPublished({fState,appState,coName,onRefresh}){
         <button className="btn btn-gold btn-sm" disabled={exporting} onClick={exportPDF}>{exporting?'EXPORTING…':'📄 EXPORT PDF'}</button>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'2px 24px'}}>
-        {Array.from({length:total},(_,i)=>i+1).map(day=>{
-          const mid=assignments[day],isSNCOIC=mid==='SNCOIC',isWk=wkSet.has(day)||blackoutSet.has(day);
-          return(
-            <div key={day} style={{display:'flex',justifyContent:'space-between',padding:'4px 6px'}}>
-              <span style={{fontFamily:'var(--fm)',fontSize:11,color:isWk?'var(--accent)':'var(--text)',minWidth:28}}>{isWk?'*':''}{day}</span>
-              <span style={{fontSize:11,color:isSNCOIC?'var(--muted)':'var(--text)'}}>{getDisplayName(mid)}</span>
-            </div>
-          );
-        })}
+        {(()=>{
+          const leftCount=total===31?15:total===30?15:Math.ceil(total/2);
+          const leftDays=Array.from({length:leftCount},(_,i)=>i+1);
+          const rightDays=Array.from({length:total-leftCount},(_,i)=>leftCount+i+1);
+          const renderDay=day=>{
+            const mid=assignments[day],isSNCOIC=mid==='SNCOIC',isWk=wkSet.has(day)||blackoutSet.has(day);
+            return(
+              <div key={day} style={{display:'flex',justifyContent:'space-between',padding:'4px 6px'}}>
+                <span style={{fontFamily:'var(--fm)',fontSize:11,color:isWk?'var(--accent)':'var(--text)',minWidth:28}}>{isWk?'*':''}{day}</span>
+                <span style={{fontSize:11,color:isSNCOIC?'var(--muted)':'var(--text)'}}>{getDisplayName(mid)}</span>
+              </div>
+            );
+          };
+          return(<><div>{leftDays.map(renderDay)}</div><div>{rightDays.map(renderDay)}</div></>);
+        })()}
       </div>
       <div style={{marginTop:8,fontSize:10,color:'var(--muted)'}}>* denotes weekend day</div>
     </div>
