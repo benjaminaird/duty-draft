@@ -528,6 +528,29 @@ app.post('/api/next-month',async(req,res)=>{
   res.json({ok:true});
 });
 
+// Roster PDF export — server-side via Python/reportlab
+app.post('/api/export-roster', async (req, res) => {
+  const { execFile } = require('child_process');
+  const os = require('os');
+  const fs = require('fs');
+  const path = require('path');
+
+  const tmpFile = path.join(os.tmpdir(), `roster_${Date.now()}.pdf`);
+  const jsonInput = JSON.stringify(req.body);
+
+  execFile('python3', ['generate_roster.py', jsonInput, tmpFile], (err, stdout, stderr) => {
+    if (err) {
+      console.error('Roster generation failed:', stderr);
+      return res.status(500).send('PDF generation failed: ' + stderr);
+    }
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="DutyRoster.pdf"');
+    const stream = fs.createReadStream(tmpFile);
+    stream.pipe(res);
+    stream.on('close', () => fs.unlink(tmpFile, () => {}));
+  });
+});
+
 app.get('*',(req,res)=>{
   res.sendFile(path.join(__dirname,'public','index.html'));
 });
