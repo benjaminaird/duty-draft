@@ -1809,6 +1809,12 @@ function App(){
     const phaseIdx=PHASE_ORDER.indexOf(st.phase);
     async function goBack(){if(phaseIdx>0)await patch({phase:PHASE_ORDER[phaseIdx-1]});}
     async function reset(){await api.reset().then(()=>api.getState().then(s=>{setSt(s);setEditRoster([...s.marines]);setActiveUser('ncoic');setPendingDay(null);}));}
+    async function nextMonth(){
+      if(!confirm('Advance to next month? History is preserved. All current cycle data (assignments, blackouts, prefs, draft) will be cleared.'))return;
+      const r=await fetch('/api/next-month',{method:'POST'}).then(x=>x.json());
+      if(r.ok){const s=await api.getState();setSt(s);setEditRoster([...s.marines]);setActiveUser('ncoic');setPendingDay(null);}
+    }
+    const nextMonthName=(()=>{const m=st.month===11?0:st.month+1;const y=st.month===11?st.year+1:st.year;return MONTHS[m]+' '+y;})();
     return(
       <div>
         <div className="card">
@@ -1831,7 +1837,11 @@ function App(){
             <button className="btn btn-ghost" disabled={phaseIdx<=0} onClick={goBack}>← GO BACK</button>
             <button className="btn btn-red" onClick={reset}>↺ FULL RESET</button>
           </div>
-          <div style={{color:'var(--muted)',fontSize:11,marginTop:8}}>Current: <strong style={{color:'var(--text)'}}>{PL[st.phase]||st.phase}</strong></div>
+          <div style={{marginTop:10,paddingTop:10,borderTop:'1px solid var(--border)'}}>
+            <div style={{fontSize:11,color:'var(--muted)',marginBottom:6}}>Advance to next month while keeping all fairness history. Use this to simulate multiple months quickly.</div>
+            <button className="btn btn-orange" onClick={nextMonth}>▶▶ NEXT MONTH  --  {nextMonthName}</button>
+          </div>
+          <div style={{color:'var(--muted)',fontSize:11,marginTop:8}}>Current: <strong style={{color:'var(--text)'}}>{PL[st.phase]||st.phase}</strong> · {MONTHS[st.month]} {st.year}</div>
         </div>
         <div className="card">
           <div className="card-title">PHASE ORDER</div>

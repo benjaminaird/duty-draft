@@ -400,6 +400,42 @@ app.get('/api/health',(req,res)=>{
   res.json({ok:true,phase:appState.phase,draftLive:appState.draftLive,ts:Date.now()});
 });
 
+// Advance to next month — preserves history, clears cycle data
+app.post('/api/next-month',async(req,res)=>{
+  stopTimer();
+  const nextMonth=appState.month===11?0:appState.month+1;
+  const nextYear=appState.month===11?appState.year+1:appState.year;
+  // Carry lastDutyDay forward from this month's assignments
+  const lastDutyDay={...((appState.history||{}).lastDutyDay||{})};
+  Object.entries(appState.assignments||{}).forEach(([day,mid])=>{
+    lastDutyDay[mid]=Number(day);
+  });
+  appState={
+    phase:'setup',
+    year:nextYear,
+    month:nextMonth,
+    marines:appState.marines,
+    history:{
+      weekendBurden:(appState.history||{}).weekendBurden||{junior:[],ssgt:[],gysgt:[]},
+      extraDuty:(appState.history||{}).extraDuty||[],
+      dutyHistory:(appState.history||{}).dutyHistory||{junior:[],ssgt:[],gysgt:[]},
+      lastDutyDay
+    },
+    turnMins:appState.turnMins||3,
+    blackouts:[],extraWk:[],workdays:[],
+    preAssigned:{},preAssignReasons:{},pendingPreAssignNotifs:[],
+    weekendDates:[],wkAssigneeIds:[],wkAssignees:{junior:[],ssgt:[],gysgt:[]},
+    doubleDuty:{},shortMonth:false,shortRoster:null,
+    prefs:{},nonAvail:{},assignments:{},
+    draftOrder:[],draftIdx:0,draftLive:false,draftPaused:false,draftDone:false,
+    draftScheduled:null,turnSecsRemaining:0,
+    voluntaryWkTakers:[],freedMarines:[],
+    notifications:[{id:Date.now(),title:'NEW MONTH',body:`${MONTHS[nextMonth]} ${nextYear} cycle started. Fairness history carried forward.`,icon:'📅',unread:true,targetMid:null,ts:Date.now()}]
+  };
+  await persist();
+  res.json({ok:true});
+});
+
 app.get('*',(req,res)=>{
   res.sendFile(path.join(__dirname,'public','index.html'));
 });
