@@ -1,12 +1,13 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { getState, saveState } = require('./db');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 
-// Explicit favicon routes — Safari requires correct MIME type
 app.get('/favicon.png',(req,res)=>{
   res.setHeader('Content-Type','image/png');
   res.sendFile(path.join(__dirname,'public','favicon.png'));
@@ -16,7 +17,7 @@ app.get('/apple-touch-icon.png',(req,res)=>{
   res.sendFile(path.join(__dirname,'public','apple-touch-icon.png'));
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname,'public')));
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 const RANK_TO_GRADE={PVT:'E1',PFC:'E2',LCPL:'E3',CPL:'E4',SGT:'E5',SSGT:'E6',GYSGT:'E7'};
@@ -35,10 +36,10 @@ const isNatWk=(y,m,d)=>{const w=new Date(y,m,d).getDay();return w===0||w===6;};
 const isConsec=(d,list)=>list.some(a=>Math.abs(d-a)===1);
 const consecPrev=(d,last,y,m)=>{if(last==null)return false;const lm=m===0?getDIM(y-1,11):getDIM(y,m-1);return last===lm&&d===1;};
 
-// ─── STATE ───────────────────────────────────────────────────────────────────
-let appState=getInitialState();
-
-// Server-side timer — lives entirely in Node, tamper-proof
+// ─── IN-MEMORY STATE ──────────────────────────────────────────────────────────
+// appState is loaded from DB on startup and kept in sync.
+// The timer lives only in memory — it is always restarted fresh on boot.
+let appState = null;
 const draftTimer={running:false,paused:false,turnEndsAt:null,pausedRemaining:null,interval:null};
 
 function getInitialState(){
@@ -96,6 +97,13 @@ function getDefaultMarines(){
   ];
 }
 
+// ─── PERSIST HELPER ───────────────────────────────────────────────────────────
+// Call this after every mutation so the DB stays in sync with memory.
+async function persist(){
+  try{ await saveState(appState); }
+  catch(err){ console.error('persist error:',err.message); }
+}
+
 // ─── NOTIFICATION HELPER ──────────────────────────────────────────────────────
 function addNotif(title,body,icon='🔔',targetMid=null){
   const n={id:Date.now()+Math.random(),title,body,icon,unread:true,targetMid,ts:Date.now()};
@@ -143,41 +151,24 @@ function currentNeedsWk(mid,turn,asgn,state){
   return isDD?turn===1:true;
 }
 
-// After every pick, check if any remaining slotted Marines have NO available
-// weekend dates left (all taken). If so, free them automatically so they
-// can pick weekdays instead of being completely locked out.
 function autoFreeBlockedMarines(asgn,state){
   const order=state.draftOrder||[];
   const currentIdx=state.draftIdx||0;
   const newFreed=[...(state.freedMarines||[])];
   let anyFreed=false;
-
-  // Find all available weekend dates (not yet assigned)
   const allDates=getAllDates(state);
   const availableWkDates=allDates.filter(d=>isWkDate(d,state)&&!asgn[d]);
-
-  // For each remaining slotted Marine who hasn't picked a weekend yet,
-  // check if there are any weekend dates they could legally pick
   for(let i=currentIdx;i<order.length;i++){
     const mid=order[i].id;
     if(!(state.wkAssigneeIds||[]).includes(mid))continue;
     if(newFreed.includes(mid))continue;
     const myDays=Object.entries(asgn).filter(([,x])=>x===mid).map(([d])=>Number(d));
-    if(myDays.some(d=>isWkDate(d,state)))continue; // already has a weekend
-
-    // Can this Marine actually pick any available weekend date?
+    if(myDays.some(d=>isWkDate(d,state)))continue;
     const canPickWk=availableWkDates.some(d=>isDateValid(mid,d,asgn,state,false));
     if(!canPickWk){
-      // No available weekends — free them so they can pick a weekday
       newFreed.push(mid);
       const m=(state.marines||[]).find(x=>x.id===mid);
-      if(m){
-        addNotif(
-          'WEEKEND OBLIGATION WAIVED',
-          `${dName(m)}: no weekend dates remain available. Weekend obligation waived -- all remaining dates are open on your turn.`,
-          '🟡',mid
-        );
-      }
+      if(m)addNotif('WEEKEND OBLIGATION WAIVED',`${dName(m)}: no weekend dates remain available. Weekend obligation waived -- all remaining dates are open on your turn.`,'🟡',mid);
       anyFreed=true;
     }
   }
@@ -202,7 +193,6 @@ function doAutoPick(mid,state,asgn){
   return pool[0];
 }
 
-// Handle voluntary weekend pick — free next slotted Marine in queue
 function checkVoluntaryWk(pickerMid,day,asgn,state){
   if(!isWkDate(day,state))return state;
   if((state.wkAssigneeIds||[]).includes(pickerMid))return state;
@@ -211,7 +201,6 @@ function checkVoluntaryWk(pickerMid,day,asgn,state){
   const newFreed=[...(state.freedMarines||[])];
   const order=state.draftOrder||[];
   const searchFrom=(state.draftIdx||0)+1;
-  let freedSomeone=false;
   for(let i=searchFrom;i<order.length;i++){
     const mid=order[i].id;
     const isSlotted=(state.wkAssigneeIds||[]).includes(mid);
@@ -224,21 +213,13 @@ function checkVoluntaryWk(pickerMid,day,asgn,state){
       newFreed.push(mid);
       const pickerM=(state.marines||[]).find(m=>m.id===pickerMid);
       const freedM=(state.marines||[]).find(m=>m.id===mid);
-      if(freedM&&pickerM){
-        addNotif(
-          'WEEKEND OBLIGATION COVERED',
-          `${dName(pickerM)} has voluntarily taken a weekend duty day. Your weekend obligation for ${MONTHS[state.month]} is fulfilled -- all dates are open on your turn.`,
-          '🟢',mid
-        );
-      }
-      freedSomeone=true;
+      if(freedM&&pickerM)addNotif('WEEKEND OBLIGATION COVERED',`${dName(pickerM)} has voluntarily taken a weekend duty day. Your weekend obligation for ${MONTHS[state.month]} is fulfilled -- all dates are open on your turn.`,'🟢',mid);
       break;
     }
   }
   return{...state,voluntaryWkTakers:newVol,freedMarines:newFreed};
 }
 
-// Advance draft after a pick (or auto-pick)
 function advanceDraft(pickedDay,state){
   const e=(state.draftOrder||[])[state.draftIdx||0];
   if(!e)return finishDraft(state);
@@ -247,19 +228,15 @@ function advanceDraft(pickedDay,state){
   if(pickedDay!==null)asgn[pickedDay]=mid;
   let next=pickedDay!==null?checkVoluntaryWk(mid,pickedDay,asgn,state):state;
   next={...next,assignments:asgn};
-  // After every pick, check if any remaining slotted Marines are now blocked
-  // (no weekend dates left for them) and free them automatically
   next=autoFreeBlockedMarines(asgn,next);
   const nextIdx=(state.draftIdx||0)+1;
   if(nextIdx>=(state.draftOrder||[]).length)return finishDraft(next);
   next={...next,draftIdx:nextIdx};
-  // 3-picks-away
   const threeEntry=(state.draftOrder||[])[nextIdx+2];
   if(threeEntry){
     const m3=(state.marines||[]).find(m=>m.id===threeEntry.id);
     if(m3)addNotif('STAND BY',`${dName(m3)}: 3 picks away — prepare to select your duty date.`,'⏱',m3.id);
   }
-  // Your turn
   const nextEntry=(state.draftOrder||[])[nextIdx];
   const nextM=(state.marines||[]).find(m=>m.id===nextEntry?.id);
   if(nextM){
@@ -289,18 +266,19 @@ function startTurnTimer(){
   draftTimer.running=true;draftTimer.paused=false;draftTimer.pausedRemaining=null;
   appState.turnSecsRemaining=Math.round(turnMs/1000);
   appState.draftPaused=false;
-  draftTimer.interval=setInterval(()=>{
+  draftTimer.interval=setInterval(async()=>{
     if(!appState.draftLive||appState.draftDone||appState.draftPaused)return;
     const remaining=draftTimer.turnEndsAt-Date.now();
     appState.turnSecsRemaining=Math.max(0,Math.round(remaining/1000));
     if(remaining<=0){
       const e=(appState.draftOrder||[])[appState.draftIdx||0];
-      if(!e){appState=finishDraft(appState);stopTimer();return;}
+      if(!e){appState=finishDraft(appState);await persist();stopTimer();return;}
       const mid=e.id;
       const m=(appState.marines||[]).find(x=>x.id===mid);
       const day=doAutoPick(mid,appState,appState.assignments||{});
       if(day!==null&&m)addNotif('DUTY DATE ASSIGNED',`${dName(m)}: time expired — assigned ${MONTHS[appState.month]} ${day}.`,'⏱',mid);
       appState=advanceDraft(day,appState);
+      await persist();
       if(appState.draftLive&&!appState.draftDone)startTurnTimer();
     }
   },1000);
@@ -328,14 +306,14 @@ app.get('/api/state',(req,res)=>{
   res.json(appState);
 });
 
-app.post('/api/state',(req,res)=>{
+app.post('/api/state',async(req,res)=>{
   if(!req.body||typeof req.body!=='object')return res.status(400).json({error:'Invalid state'});
   appState={...appState,...req.body};
+  await persist();
   res.json({ok:true});
 });
 
-// Launch draft
-app.post('/api/draft/start',(req,res)=>{
+app.post('/api/draft/start',async(req,res)=>{
   const{draftOrder,assignments}=req.body;
   appState.draftOrder=draftOrder;
   appState.assignments=assignments||{};
@@ -352,11 +330,11 @@ app.post('/api/draft/start',(req,res)=>{
     if(threeEntry){const m3=(appState.marines||[]).find(m=>m.id===threeEntry.id);if(m3)addNotif('STAND BY',`${dName(m3)}: 3 picks away.`,'⏱',m3.id);}
   }
   startTurnTimer();
+  await persist();
   res.json({ok:true,state:appState});
 });
 
-// Submit pick
-app.post('/api/draft/pick',(req,res)=>{
+app.post('/api/draft/pick',async(req,res)=>{
   if(!appState.draftLive||appState.draftDone)return res.status(400).json({error:'Draft not live'});
   if(appState.draftPaused)return res.status(400).json({error:'Draft is paused'});
   const{day,mid}=req.body;
@@ -367,50 +345,54 @@ app.post('/api/draft/pick',(req,res)=>{
   const lbl=isDD?(e.turn===2?' (Day 2)':' (Day 1)'):'';
   if(m)addNotif('SELECTION CONFIRMED',`${dName(m)}${lbl}: ${MONTHS[appState.month]} ${day} confirmed.`,'✅',mid);
   appState=advanceDraft(day,appState);
+  await persist();
   if(appState.draftLive&&!appState.draftDone)startTurnTimer();
   res.json({ok:true,state:appState});
 });
 
-// Pause
-app.post('/api/draft/pause',(req,res)=>{
+app.post('/api/draft/pause',async(req,res)=>{
   pauseTimer();
   addNotif('DRAFT PAUSED','The draft has been paused by the NCOIC.','⏸');
+  await persist();
   res.json({ok:true});
 });
 
-// Resume
-app.post('/api/draft/resume',(req,res)=>{
+app.post('/api/draft/resume',async(req,res)=>{
   resumeTimer();
   addNotif('DRAFT RESUMED','The draft has resumed.','▶️');
+  await persist();
   res.json({ok:true});
 });
 
-// Restart draft
-app.post('/api/draft/restart',(req,res)=>{
+app.post('/api/draft/restart',async(req,res)=>{
   stopTimer();
   appState={...appState,draftIdx:0,draftLive:false,draftDone:false,draftPaused:false,assignments:{},voluntaryWkTakers:[],freedMarines:[],turnSecsRemaining:0};
   addNotif('DRAFT RESTARTED','The draft has been restarted. All picks cleared.','↺');
+  await persist();
   res.json({ok:true});
 });
 
-// Notifications
-app.post('/api/notif',(req,res)=>{
+app.post('/api/notif',async(req,res)=>{
   const{title,body,icon,targetMid}=req.body;
   const n=addNotif(title,body,icon||'🔔',targetMid||null);
+  await persist();
   res.json({ok:true,notif:n});
 });
 
-app.post('/api/notif/read',(req,res)=>{
+app.post('/api/notif/read',async(req,res)=>{
   const{mid}=req.body;
   appState.notifications=appState.notifications.map(n=>{
     if(mid==='all'||!n.targetMid||n.targetMid===mid)return{...n,unread:false};
     return n;
   });
+  await persist();
   res.json({ok:true});
 });
 
-app.post('/api/reset',(req,res)=>{
-  stopTimer();appState=getInitialState();
+app.post('/api/reset',async(req,res)=>{
+  stopTimer();
+  appState=getInitialState();
+  await persist();
   res.json({ok:true});
 });
 
@@ -422,5 +404,34 @@ app.get('*',(req,res)=>{
   res.sendFile(path.join(__dirname,'public','index.html'));
 });
 
+// ─── STARTUP ──────────────────────────────────────────────────────────────────
 const PORT=process.env.PORT||3000;
-app.listen(PORT,()=>console.log(`DutyDraft running on port ${PORT}`));
+
+async function start(){
+  try {
+    const saved = await getState();
+    if(saved){
+      appState = saved;
+      console.log('State loaded from database. Phase:',appState.phase);
+      // If a draft was live when the server last stopped, mark it paused
+      // so Marines aren't locked out on reconnect
+      if(appState.draftLive && !appState.draftDone){
+        appState.draftPaused = true;
+        appState.turnSecsRemaining = (appState.turnMins||3)*60;
+        await persist();
+        console.log('Draft was live on restart — marked paused. NCOIC must resume.');
+      }
+    } else {
+      appState = getInitialState();
+      await persist();
+      console.log('No saved state found — initialized fresh.');
+    }
+  } catch(err){
+    console.error('Failed to load state from DB, using initial state:',err.message);
+    appState = getInitialState();
+  }
+
+  app.listen(PORT,()=>console.log(`DutyDraft running on port ${PORT}`));
+}
+
+start();
