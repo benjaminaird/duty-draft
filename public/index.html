@@ -88,7 +88,6 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size
 .cc.pref-wk{background:#0f1a05;border-color:#4a8020;color:#8fbc44;cursor:pointer;}
 .cc.grey{background:#090a0d;border-color:#111318;color:#1e2028;cursor:not-allowed;}
 .cc.na-red{background:#130303;border-color:#3a0a0a;color:var(--red);cursor:not-allowed;}
-.cc.na-blocked{background:#130e00;border-color:#3a2a00;color:#8a6a20;cursor:not-allowed;}
 .cc.bo{background:#100606;border-color:#280e0e;color:#331010;cursor:not-allowed;}
 .cc.wk-cfg{background:#181208;border-color:#3d2e08;color:#c8a84b;cursor:pointer;}
 .cc.workday{background:var(--s3);border-color:var(--blue);color:var(--blue);cursor:pointer;}
@@ -1469,7 +1468,7 @@ function App(){
         <div className="card">
           <div className="card-title">SELECT DATE{pickLabel?'  --  '+pickLabel:''}</div>
           <div className="row" style={{marginBottom:8,fontSize:9,color:'var(--muted)',gap:8}}>
-            <span style={{color:'var(--green)'}}>■ Pref</span><span>■ Avail</span><span style={{color:'var(--red)'}}>■ Pref taken</span><span style={{color:'#8a6a20'}}>■ Your N/A</span><span style={{color:'#1e2028'}}>■ Taken</span>
+            <span style={{color:'var(--green)'}}>■ Pref</span><span>■ Avail</span><span style={{color:'var(--red)'}}>■ N/A</span><span style={{color:'#1e2028'}}>■ Taken</span>
             {isPaused&&<span style={{color:'var(--muted)'}}>⏸ Draft paused</span>}
           </div>
           <CalGrid year={st.year} month={st.month} renderCell={d=>{
@@ -1477,14 +1476,13 @@ function App(){
             const isPref=myPrefs.find(p=>p.day===d);
             const takenBy=assignments[d];
             const takenName=takenBy&&takenBy!==currentMid?marines.find(m=>m.id===takenBy)?.lastName:'';
-            const cls='cc'+(state==='grey'?' grey':state==='mine'?' assigned':state==='na'?' na-blocked':state==='pending'?' pending':state==='paused'?' paused':state==='pref'?' pref':state==='pref-wk'?' pref-wk':state==='avail-wk'?' avail-wk':' avail');
+            const cls='cc'+(state==='grey'?' grey':state==='mine'?' assigned':state==='na'?' na-red':state==='pending'?' pending':state==='paused'?' paused':state==='pref'?' pref':state==='pref-wk'?' pref-wk':state==='avail-wk'?' avail-wk':' avail');
             const clickable=!isPaused&&['avail','avail-wk','pref','pref-wk','pending'].includes(state);
             return(<div key={d} className={cls} onClick={()=>clickable&&handleDayClick(d)}>
               {isPref&&!['grey','na','paused'].includes(state)&&<div className="c-prio">#{isPref.priority}</div>}
               <div className="c-num">{d}</div>
               {takenName&&<div className="c-lbl">{takenName}</div>}
               {state==='mine'&&<div className="c-lbl">MINE</div>}
-              {state==='na'&&<div className="c-lbl">N/A</div>}
             </div>);
           }}/>
         </div>
@@ -1535,50 +1533,11 @@ function App(){
       await api.addNotif('ROSTER PUBLISHED',`The ${MONTHS[st.month]} ${st.year} duty roster is published. All duties: check your assignment.`,'🔒');
     }
     async function exportRoster(){
-      // ── PDF layout constants ────────────────────────────────────────────────
-      const pageWidth        = 612;   // 8.5in × 72
-      const pageHeight       = 792;   // 11in  × 72
-      const marginLeft       = 75.6;  // 1.05in
-      const marginRight      = 59.04; // 0.82in
-      const marginTop        = 44.64; // 0.62in
-      const bodyFontSize     = 10.5;
-      const rosterFontSize   = 10;
-      const letterheadFontSize = 11;
-      const replyLabelSize   = 6;
-      const replyBodySize    = 9.5;
-      const rowGap           = 21.5;  // points between roster rows
-      const firstRosterRowY  = 490;   // Y of row 1 (positive = down from top in jsPDF)
-      const footnoteY        = firstRosterRowY + 16 * rowGap + 14;
-      const signatureY       = 738;   // near bottom, ~0.75in from bottom
-
-      // Column X positions (from left edge of page)
-      const leftDateX  = marginLeft + 2;
-      const leftNameX  = marginLeft + 34;
-      const rightDateX = marginLeft + 220;
-      const rightNameX = marginLeft + 254;
-      const ruleX      = marginLeft;
-      const ruleW      = pageWidth - marginLeft - marginRight;
-
-      // ── Load jsPDF ─────────────────────────────────────────────────────────
-      if(!window.jspdf){
-        await new Promise((res,rej)=>{
-          const s=document.createElement('script');
-          s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-          s.onload=res; s.onerror=rej;
-          document.head.appendChild(s);
-        });
-      }
-      const {jsPDF}=window.jspdf;
-      const doc=new jsPDF({unit:'pt',format:'letter',orientation:'portrait'});
-
-      // ── Data preparation ────────────────────────────────────────────────────
       const allAsgn2={...assignments};
       Object.entries(preAssigned).forEach(([d,mid])=>{if(!allAsgn2[Number(d)])allAsgn2[Number(d)]=mid;});
-
       const totalDays=getDIM(st.year,st.month);
       const leftCount=totalDays===31?16:totalDays===30?15:Math.ceil(totalDays/2);
       const rightCount=totalDays-leftCount;
-      const rowCount=Math.max(leftCount,rightCount);
 
       const now=new Date();
       const MON_ABBR=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -1586,141 +1545,47 @@ function App(){
       const monthUpper=MONTHS[st.month].toUpperCase();
       const monthTitle=MONTHS[st.month].charAt(0)+MONTHS[st.month].slice(1).toLowerCase();
 
-      // Helper: right-aligned text at a given right-edge X
-      function drawTextRight(text,rightEdgeX,y,font,style,size){
-        doc.setFont(font,style);
-        doc.setFontSize(size);
-        const w=doc.getTextWidth(text);
-        doc.text(text,rightEdgeX-w,y);
+      function dayStr(d){
+        const isWk=isNatWk(st.year,st.month,d)||isWkDate(d);
+        return (isWk?'*':'')+String(d);
       }
-      function drawText(text,x,y,font,style,size){
-        doc.setFont(font,style);
-        doc.setFontSize(size);
-        doc.text(text,x,y);
-      }
-      function drawTextCenter(text,y,font,style,size){
-        doc.setFont(font,style);
-        doc.setFontSize(size);
-        const w=doc.getTextWidth(text);
-        doc.text(text,(pageWidth-w)/2,y);
+      function nameFor(d){
+        const k=dk(st.year,st.month,d);
+        if((blackouts||[]).includes(k))return'NCOIC';
+        const mid=allAsgn2[d];
+        if(!mid)return'';
+        const m=marines.find(x=>x.id===mid);
+        return m?dName(m):'';
       }
 
-      // ── Letterhead (centered) ───────────────────────────────────────────────
-      // jsPDF Y is from top of page; baseline of first line:
-      const lhLine1Y = marginTop + letterheadFontSize;
-      const lhLeading = letterheadFontSize * 1.15;
+      const leftRows =Array.from({length:leftCount}, (_,i)=>[dayStr(i+1),           nameFor(i+1)]);
+      const rightRows=Array.from({length:rightCount},(_,i)=>[dayStr(leftCount+i+1), nameFor(leftCount+i+1)]);
 
-      drawTextCenter('UNITED STATES MARINE CORPS',         lhLine1Y,              'helvetica','bold',  letterheadFontSize);
-      drawTextCenter('THE UNITED STATES MARINE DRUM & BUGLE CORPS', lhLine1Y+lhLeading,   'times','normal',letterheadFontSize);
-      drawTextCenter('MARINE BARRACKS',                    lhLine1Y+lhLeading*2,  'times','normal',letterheadFontSize);
-      drawTextCenter('8TH & I STREETS SE',                 lhLine1Y+lhLeading*3,  'times','normal',letterheadFontSize);
-      drawTextCenter('WASHINGTON, DC 20390-5000',          lhLine1Y+lhLeading*4,  'times','normal',letterheadFontSize);
+      const payload={
+        year:st.year, month_name:monthTitle, month_upper:monthUpper,
+        pub_date:pubDate, left_rows:leftRows, right_rows:rightRows,
+        co_name:coName||'N. D. MORRIS'
+      };
 
-      // ── Reply block (top-right) ─────────────────────────────────────────────
-      const replyRightEdge = pageWidth - marginRight + 6;
-      const replyLines=['IN REPLY REFER TO:','1601.2','D&B',pubDate];
-      const replySizes=[replyLabelSize,replyBodySize,replyBodySize,replyBodySize];
-      let replyYcur=marginTop+replyLabelSize+2;
-      replyLines.forEach((line,i)=>{
-        doc.setFont('times','normal');
-        doc.setFontSize(replySizes[i]);
-        doc.text(line, replyRightEdge - doc.getTextWidth(line), replyYcur);
-        replyYcur+=replySizes[i]*1.25;
-      });
-
-      // ── Memo body ───────────────────────────────────────────────────────────
-      const memoTopY   = lhLine1Y + lhLeading*4 + 28;  // ~0.38in below letterhead
-      const bodyLeading= bodyFontSize * 1.42;
-
-      let curY = memoTopY;
-      drawText('MEMORANDUM', marginLeft, curY, 'times','normal', bodyFontSize);
-
-      curY += bodyLeading * 1.6;
-      drawText('From:  Commanding Officer, Drum & Bugle Corps Company', marginLeft, curY, 'times','normal', bodyFontSize);
-      curY += bodyLeading;
-      drawText('To:      Duty Musics, Drum & Bugle Corps Company', marginLeft, curY, 'times','normal', bodyFontSize);
-
-      curY += bodyLeading * 1.4;
-      drawText(`Subj:   DUTY MUSIC ROSTER FOR THE MONTH OF ${monthUpper}, ${st.year}.`, marginLeft, curY, 'times','normal', bodyFontSize);
-
-      curY += bodyLeading * 1.4;
-      drawText(`1.  The following comprises the Duty Music assignments for the month of ${monthTitle}, ${st.year}.`, marginLeft, curY, 'times','normal', bodyFontSize);
-
-      curY += bodyLeading * 1.3;
-      drawText('DUTY MUSIC', marginLeft, curY, 'times','bold', bodyFontSize);
-
-      curY += 6;
-      // Horizontal rule
-      doc.setDrawColor(0);
-      doc.setLineWidth(0.75);
-      doc.line(ruleX, curY, ruleX + ruleW, curY);
-
-      // ── DATE / NAME header row ──────────────────────────────────────────────
-      curY += bodyFontSize + 4;
-      doc.setFont('times','normal');
-      doc.setFontSize(rosterFontSize);
-      // Underlined headers
-      const headers=[
-        {text:'DATE',  x:leftDateX,  align:'right', rightEdge:leftNameX-2},
-        {text:'NAME',  x:leftNameX,  align:'left'},
-        {text:'DATE',  x:rightDateX, align:'right', rightEdge:rightNameX-2},
-        {text:'NAME',  x:rightNameX, align:'left'},
-      ];
-      headers.forEach(h=>{
-        doc.setFont('times','normal');
-        doc.setFontSize(rosterFontSize);
-        let tx=h.x;
-        if(h.align==='right'){tx=h.rightEdge-doc.getTextWidth(h.text);}
-        doc.text(h.text,tx,curY);
-        const tw=doc.getTextWidth(h.text);
-        doc.setLineWidth(0.5);
-        doc.line(tx,curY+1.5,tx+tw,curY+1.5);
-      });
-
-      // Month label row
-      curY += rosterFontSize * 1.3;
-      drawTextRight(monthUpper, leftNameX-2, curY, 'times','normal', rosterFontSize);
-
-      // ── Roster rows ─────────────────────────────────────────────────────────
-      for(let i=0;i<rowCount;i++){
-        const rowY = firstRosterRowY + i * rowGap;
-        const ld=i<leftCount?i+1:null;
-        const rd=i<rightCount?leftCount+i+1:null;
-
-        if(ld!==null){
-          const isWk=isNatWk(st.year,st.month,ld)||isWkDate(ld);
-          const ldStr=(isWk?'*':'')+String(ld);
-          const ldKey=dk(st.year,st.month,ld);
-          const ldBlkout=(blackouts||[]).includes(ldKey);
-          const lmid=allAsgn2[ld];
-          const ln=ldBlkout?'NCOIC':lmid?dName(marines.find(m=>m.id===lmid)||{rank:'',lastName:'',firstName:''}):'';
-          const lSize=ln.length>30?rosterFontSize-0.5:rosterFontSize;
-          drawTextRight(ldStr, leftNameX-2, rowY, 'times','normal', rosterFontSize);
-          if(ln) drawText(ln, leftNameX, rowY, 'times','normal', lSize);
-        }
-
-        if(rd!==null){
-          const isWk=isNatWk(st.year,st.month,rd)||isWkDate(rd);
-          const rdStr=(isWk?'*':'')+String(rd);
-          const rdKey=dk(st.year,st.month,rd);
-          const rdBlkout=(blackouts||[]).includes(rdKey);
-          const rmid=allAsgn2[rd];
-          const rn=rdBlkout?'NCOIC':rmid?dName(marines.find(m=>m.id===rmid)||{rank:'',lastName:'',firstName:''}):'';
-          const rSize=rn.length>30?rosterFontSize-0.5:rosterFontSize;
-          drawTextRight(rdStr, rightNameX-2, rowY, 'times','normal', rosterFontSize);
-          if(rn) drawText(rn, rightNameX, rowY, 'times','normal', rSize);
-        }
+      try{
+        const resp=await fetch('/api/export-roster',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(payload)
+        });
+        if(!resp.ok)throw new Error(await resp.text());
+        const blob=await resp.blob();
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url;
+        a.download=`DutyRoster_${monthTitle}_${st.year}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }catch(e){
+        alert('PDF export failed: '+e.message);
       }
-
-      // ── Footnote ─────────────────────────────────────────────────────────────
-      drawText('* denotes weekend day', marginLeft, footnoteY, 'times','normal', bodyFontSize);
-
-      // ── Signature ────────────────────────────────────────────────────────────
-      drawTextCenter(coName||'N. D. MORRIS', signatureY, 'times','normal', bodyFontSize);
-
-      // ── Download ─────────────────────────────────────────────────────────────
-      doc.save(`DutyRoster_${monthTitle}_${st.year}.pdf`);
     }
+
     return(
       <div>
         {editDModal!==null&&(<div className="overlay"><div className="modal">
