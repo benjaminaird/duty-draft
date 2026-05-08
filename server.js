@@ -405,20 +405,64 @@ app.post('/api/next-month',async(req,res)=>{
   stopTimer();
   const nextMonth=appState.month===11?0:appState.month+1;
   const nextYear=appState.month===11?appState.year+1:appState.year;
-  // Carry lastDutyDay forward from this month's assignments
-  const lastDutyDay={...((appState.history||{}).lastDutyDay||{})};
-  Object.entries(appState.assignments||{}).forEach(([day,mid])=>{
-    lastDutyDay[mid]=Number(day);
+
+  // ── Compute who stood weekends this cycle ─────────────────────────────────
+  const prevHistory=appState.history||{};
+  const newWb={
+    junior:[...(prevHistory.weekendBurden?.junior||[])],
+    ssgt:[...(prevHistory.weekendBurden?.ssgt||[])],
+    gysgt:[...(prevHistory.weekendBurden?.gysgt||[])],
+  };
+  const newEd=[...(prevHistory.extraDuty||[])];
+  const newDh={
+    junior:[...(prevHistory.dutyHistory?.junior||[])],
+    ssgt:[...(prevHistory.dutyHistory?.ssgt||[])],
+    gysgt:[...(prevHistory.dutyHistory?.gysgt||[])],
+  };
+
+  // Who stood a weekend this cycle?
+  const allAsgn={...appState.assignments};
+  Object.entries(appState.preAssigned||{}).forEach(([d,mid])=>{
+    if(!allAsgn[Number(d)])allAsgn[Number(d)]=mid;
   });
+  Object.entries(allAsgn).forEach(([day,mid])=>{
+    if(isWkDate(Number(day),appState)){
+      const m=(appState.marines||[]).find(x=>x.id===mid);
+      if(!m)return;
+      const g=groupOf(m.rank);
+      newWb[g].push(mid);
+    }
+  });
+
+  // Who doubled this cycle?
+  Object.entries(appState.doubleDuty||{}).forEach(([mid,count])=>{
+    if(count>=2)newEd.push(mid);
+  });
+
+  // Who stood duty at all this cycle (for short month sit-out rotation)?
+  Object.values(allAsgn).forEach(mid=>{
+    const m=(appState.marines||[]).find(x=>x.id===mid);
+    if(!m)return;
+    const g=groupOf(m.rank);
+    if(!newDh[g].includes(mid))newDh[g].push(mid);
+  });
+
+  // lastDutyDay — carry forward from this cycle's assignments
+  const lastDutyDay={...((prevHistory.lastDutyDay)||{})};
+  Object.entries(allAsgn).forEach(([day,mid])=>{
+    const d=Number(day);
+    if(!lastDutyDay[mid]||d>lastDutyDay[mid])lastDutyDay[mid]=d;
+  });
+
   appState={
     phase:'setup',
     year:nextYear,
     month:nextMonth,
     marines:appState.marines,
     history:{
-      weekendBurden:(appState.history||{}).weekendBurden||{junior:[],ssgt:[],gysgt:[]},
-      extraDuty:(appState.history||{}).extraDuty||[],
-      dutyHistory:(appState.history||{}).dutyHistory||{junior:[],ssgt:[],gysgt:[]},
+      weekendBurden:newWb,
+      extraDuty:newEd,
+      dutyHistory:newDh,
       lastDutyDay
     },
     turnMins:appState.turnMins||3,

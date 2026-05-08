@@ -281,7 +281,7 @@ const DAYS_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const PHASE_ORDER=['setup','calendar','wkpreview','top5','nonavail','review','draft-scheduled','draft','postdraft','published'];
 const NA_REASONS=['Approved Leave','On the Roster for a Gig','TAD','Parental Leave','Approved Out of Bounds Liberty','Other  --  Non-Sensitive Conflict','Other  --  Please Speak with SNCOIC in Person'];
 const PL={setup:'ROSTER SETUP',calendar:'CAL CONFIG',wkpreview:'WK PREVIEW',shortmonth:'SHORT MONTH',top5:'PD / NA',nonavail:'PD / NA',review:'NCOIC REVIEW','draft-scheduled':'DRAFT SCHED',draft:'LIVE DRAFT',postdraft:'POST-DRAFT',published:'PUBLISHED'};
-const TABS=[{id:'admin',label:'NCOIC'},{id:'pdna',label:'PD / NA'},{id:'draft',label:'DRAFT'},{id:'roster',label:'ROSTER'},{id:'notifs',label:'🔔'},{id:'settings',label:'⚙️'}];
+const TABS=[{id:'admin',label:'NCOIC'},{id:'pdna',label:'PD / NA'},{id:'draft',label:'DRAFT'},{id:'roster',label:'ROSTER'},{id:'history',label:'HISTORY'},{id:'notifs',label:'🔔'},{id:'settings',label:'⚙️'}];
 
 const gradeOf=r=>RANK_TO_GRADE[r]||'E1';
 const groupOf=r=>BURDEN_GROUP[gradeOf(r)]||'junior';
@@ -1804,11 +1804,110 @@ function App(){
     );
   }
 
+  // ── HISTORY REPORT ─────────────────────────────────────────────────────────
+  function HistoryView(){
+    const h=history;
+    const wbJ=h.weekendBurden.junior||[];
+    const wbS=h.weekendBurden.ssgt||[];
+    const wbG=h.weekendBurden.gysgt||[];
+    const ed=h.extraDuty||[];
+    const dhJ=h.dutyHistory.junior||[];
+    const dhS=h.dutyHistory.ssgt||[];
+    const dhG=h.dutyHistory.gysgt||[];
+    const lastDay=h.lastDutyDay||{};
+    function countOccurrences(arr,mid){return arr.filter(x=>x===mid).length;}
+    function queuePos(arr,mid){const idx=arr.lastIndexOf(mid);return idx===-1?-1:arr.length-1-idx;}
+    const groups=[
+      {label:'GUNNERY SERGEANTS',color:'var(--accent)',marines:marines.filter(m=>m.rank==='GYSGT'),wb:wbG,dh:dhG},
+      {label:'STAFF SERGEANTS',color:'var(--blue)',marines:marines.filter(m=>m.rank==='SSGT'),wb:wbS,dh:dhS},
+      {label:'SERGEANTS & BELOW',color:'var(--green)',marines:marines.filter(m=>groupOf(m.rank)==='junior'),wb:wbJ,dh:dhJ},
+    ];
+    const totalWkStood=wbJ.length+wbS.length+wbG.length;
+    const totalDD=ed.length;
+    return(
+      <div>
+        <div className="card">
+          <div className="card-title">FAIRNESS HISTORY REPORT</div>
+          <div className="card-sub">Cumulative data across all completed cycles. Use this to verify the rotation engine is working correctly.</div>
+          <div className="dash-grid" style={{marginTop:8}}>
+            <div className="dash-cell"><div className="dash-num">{totalWkStood}</div><div className="dash-lbl">TOTAL WK DUTIES</div></div>
+            <div className="dash-cell"><div className="dash-num">{totalDD}</div><div className="dash-lbl">TOTAL DOUBLE DUTIES</div></div>
+            <div className="dash-cell"><div className="dash-num">{MONTHS[st.month].slice(0,3).toUpperCase()} {st.year}</div><div className="dash-lbl">CURRENT MONTH</div></div>
+          </div>
+        </div>
+        {groups.map(g=>(
+          <div key={g.label} className="card">
+            <div className="card-title" style={{color:g.color,fontSize:13}}>{g.label}</div>
+            <div style={{overflowX:'auto'}}>
+              <table className="rt" style={{minWidth:480,marginTop:6}}>
+                <thead>
+                  <tr>
+                    <th style={{width:'30%'}}>MARINE</th>
+                    <th style={{textAlign:'center'}}>WK STOOD</th>
+                    <th style={{textAlign:'center'}}>WK QUEUE</th>
+                    <th style={{textAlign:'center'}}>DOUBLED</th>
+                    <th style={{textAlign:'center'}}>DD QUEUE</th>
+                    <th style={{textAlign:'center'}}>SAT OUT</th>
+                    <th style={{textAlign:'center'}}>LAST DAY</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {g.marines.map(m=>{
+                    const wkCount=countOccurrences(g.wb,m.id);
+                    const wkPos=queuePos(g.wb,m.id);
+                    const ddCount=countOccurrences(ed,m.id);
+                    const ddPos=queuePos(ed,m.id);
+                    const sitCount=countOccurrences(g.dh,m.id);
+                    const ld=lastDay[m.id];
+                    const isNextWk=wkPos===-1||wkPos===0;
+                    const isNextDD=ddPos===-1||ddPos===0;
+                    return(
+                      <tr key={m.id}>
+                        <td style={{fontFamily:'var(--fh)',fontSize:10,letterSpacing:.5}}>{dName(m)}</td>
+                        <td style={{textAlign:'center'}}><span style={{color:wkCount>0?g.color:'var(--muted)'}}>{wkCount}</span></td>
+                        <td style={{textAlign:'center'}}>
+                          <span style={{color:isNextWk?g.color:'var(--muted)',fontWeight:isNextWk?700:400}}>
+                            {wkPos===-1||wkPos===0?'NEXT':wkPos+' back'}
+                          </span>
+                        </td>
+                        <td style={{textAlign:'center'}}><span style={{color:ddCount>0?'var(--orange)':'var(--muted)'}}>{ddCount}</span></td>
+                        <td style={{textAlign:'center'}}>
+                          <span style={{color:isNextDD?'var(--orange)':'var(--muted)',fontWeight:isNextDD?700:400}}>
+                            {ddPos===-1||ddPos===0?'NEXT':ddPos+' back'}
+                          </span>
+                        </td>
+                        <td style={{textAlign:'center'}}><span style={{color:sitCount>0?'var(--red)':'var(--muted)'}}>{sitCount}</span></td>
+                        <td style={{textAlign:'center',fontFamily:'var(--fm)',fontSize:10,color:'var(--muted)'}}>
+                          {ld?MONTHS[st.month].slice(0,3)+' '+ld:'—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
+        <div className="card">
+          <div className="card-title" style={{fontSize:13}}>HOW TO READ THIS</div>
+          <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.7}}>
+            <div><strong style={{color:'var(--text)'}}>WK STOOD</strong> — total weekend duties assigned across all cycles</div>
+            <div><strong style={{color:'var(--text)'}}>WK QUEUE</strong> — NEXT = first in line for weekend. Higher number = further back in rotation.</div>
+            <div><strong style={{color:'var(--text)'}}>DOUBLED</strong> — total double duty assignments across all cycles</div>
+            <div><strong style={{color:'var(--text)'}}>DD QUEUE</strong> — NEXT = first in line if double duty is needed next month</div>
+            <div><strong style={{color:'var(--text)'}}>SAT OUT</strong> — short-month sit-outs (only relevant if you have run a short month)</div>
+            <div><strong style={{color:'var(--text)'}}>LAST DAY</strong> — last assigned duty day, used to prevent back-to-back days across the month boundary</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ── SETTINGS ───────────────────────────────────────────────────────────────
   function SettingsView(){
     const phaseIdx=PHASE_ORDER.indexOf(st.phase);
     async function goBack(){if(phaseIdx>0)await patch({phase:PHASE_ORDER[phaseIdx-1]});}
-    async function reset(){await api.reset().then(()=>api.getState().then(s=>{setSt(s);setEditRoster([...s.marines]);setActiveUser('ncoic');setPendingDay(null);}));}
+    async function reset(){await api.reset();window.location.reload();}
     async function nextMonth(){
       if(!confirm('Advance to next month? History is preserved. All current cycle data (assignments, blackouts, prefs, draft) will be cleared.'))return;
       const r=await fetch('/api/next-month',{method:'POST'}).then(x=>x.json());
@@ -1910,6 +2009,7 @@ function App(){
     if(tab==='draft')return(st.phase==='draft'||st.phase==='draft-scheduled'||st.draftDone)?DraftView():<div className="card"><div className="card-sub">Draft not started yet.</div></div>;
     if(tab==='roster')return(st.phase==='postdraft'||st.phase==='published')?RosterView():<div className="card"><div className="card-sub">Roster not available yet.</div></div>;
     if(tab==='notifs')return NotifsView();
+    if(tab==='history')return HistoryView();
     if(tab==='settings')return SettingsView();
   }
 
