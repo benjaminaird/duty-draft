@@ -249,8 +249,56 @@ function advanceDraft(pickedDay,state){
 
 function finishDraft(state){
   stopTimer();
-  addNotif('DRAFT COMPLETE','All duty dates assigned. NCOIC: review and publish the roster.','✅');
-  return{...state,draftLive:false,draftDone:true};
+  const asgn={...state.assignments};
+  const totalDays=getDIM(state.year,state.month);
+  const unassigned=[];
+
+  // Find all days that are unassigned and not blacked out
+  for(let d=1;d<=totalDays;d++){
+    const k=dk(state.year,state.month,d);
+    if((state.blackouts||[]).includes(k))continue;
+    if(asgn[d])continue;
+    unassigned.push(d);
+  }
+
+  if(unassigned.length>0){
+    // For each unassigned day, find the Marine with the fewest assignments
+    // who is active, not consecutive, and not pre-assigned to someone else
+    const activeMarines=(state.marines||[]).filter(m=>m.active);
+    for(const d of unassigned){
+      // Count current assignments per Marine
+      const counts={};
+      activeMarines.forEach(m=>{counts[m.id]=0;});
+      Object.values(asgn).forEach(mid=>{if(counts[mid]!==undefined)counts[mid]++;});
+
+      // Find eligible Marines sorted by fewest assignments
+      const eligible=activeMarines
+        .filter(m=>isDateValid(m.id,d,asgn,state,false))
+        .sort((a,b)=>counts[a.id]-counts[b.id]);
+
+      if(eligible.length>0){
+        asgn[d]=eligible[0].id;
+        const m=eligible[0];
+        addNotif(
+          'AUTO-ASSIGNED',
+          `${dName(m)}: ${MONTHS[state.month]} ${d} was unassigned after the draft and has been auto-assigned to you. Contact NCOIC if you have a conflict.`,
+          '📋',m.id
+        );
+      } else {
+        // No eligible Marine found — flag for NCOIC
+        addNotif(
+          'UNASSIGNED DAY',
+          `${MONTHS[state.month]} ${d} could not be auto-assigned. Manual assignment required in post-draft.`,
+          '⚠️',null
+        );
+      }
+    }
+    addNotif('DRAFT COMPLETE',`All picks complete. ${unassigned.length} day(s) were auto-assigned after the draft. NCOIC: review and publish the roster.`,'✅');
+  } else {
+    addNotif('DRAFT COMPLETE','All duty dates assigned. NCOIC: review and publish the roster.','✅');
+  }
+
+  return{...state,assignments:asgn,draftLive:false,draftDone:true};
 }
 
 // ─── SERVER-SIDE TIMER ────────────────────────────────────────────────────────
