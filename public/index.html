@@ -243,8 +243,22 @@ hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
 .dash-cell{background:var(--s3);border:1px solid var(--border2);border-radius:4px;padding:10px 8px;text-align:center;}
 .dash-num{font-family:var(--fh);font-size:24px;color:var(--accent);line-height:1;}
 .dash-lbl{font-family:var(--fh);font-size:8px;letter-spacing:1px;color:var(--muted);margin-top:3px;}
-/* Export button */
-@media print{.no-print{display:none!important;}.print-only{display:block!important;}}
+.ir-wrap{font-family:"Times New Roman",Times,serif;font-size:9px;color:var(--text);background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:12px 14px;line-height:1.4;overflow-x:auto;}
+.ir-lhb{text-align:center;font-size:8px;font-weight:700;font-family:Arial,Helvetica,sans-serif;letter-spacing:.5px;}
+.ir-lhl{text-align:center;font-size:7px;letter-acing:.3px;}
+.ir-reply{position:absolute;top:0;right:0;text-align:right;font-size:6.5px;font-family:"Courier New",Courier,monospace;}
+.ir-memo{font-size:9px;margin-top:8px;}
+.ir-title{text-align:center;font-size:9px;margin-top:10px;margin-bottom:2px;}
+.ir-hr{border-top:1px solid var(--text);margin:2px 0 6px;}
+.ir-hdrs{display:grid;grid-template-columns:38px 1fr 38px 1fr;gap:0 6px;margin-bottom:3px;}
+.ir-hdr{font-size:8px;font-weight:700;border-bottom:1px solid var(--text);padding-bottom:1px;}
+.ir-hdrr{font-size:8px;font-weight:700;border-bottom:1px solid var(--text);padding-bottom:1px;text-align:right;}
+.ir-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 20px;}
+.ir-row{display:grid;grid-template-columns:38px 1fr;gap:0 4px;padding:.5px 0;}
+.ir-day{text-align:right;font-size:8.5px;white-space:nowrap;}
+.ir-name{font-size:8.5px;white-space:nowrap;}
+.ir-fn{margin-top:8px;font-size:8px;}
+.ir-sig{text-align:center;font-size:9px;margin-top:14px;}
 /* Bugler illustration */
 .bugler-wrap{text-align:center;padding:16px 0 8px;opacity:0.85;}
 .bugler-img{width:140px;height:140px;object-fit:contain;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.6));}
@@ -1535,62 +1549,49 @@ function App(){
   function RosterView(){
     const allAsgn={...assignments};
     Object.entries(preAssigned).forEach(([d,mid])=>{if(!allAsgn[Number(d)])allAsgn[Number(d)]=mid;});
+    const totalDays=getDIM(st.year,st.month);
+    const leftCount=totalDays===31?16:totalDays===30?15:Math.ceil(totalDays/2);
+    const MON_ABBR=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const now=new Date();
+    const pubDate=`${now.getDate()} ${MON_ABBR[now.getMonth()]} ${String(now.getFullYear()).slice(2)}`;
+    const monthUpper=MONTHS[st.month].toUpperCase();
+    const monthTitle=MONTHS[st.month].charAt(0)+MONTHS[st.month].slice(1).toLowerCase();
+
+    function dayStr(d){return(isNatWk(st.year,st.month,d)||isWkDate(d)?'*':'')+String(d);}
+    function nameFor(d){
+      const k=dk(st.year,st.month,d);
+      if((blackouts||[]).includes(k))return'SNCOIC';
+      const mid=allAsgn[d];if(!mid)return'';
+      const m=marines.find(x=>x.id===mid);return m?dName(m):'';
+    }
+
     async function publish(){
       await patch({phase:'published'});
       await api.addNotif('ROSTER PUBLISHED',`The ${MONTHS[st.month]} ${st.year} duty roster is published. All duties: check your assignment.`,'🔒');
     }
+
     async function exportRoster(){
-      const allAsgn2={...assignments};
-      Object.entries(preAssigned).forEach(([d,mid])=>{if(!allAsgn2[Number(d)])allAsgn2[Number(d)]=mid;});
-      const totalDays=getDIM(st.year,st.month);
-      const leftCount=totalDays===31?16:totalDays===30?15:Math.ceil(totalDays/2);
       const rightCount=totalDays-leftCount;
-
-      const now=new Date();
-      const MON_ABBR=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const pubDate=`${now.getDate()} ${MON_ABBR[now.getMonth()]} ${String(now.getFullYear()).slice(2)}`;
-      const monthUpper=MONTHS[st.month].toUpperCase();
-      const monthTitle=MONTHS[st.month].charAt(0)+MONTHS[st.month].slice(1).toLowerCase();
-
-      function dayStr(d){
-        const isWk=isNatWk(st.year,st.month,d)||isWkDate(d);
-        return (isWk?'*':'')+String(d);
-      }
-      function nameFor(d){
-        const k=dk(st.year,st.month,d);
-        if((blackouts||[]).includes(k))return'SNCOIC';
-        const mid=allAsgn2[d];
-        if(!mid)return'';
-        const m=marines.find(x=>x.id===mid);
-        return m?dName(m):'';
-      }
-
-      const leftRows =Array.from({length:leftCount}, (_,i)=>[dayStr(i+1),           nameFor(i+1)]);
-      const rightRows=Array.from({length:rightCount},(_,i)=>[dayStr(leftCount+i+1), nameFor(leftCount+i+1)]);
-
-      const payload={
-        year:st.year, month_name:monthTitle, month_upper:monthUpper,
-        pub_date:pubDate, left_rows:leftRows, right_rows:rightRows,
-        co_name:coName||'N. D. MORRIS'
-      };
-
+      const leftRows=Array.from({length:leftCount},(_,i)=>[dayStr(i+1),nameFor(i+1)]);
+      const rightRows=Array.from({length:rightCount},(_,i)=>[dayStr(leftCount+i+1),nameFor(leftCount+i+1)]);
+      const payload={year:st.year,month_name:monthTitle,month_upper:monthUpper,pub_date:pubDate,left_rows:leftRows,right_rows:rightRows,co_name:coName||'N. D. MORRIS'};
       try{
-        const resp=await fetch('/api/export-roster',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify(payload)
-        });
+        const resp=await fetch('/api/export-roster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         if(!resp.ok)throw new Error(await resp.text());
         const blob=await resp.blob();
         const url=URL.createObjectURL(blob);
-        const a=document.createElement('a');
-        a.href=url;
-        a.download=`DutyRoster_${monthTitle}_${st.year}.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }catch(e){
-        alert('PDF export failed: '+e.message);
+        const a=document.createElement('a');a.href=url;a.download=`DutyRoster_${monthTitle}_${st.year}.pdf`;a.click();URL.revokeObjectURL(url);
+      }catch(e){alert('PDF export failed: '+e.message);}
+    }
+
+    function exportICS(){
+      const entries=[];
+      for(let d=1;d<=totalDays;d++){
+        const name=nameFor(d);if(!name||name==='SNCOIC')continue;
+        const isWk=isNatWk(st.year,st.month,d)||isWkDate(d);
+        entries.push({year:st.year,month:st.month,day:d,summary:`DUTY MUSIC - ${name}${isWk?' (WEEKEND)':''}`,desc:`${MONTHS[st.month]} ${st.year} Duty Music Roster - ${name}`,uid:`dutydraft-duty-${st.year}-${String(st.month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`});
       }
+      downloadICS(buildICS(entries),`DutyRoster_${monthTitle}_${st.year}.ics`);
     }
 
     return(
@@ -1607,25 +1608,49 @@ function App(){
             <button className="btn btn-ghost" onClick={()=>setEditDModal(null)}>CANCEL</button>
           </div>
         </div></div>)}
-        <div className="card">
-          <div className="rowb" style={{marginBottom:10}}>
-            <div><div className="card-title">DUTY ROSTER  --  {MONTHS[st.month]} {st.year}</div><div className="card-sub">{st.phase==='postdraft'?'Tap date to edit. ':''}★ = weekend · 🔒 = pre-assigned</div></div>
-            <div className="row" style={{gap:6}}>
-              <button className="btn btn-ghost btn-sm no-print" onClick={exportRoster}>📄 EXPORT PDF</button>
-              {st.phase==='postdraft'&&<button className="btn btn-gold btn-sm" onClick={publish}>🔒 PUBLISH</button>}
+
+        {/* ── Published: inline roster graphic ── */}
+        {st.phase==='published'&&(
+          <div className="card">
+            <div className="rowb" style={{marginBottom:10}}>
+              <div><div className="card-title">DUTY MUSIC ROSTER  --  {monthUpper} {st.year}</div><div className="card-sub">Published · ★ = weekend</div></div>
+              <div className="row" style={{gap:6}}>
+                <button className="btn btn-ghost btn-sm" onClick={exportRoster}>📄 PDF</button>
+                <button className="btn btn-ghost btn-sm" onClick={exportICS}>📅 CALENDAR</button>
+              </div>
             </div>
+            <InlineRoster
+              totalDays={totalDays} leftCount={leftCount} year={st.year} month={st.month}
+              dayStr={dayStr} nameFor={nameFor} pubDate={pubDate}
+              monthUpper={monthUpper} coName={coName||'N. D. MORRIS'}
+              rosterType="duty"
+            />
           </div>
-          <CalGrid year={st.year} month={st.month} renderCell={d=>{
-            const k=dk(st.year,st.month,d),bo=(st.blackouts||[]).includes(k),pa=!!preAssigned[d],mid2=allAsgn[d];
-            const m=marines.find(x=>x.id===mid2);
-            const cls='cc'+(bo?' bo':pa?' pre-assigned':mid2?' assigned':isWkDate(d)?' avail-wk':' avail');
-            return(<div key={d} className={cls} onClick={()=>st.phase==='postdraft'&&!bo&&(()=>{editDRef.current=m?dName(m):'';setEditDModal(d);})()}>
-              <div className="c-num">{d}</div>
-              {m&&<div className="c-lbl">{m.lastName}{pa?' 🔒':''}</div>}
-              {bo&&<div className="c-lbl">SNCOIC</div>}
-            </div>);
-          }}/>
-        </div>
+        )}
+
+        {/* ── Post-draft: editable calendar grid ── */}
+        {st.phase==='postdraft'&&(
+          <div className="card">
+            <div className="rowb" style={{marginBottom:10}}>
+              <div><div className="card-title">DUTY ROSTER  --  {MONTHS[st.month]} {st.year}</div><div className="card-sub">Tap date to edit. ★ = weekend · 🔒 = pre-assigned</div></div>
+              <div className="row" style={{gap:6}}>
+                <button className="btn btn-ghost btn-sm no-print" onClick={exportRoster}>📄 EXPORT PDF</button>
+                <button className="btn btn-gold btn-sm" onClick={publish}>🔒 PUBLISH</button>
+              </div>
+            </div>
+            <CalGrid year={st.year} month={st.month} renderCell={d=>{
+              const k=dk(st.year,st.month,d),bo=(st.blackouts||[]).includes(k),pa=!!preAssigned[d],mid2=allAsgn[d];
+              const m=marines.find(x=>x.id===mid2);
+              const cls='cc'+(bo?' bo':pa?' pre-assigned':mid2?' assigned':isWkDate(d)?' avail-wk':' avail');
+              return(<div key={d} className={cls} onClick={()=>!bo&&(()=>{editDRef.current=m?dName(m):'';setEditDModal(d);})()}>
+                <div className="c-num">{d}</div>
+                {m&&<div className="c-lbl">{m.lastName}{pa?' 🔒':''}</div>}
+                {bo&&<div className="c-lbl">SNCOIC</div>}
+              </div>);
+            }}/>
+          </div>
+        )}
+
         {/* Seniority-ordered assignment list */}
         <div className="card">
           <div className="card-title">ASSIGNMENTS BY SENIORITY</div>
@@ -1638,11 +1663,7 @@ function App(){
                 <div className="mrow-num" style={{minWidth:22,fontSize:11}}>{i+1}</div>
                 <div className="seniority-name">{dName(m)}</div>
                 <div style={{display:'flex',gap:6,alignItems:'center'}}>
-                  {assignedDay.map(d=>(
-                    <span key={d} className="seniority-date">
-                      {MONTHS[st.month].slice(0,3)} {d}{isWkDate(d)?<span className="seniority-wk"> ★</span>:''}
-                    </span>
-                  ))}
+                  {assignedDay.map(d=>(<span key={d} className="seniority-date">{MONTHS[st.month].slice(0,3)} {d}{isWkDate(d)?<span className="seniority-wk"> ★</span>:''}</span>))}
                   {!assignedDay.length&&<span style={{color:'var(--muted)',fontSize:10}}> -- </span>}
                   {doubleDuty[m.id]&&<span className="pill p-org">×2</span>}
                   {wkAssigneeIds.includes(m.id)&&<span className="pill p-gold">WK</span>}
@@ -1973,6 +1994,69 @@ function App(){
   );
 }
 
+function buildICS(entries,calTitle){
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//DutyDraft//MBW D&B//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+  entries.forEach(({year,month,day,summary,desc,uid})=>{
+    const mm=String(month+1).padStart(2,'0'),dd=String(day).padStart(2,'0'),ds=`${year}${mm}${dd}`;
+    lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${ds}`,`DTEND;VALUE=DATE:${ds}`,`SUMMARY:${summary}`,`DESCRIPTION:${desc}`,`UID:${uid}@mbw`,'END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+function downloadICS(icsText,filename){
+  const blob=new Blob([icsText],{type:'text/calendar'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);
+}
+
+// ── INLINE ROSTER GRAPHIC ────────────────────────────────────────────────────
+// Renders an HTML replica of the official USMC memo roster format.
+// Used on the published Roster tab for both duty and funeral rosters.
+function InlineRoster({totalDays,leftCount,year,month,dayStr,nameFor,pubDate,monthUpper,coName,rosterType}){
+  const rightDays=Array.from({length:totalDays-leftCount},(_,i)=>leftCount+i+1);
+  const leftDays=Array.from({length:leftCount},(_,i)=>i+1);
+  const titleText=rosterType==='funeral'?'FUNERAL MUSIC':'DUTY MUSIC';
+  const mn=MONTHS[month].charAt(0)+MONTHS[month].slice(1).toLowerCase();
+  const subj=rosterType==='funeral'?`FUNERAL BUGLER ROSTER FOR THE MONTH OF ${monthUpper}, ${year}.`:`DUTY MUSIC ROSTER FOR THE MONTH OF ${monthUpper}, ${year}.`;
+  const para=rosterType==='funeral'?`1.  The following comprises the Funeral Bugler assignments for the month of ${mn}, ${year}.`:`1.  The following comprises the Duty Music assignments for the month of ${mn}, ${year}.`;
+  const Row=({d})=><div className="ir-row"><div className="ir-day">{dayStr(d)}</div><div className="ir-name">{nameFor(d)}</div></div>;
+  return(
+    <div className="ir-wrap">
+      <div style={{position:'relative'}}>
+        <div className="ir-lhb">UNITED STATES MARINE CORPS</div>
+        <div className="ir-lhl">THE UNITED STATES MARINE DRUM &amp; BUGLE CORPS</div>
+        <div className="ir-lhl">MARINE BARRACKS</div>
+        <div className="ir-lhl">8TH &amp; I STREETS SE</div>
+        <div className="ir-lhl">WASHINGTON, DC 20390-5000</div>
+        <div className="ir-reply"><div style={{fontSize:6}}>IN REPLY REFER TO:</div><div>1601.2</div><div>D&amp;B</div><div>{pubDate}</div></div>
+      </div>
+      <div className="ir-memo" style={{marginTop:14}}><strong>MEMORANDUM</strong></div>
+      <div className="ir-memo">From:  Commanding Officer, Drum &amp; Bugle Corps Company</div>
+      <div className="ir-memo">To:      Duty Musics, Drum &amp; Bugle Corps Company</div>
+      <div className="ir-memo" style={{marginTop:4}}>Subj: &nbsp;&nbsp;&nbsp;{subj}</div>
+      <div className="ir-memo" style={{marginTop:4}}>{para}</div>
+      <div className="ir-title">{titleText}</div>
+      <div className="ir-hr"/>
+      <div className="ir-hdrs">
+        <div className="ir-hdrr">DATE</div><div className="ir-hdr">NAME</div>
+        <div className="ir-hdrr">DATE</div><div className="ir-hdr">NAME</div>
+      </div>
+      <div className="ir-grid">
+        <div>
+          <div className="ir-row"><div className="ir-day" style={{fontWeight:700}}>{monthUpper}</div><div/></div>
+          {leftDays.map(d=><Row key={d} d={d}/>)}
+        </div>
+        <div>
+          <div className="ir-row"><div className="ir-day"/><div/></div>
+          {rightDays.map(d=><Row key={d} d={d}/>)}
+        </div>
+      </div>
+      <div className="ir-fn">* denotes weekend day</div>
+      <div className="ir-sig">{coName}</div>
+    </div>
+  );
+}
+
 // ── DEMO FUNERAL MARINES ─────────────────────────────────────────────────────
 const DEMO_FUNERAL_MARINES=[
   {id:'f1', rank:'SSGT',lastName:'THE HEADLESS HORSEMAN',   firstName:''},
@@ -2216,61 +2300,58 @@ function FuneralRoster({fState,appState,onUpdate,onRefresh}){
 function FuneralPublished({fState,appState,coName,onRefresh}){
   const {year,month}=appState;
   const total=new Date(year,month+1,0).getDate();
+  const leftCount=total===31?15:total===30?15:Math.ceil(total/2);
   const [exporting,setExporting]=useState(false);
   const funeralMarines=fState.funeralMarines||[];
   const assignments=fState.funeralAssignments||{};
   const wkSet=fBuildWkSet(year,month,fState.funeralExtraWk||[],fState.funeralWorkdays||[]);
   const blackoutSet=new Set((fState.funeralBlackouts||[]).map(k=>parseInt(k.split('-').pop())));
-  const getDisplayName=mid=>{
-    if(!mid)return'—';if(mid==='SNCOIC')return'SNCOIC';
-    const fm=funeralMarines.find(m=>m.id===mid);return fm?`${fm.rank} ${fm.lastName}`:mid;
+  const MON_ABBR=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const now=new Date();
+  const pubDate=`${now.getDate()} ${MON_ABBR[now.getMonth()]} ${String(now.getFullYear()).slice(2)}`;
+  const monthTitle=MONTHS[month].charAt(0)+MONTHS[month].slice(1).toLowerCase();
+  const monthUpper=MONTHS[month].toUpperCase();
+  const dayStr=d=>(wkSet.has(d)||blackoutSet.has(d)?'*':'')+String(d);
+  const nameFor=d=>{
+    const mid=assignments[d];if(!mid)return'';if(mid==='SNCOIC')return'SNCOIC';
+    const fm=funeralMarines.find(m=>m.id===mid);return fm?`${fm.rank} ${fm.lastName}`:'';
   };
   const exportPDF=async()=>{
     setExporting(true);
-    const monthTitle=MONTHS[month].charAt(0)+MONTHS[month].slice(1).toLowerCase();
-    const leftCount=total===31?16:total===30?15:Math.ceil(total/2);
     const rightCount=total-leftCount;
-    const MON_ABBR=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const now=new Date();
-    const pubDate=`${now.getDate()} ${MON_ABBR[now.getMonth()]} ${String(now.getFullYear()).slice(2)}`;
-    const dayStr=d=>(wkSet.has(d)||blackoutSet.has(d)?'*':'')+String(d);
-    const nameFor=d=>{const mid=assignments[d];if(!mid)return'';if(mid==='SNCOIC')return'SNCOIC';const fm=funeralMarines.find(m=>m.id===mid);return fm?`${fm.rank} ${fm.lastName}`:'';}
     const leftRows=Array.from({length:leftCount},(_,i)=>[dayStr(i+1),nameFor(i+1)]);
     const rightRows=Array.from({length:rightCount},(_,i)=>[dayStr(leftCount+i+1),nameFor(leftCount+i+1)]);
     try{
       const resp=await fetch('/api/export-funeral-roster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({left_rows:leftRows,right_rows:rightRows,co_name:coName||'N. D. MORRIS'})});
       if(!resp.ok)throw new Error(await resp.text());
-      const blob=await resp.blob();
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');
-      a.href=url;a.download=`FuneralRoster_${monthTitle}_${year}.pdf`;a.click();URL.revokeObjectURL(url);
+      const blob=await resp.blob();const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');a.href=url;a.download=`FuneralRoster_${monthTitle}_${year}.pdf`;a.click();URL.revokeObjectURL(url);
     }catch(e){alert('PDF export failed: '+e.message);}
     setExporting(false);
+  };
+  const exportICS=()=>{
+    const entries=[];
+    for(let d=1;d<=total;d++){
+      const name=nameFor(d);if(!name||name==='SNCOIC')continue;
+      entries.push({year,month,day:d,summary:`FUNERAL BUGLER - ${name}`,desc:`${MONTHS[month]} ${year} Funeral Bugler Roster - ${name}`,uid:`dutydraft-funeral-${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`});
+    }
+    downloadICS(buildICS(entries),`FuneralRoster_${monthTitle}_${year}.ics`);
   };
   return(
     <div className="card">
       <div className="rowb" style={{marginBottom:10}}>
-        <div><div className="card-title">FUNERAL ROSTER  --  {MONTHS[month].toUpperCase()} {year}</div><div className="card-sub">Published · ★ = weekend / blackout (SNCOIC)</div></div>
-        <button className="btn btn-gold btn-sm" disabled={exporting} onClick={exportPDF}>{exporting?'EXPORTING…':'📄 EXPORT PDF'}</button>
+        <div><div className="card-title">FUNERAL MUSIC ROSTER  --  {monthUpper} {year}</div><div className="card-sub">Published · ★ = weekend / blackout (SNCOIC)</div></div>
+        <div className="row" style={{gap:6}}>
+          <button className="btn btn-ghost btn-sm" disabled={exporting} onClick={exportPDF}>{exporting?'EXPORTING…':'📄 PDF'}</button>
+          <button className="btn btn-ghost btn-sm" onClick={exportICS}>📅 CALENDAR</button>
+        </div>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'2px 24px'}}>
-        {(()=>{
-          const leftCount=total===31?15:total===30?15:Math.ceil(total/2);
-          const leftDays=Array.from({length:leftCount},(_,i)=>i+1);
-          const rightDays=Array.from({length:total-leftCount},(_,i)=>leftCount+i+1);
-          const renderDay=day=>{
-            const mid=assignments[day],isSNCOIC=mid==='SNCOIC',isWk=wkSet.has(day)||blackoutSet.has(day);
-            return(
-              <div key={day} style={{display:'flex',justifyContent:'space-between',padding:'4px 6px'}}>
-                <span style={{fontFamily:'var(--fm)',fontSize:11,color:isWk?'var(--accent)':'var(--text)',minWidth:28}}>{isWk?'*':''}{day}</span>
-                <span style={{fontSize:11,color:isSNCOIC?'var(--muted)':'var(--text)'}}>{getDisplayName(mid)}</span>
-              </div>
-            );
-          };
-          return(<><div>{leftDays.map(renderDay)}</div><div>{rightDays.map(renderDay)}</div></>);
-        })()}
-      </div>
-      <div style={{marginTop:8,fontSize:10,color:'var(--muted)'}}>* denotes weekend day</div>
+      <InlineRoster
+        totalDays={total} leftCount={leftCount} year={year} month={month}
+        dayStr={dayStr} nameFor={nameFor} pubDate={pubDate}
+        monthUpper={monthUpper} coName={coName||'N. D. MORRIS'}
+        rosterType="funeral"
+      />
     </div>
   );
 }
