@@ -29,9 +29,7 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size
 .logo{font-family:var(--fh);font-size:24px;letter-spacing:4px;color:var(--accent);line-height:1;}
 .logo-sub{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:1px;}
 .hdr-right{display:flex;align-items:center;gap:6px;}
-.phase-chip{font-family:var(--fh);font-size:9px;letter-spacing:1.5px;background:var(--accent);color:#000;padding:3px 8px;border-radius:2px;white-space:nowrap;}
-.demo-label{font-family:var(--fh);font-size:9px;letter-spacing:1px;color:var(--orange);white-space:nowrap;}
-.demo-sel{background:var(--s3);border:1px solid var(--orange);border-radius:3px;color:var(--orange);font-family:var(--fh);font-size:9px;padding:3px 6px;outline:none;cursor:pointer;max-width:130px;}
+.demo-sel{background:var(--s3);border:1px solid var(--border2);border-radius:3px;color:var(--muted);font-family:var(--fh);font-size:9px;padding:3px 6px;outline:none;cursor:pointer;max-width:160px;}
 .tabs{display:flex;background:var(--s1);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
 .tabs::-webkit-scrollbar{display:none;}
 .tab{font-family:var(--fh);font-size:13px;letter-spacing:1px;padding:10px 13px;border:none;background:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;}
@@ -187,18 +185,17 @@ hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
 ::-webkit-scrollbar{width:3px;height:3px;}
 ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
-/* Phase progress bar */
-.phase-bar{display:flex;align-items:center;background:var(--s1);border-bottom:1px solid var(--border);padding:0 12px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.phase-bar{display:flex;align-items:center;background:var(--s1);border-bottom:1px solid var(--border);padding:0 10px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
 .phase-bar::-webkit-scrollbar{display:none;}
 .phase-step{display:flex;align-items:center;flex-shrink:0;}
-.phase-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);border:1px solid var(--border2);transition:all .2s;flex-shrink:0;}
+.phase-dot{width:6px;height:6px;border-radius:50%;background:var(--dim);border:1px solid var(--border2);transition:all .2s;flex-shrink:0;}
 .phase-dot.done{background:var(--green);border-color:var(--green);}
-.phase-dot.now{background:var(--accent);border-color:var(--accent);box-shadow:0 0 6px rgba(200,168,75,.5);}
-.phase-dot-lbl{font-family:var(--fh);font-size:7px;letter-spacing:.5px;color:var(--dim);margin-top:2px;white-space:nowrap;}
+.phase-dot.now{background:var(--accent);border-color:var(--accent);box-shadow:0 0 5px rgba(200,168,75,.5);}
+.phase-dot-lbl{font-family:var(--fh);font-size:6.5px;letter-spacing:.4px;color:var(--dim);margin-top:2px;white-space:nowrap;}
 .phase-dot-lbl.done{color:var(--green);}
 .phase-dot-lbl.now{color:var(--accent);}
-.phase-step-inner{display:flex;flex-direction:column;align-items:center;padding:5px 6px 4px;}
-.phase-connector{width:14px;height:1px;background:var(--border2);flex-shrink:0;}
+.phase-step-inner{display:flex;flex-direction:column;align-items:center;padding:4px 5px 3px;}
+.phase-connector{width:12px;height:1px;background:var(--border2);flex-shrink:0;}
 .phase-connector.done{background:var(--green);}
 /* What to do now banner */
 .now-banner{background:linear-gradient(135deg,var(--s1) 0%,var(--s3) 100%);border:1px solid var(--border2);border-left:3px solid var(--accent);border-radius:4px;padding:9px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
@@ -1943,14 +1940,12 @@ function App(){
         </div>
       )}
       <div className="hdr">
-        <div><div className="logo">DUTYDRAFT</div><div className="logo-sub">D&B · MBW</div></div>
+        <div><div className="logo">DUTYDRAFT</div><div className="logo-sub">D&amp;B · MBW</div></div>
         <div className="hdr-right">
-          <span className="demo-label">👤</span>
           <select className="demo-sel" value={activeUser} onChange={e=>setActiveUser(e.target.value)}>
             <option value="ncoic">NCOIC (Admin)</option>
             {marines.map(m=>(<option key={m.id} value={m.id}>{m.rank} {m.lastName}{doubleDuty[m.id]?' ×2':''}{wkAssigneeIds.includes(m.id)?' ★':''}</option>))}
           </select>
-          <div className="phase-chip">{PL[st.phase]||st.phase.toUpperCase()}</div>
         </div>
       </div>
       {/* Phase progress bar */}
@@ -1969,7 +1964,7 @@ function App(){
         })}
       </div>
       <div className="tabs">
-        {TABS.map(t=>(<button key={t.id} className={'tab'+(tab===t.id?' on':'')} onClick={()=>setTab(t.id)}>
+        {TABS.filter(t=>t.id!=='funeral'||activeUser==='ncoic').map(t=>(<button key={t.id} className={'tab'+(tab===t.id?' on':'')} onClick={()=>setTab(t.id)}>
           {t.id==='notifs'
             ?<span className={bellPulse?'bell-pulse':''} style={{fontSize:16}}>🔔{unreadCount>0?<span style={{fontSize:12}}> ({unreadCount})</span>:''}</span>
             :t.id==='settings'
@@ -1988,7 +1983,6 @@ function App(){
           </div>
         )}
         {renderContent()}
-        <div className="last-updated no-print">Updated {Math.round((Date.now()-lastUpdated)/1000)}s ago · auto-refreshes every 3s</div>
       </div>
     </div>
   );
