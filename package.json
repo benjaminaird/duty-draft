@@ -4,7 +4,8 @@
   "description": "Duty roster management for The Commandant's Own",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "smoke": "./scripts/smoke-test.sh"
   },
   "dependencies": {
     "cors": "^2.8.5",
