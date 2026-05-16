@@ -32,7 +32,7 @@ curl -fsS "$BASE_URL/" > /tmp/dutydraft-index.html
 python3 - <<'PY'
 from pathlib import Path
 html = Path('/tmp/dutydraft-index.html').read_text(errors='replace')
-checks = ['DutyDraft', 'React', 'Babel']
+checks = ['DutyDraft', 'React', 'babel']
 missing = [c for c in checks if c not in html]
 if missing:
     raise SystemExit(f"Frontend missing expected text: {missing}")
