@@ -84,3 +84,24 @@ The smoke test currently checks:
 - Expected React/Babel app markers are present
 
 This test does not verify the full draft workflow or PDF visual formatting. It is a quick safety check before and after changes.
+
+## App state backup
+
+The app exposes a read-only backup endpoint:
+
+```bash
+https://dutydraft.onrender.com/api/backup
+```
+
+This downloads the current app state as JSON, including:
+
+- Export timestamp
+- App name
+- Full `appState`
+
+Use this before:
+
+- Full Reset
+- Next Month
+- Any risky code change
+- Any demo where the database state matters
