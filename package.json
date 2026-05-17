@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "smoke": "./scripts/smoke-test.sh"
+    "smoke": "./scripts/smoke-test.sh",
+    "check": "node --check server.js && python3 -m py_compile generate_roster.py"
   },
   "dependencies": {
     "cors": "^2.8.5",
