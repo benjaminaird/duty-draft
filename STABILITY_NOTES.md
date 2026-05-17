@@ -50,6 +50,16 @@ Before pushing future changes:
 8. Commit with a clear message.
 9. Push.
 
+## Render deployment note
+
+A GitHub push may not always auto-deploy immediately on Render.
+
+After pushing important changes, verify the Render service is live on the expected commit.
+
+If needed:
+
+Render Dashboard → DutyDraft service → Manual Deploy → Deploy latest commit
+
 ## Smoke tests
 
 Local smoke test:
