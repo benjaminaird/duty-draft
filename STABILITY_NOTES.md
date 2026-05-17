@@ -108,3 +108,21 @@ Use this before:
 - Next Month
 - Any risky code change
 - Any demo where the database state matters
+
+## Local PDF testing note
+
+The live Render service has `reportlab` installed and PDF export smoke checks pass there.
+
+If local `npm run smoke` fails at the PDF export step with:
+
+```text
+ModuleNotFoundError: No module named 'reportlab'
+```
+
+that means the local Mac Python environment is missing or unable to load `reportlab`.
+
+In that case, use the live smoke test until local Python is fixed:
+
+```bash
+BASE_URL=https://dutydraft.onrender.com npm run smoke
+```
