@@ -463,6 +463,18 @@ app.get('/api/state',(req,res)=>{
   res.json(appState);
 });
 
+app.get('/api/backup',(req,res)=>{
+  const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+  const filename=`dutydraft-backup-${stamp}.json`;
+  res.setHeader('Content-Type','application/json');
+  res.setHeader('Content-Disposition',`attachment; filename="${filename}"`);
+  res.send(JSON.stringify({
+    exportedAt:new Date().toISOString(),
+    app:'DutyDraft',
+    state:appState
+  },null,2));
+});
+
 app.post('/api/state',async(req,res)=>{
   if(!req.body||typeof req.body!=='object')return res.status(400).json({error:'Invalid state'});
   appState={...appState,...req.body};
