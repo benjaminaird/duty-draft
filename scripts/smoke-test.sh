@@ -46,7 +46,47 @@ print(f"Backup OK: app={data.get('app')} phase={state.get('phase')} marines={len
 PY
 echo
 
-echo "4. Checking frontend loads..."
+echo "4. Checking duty PDF export..."
+curl -fsS -X POST "$BASE_URL/api/export-roster" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "year":2026,
+    "month_name":"June",
+    "month_upper":"JUNE",
+    "pub_date":"16 May 26",
+    "left_rows":[["1","SGT TEST"],["2","SSGT TEST"]],
+    "right_rows":[["16","CPL TEST"],["17","LCPL TEST"]],
+    "co_name":"N. D. MORRIS"
+  }' > /tmp/dutydraft-duty-export-test.pdf
+python3 - <<'PY'
+from pathlib import Path
+p = Path('/tmp/dutydraft-duty-export-test.pdf')
+data = p.read_bytes()
+if data[:5] != b'%PDF-':
+    raise SystemExit("Duty PDF export did not return a valid PDF header")
+print(f"Duty PDF export OK: {p.stat().st_size} bytes")
+PY
+echo
+
+echo "5. Checking funeral PDF export..."
+curl -fsS -X POST "$BASE_URL/api/export-funeral-roster" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "left_rows":[["1","SGT TEST"],["2","SSGT TEST"]],
+    "right_rows":[["16","CPL TEST"],["17","LCPL TEST"]],
+    "co_name":"N. D. MORRIS"
+  }' > /tmp/dutydraft-funeral-export-test.pdf
+python3 - <<'PY'
+from pathlib import Path
+p = Path('/tmp/dutydraft-funeral-export-test.pdf')
+data = p.read_bytes()
+if data[:5] != b'%PDF-':
+    raise SystemExit("Funeral PDF export did not return a valid PDF header")
+print(f"Funeral PDF export OK: {p.stat().st_size} bytes")
+PY
+echo
+
+echo "6. Checking frontend loads..."
 curl -fsS "$BASE_URL/" > /tmp/dutydraft-index.html
 python3 - <<'PY'
 from pathlib import Path
