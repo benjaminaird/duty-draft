@@ -80,6 +80,9 @@ The smoke test currently checks:
 
 - Server health endpoint
 - App state endpoint
+- Backup endpoint
+- Duty PDF export returns a valid PDF
+- Funeral PDF export returns a valid PDF
 - Frontend loads
 - Expected React/Babel app markers are present
 
