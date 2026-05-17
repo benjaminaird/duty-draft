@@ -497,11 +497,24 @@ app.post('/api/draft/pick',async(req,res)=>{
   const{day,mid}=req.body;
   const e=(appState.draftOrder||[])[appState.draftIdx||0];
   if(!e||e.id!==mid)return res.status(400).json({error:'Not your turn'});
+
+  const pickedDay=Number(day);
+  const allDates=getAllDates(appState);
+  if(!Number.isInteger(pickedDay)||!allDates.includes(pickedDay)){
+    return res.status(400).json({error:'Invalid duty date'});
+  }
+
+  const asgn=appState.assignments||{};
+  const needsWk=currentNeedsWk(mid,e.turn||1,asgn,appState);
+  if(!isDateValid(mid,pickedDay,asgn,appState,needsWk)){
+    return res.status(400).json({error:'That date is not available for this Marine'});
+  }
+
   const m=(appState.marines||[]).find(x=>x.id===mid);
   const isDD=!!(appState.doubleDuty||{})[mid];
   const lbl=isDD?(e.turn===2?' (Day 2)':' (Day 1)'):''
-  if(m)addNotif('SELECTION CONFIRMED',`${dName(m)}${lbl}: ${MONTHS[appState.month]} ${day} confirmed.`,'✅',mid);
-  appState=advanceDraft(day,appState);
+  if(m)addNotif('SELECTION CONFIRMED',`${dName(m)}${lbl}: ${MONTHS[appState.month]} ${pickedDay} confirmed.`,'✅',mid);
+  appState=advanceDraft(pickedDay,appState);
   await persist();
   if(appState.draftLive&&!appState.draftDone)startTurnTimer();
   res.json({ok:true,state:appState});
