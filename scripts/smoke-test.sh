@@ -27,7 +27,26 @@ print(f"State OK: phase={data.get('phase')} year={data.get('year')} month={data.
 PY
 echo
 
-echo "3. Checking frontend loads..."
+echo "3. Checking backup endpoint..."
+curl -fsS "$BASE_URL/api/backup" > /tmp/dutydraft-backup.json
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+p = Path('/tmp/dutydraft-backup.json')
+data = json.loads(p.read_text())
+
+required = ['exportedAt', 'app', 'state']
+missing = [k for k in required if k not in data]
+if missing:
+    raise SystemExit(f"Backup missing expected keys: {missing}")
+
+state = data['state']
+print(f"Backup OK: app={data.get('app')} phase={state.get('phase')} marines={len(state.get('marines', []))}")
+PY
+echo
+
+echo "4. Checking frontend loads..."
 curl -fsS "$BASE_URL/" > /tmp/dutydraft-index.html
 python3 - <<'PY'
 from pathlib import Path
