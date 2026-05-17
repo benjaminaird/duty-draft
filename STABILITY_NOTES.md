@@ -48,3 +48,27 @@ Before pushing future changes:
 8. Confirm draft flow still works or was not touched.
 9. Commit with a clear message.
 10. Push.
+## Smoke tests
+
+Local smoke test:
+
+```bash
+npm start
+# In a second Terminal:
+npm run smoke
+```
+
+Live Render smoke test:
+
+```bash
+BASE_URL=https://dutydraft.onrender.com npm run smoke
+```
+
+The smoke test currently checks:
+
+- Server health endpoint
+- App state endpoint
+- Frontend loads
+- Expected React/Babel app markers are present
+
+This test does not verify the full draft workflow or PDF visual formatting. It is a quick safety check before and after changes.
