@@ -41,13 +41,15 @@ Small wording/CSS edits are okay, but test carefully after every change.
 Before pushing future changes:
 
 1. Run `git status`.
-2. Run `node --check server.js`.
-3. Run `python3 -m py_compile generate_roster.py`.
-4. Start the app locally if possible.
-5. Confirm the main page5. Confirm the main page5. Confirm tti5. Confirm the main page5. Confirm tort still works.
-8. Confirm draft flow still works or was not touched.
-9. Commit with a clear message.
-10. Push.
+2. Run `npm run check`.
+3. Start the app locally if possible.
+4. Run `npm run smoke`.
+5. Confirm duty PDF export still works if PDF code was touched.
+6. Confirm funeral PDF export still works if PDF code was touched.
+7. Confirm draft flow still works if draft code was touched.
+8. Commit with a clear message.
+9. Push.
+
 ## Smoke tests
 
 Local smoke test:
