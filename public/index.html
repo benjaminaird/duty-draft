@@ -318,6 +318,7 @@ const api={
   resume:()=>fetch('/api/draft/resume',{method:'POST'}).then(r=>r.json()),
   restart:()=>fetch('/api/draft/restart',{method:'POST'}).then(r=>r.json()),
   reset:()=>fetch('/api/reset',{method:'POST'}).then(r=>r.json()),
+  backup:()=>{window.location.href='/api/backup';},
 };
 
 function computeWkAssignees(marines,wkCount,history){
@@ -1826,6 +1827,7 @@ function App(){
           <div className="card-sub">Navigate phases while preserving all data.</div>
           <div className="row mt">
             <button className="btn btn-ghost" disabled={phaseIdx<=0} onClick={goBack}>← GO BACK</button>
+            <button className="btn btn-ghost" onClick={api.backup}>⬇ DOWNLOAD BACKUP</button>
             <button className="btn btn-red" onClick={reset}>↺ FULL RESET</button>
           </div>
           <div style={{marginTop:10,paddingTop:10,borderTop:'1px solid var(--border)'}}>
