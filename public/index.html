@@ -1800,7 +1800,12 @@ function App(){
   function SettingsView(){
     const phaseIdx=PHASE_ORDER.indexOf(st.phase);
     async function goBack(){if(phaseIdx>0)await patch({phase:PHASE_ORDER[phaseIdx-1]});}
-    async function reset(){await api.reset();window.location.reload();}
+    async function reset(){
+      if(!confirm('FULL RESET will erase the current DutyDraft app state. Download a backup first if this data matters. Continue?'))return;
+      if(!confirm('Are you absolutely sure? This cannot be undone without a saved backup.'))return;
+      await api.reset();
+      window.location.reload();
+    }
     async function nextMonth(){
       if(!confirm('Advance to next month? History is preserved. All current cycle data (assignments, blackouts, prefs, draft) will be cleared.'))return;
       const r=await fetch('/api/next-month',{method:'POST'}).then(x=>x.json());
@@ -1942,7 +1947,11 @@ function App(){
         </div>
       )}
       <div className="hdr">
-        <div><div className="logo">DUTYDRAFT</div><div className="logo-sub">D&amp;B · MBW</div></div>
+        <div>
+          <div className="logo">DUTYDRAFT</div>
+          <div className="logo-sub">D&amp;B · MBW</div>
+          <div className="pill p-gold" style={{display:'inline-block',marginTop:4,fontSize:8}}>DEMO MODE — GHOST NAMES</div>
+        </div>
         <div className="hdr-right">
           <select className="demo-sel" value={activeUser} onChange={e=>setActiveUser(e.target.value)}>
             <option value="ncoic">NCOIC (Admin)</option>
