@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { getState, saveState } = require('./db');
+const csps = require('csps');
 
 const app = express();
 app.use(cors());
@@ -62,7 +63,7 @@ function getInitialState(){
     funeralWorkdays:[],
     funeralAssignments:{},
     funeralConflictDays:[],
-    funeralHistory:{burden:[],lastFuneralDay:{}},
+    funeralBurdenCounts:{},
     notifications:[{id:1,title:'DUTYDRAFT READY',body:'Roster loaded. NCOIC: begin setup for next month.',icon:'🛡',unread:true,targetMid:null,ts:Date.now()}]
   };
 }
@@ -333,126 +334,138 @@ function resumeTimer(){
   appState.draftPaused=false;
 }
 
-// ─── FUNERAL AUTO-ASSIGN ENGINE ───────────────────────────────────────────────
-function autoAssignFuneral(state){
+// ─── FUNERAL CSP SOLVER ───────────────────────────────────────────────────────
+function greedyFuneralFallback(availableDays,funeralMarines,funeralBurdenCounts,isEligibleFn){
+  const assignment={};
+  for(let i=0;i<availableDays.length;i++){
+    const d=availableDays[i];
+    const prevDay=i>0?availableDays[i-1]:null;
+    const prevAssigned=(prevDay!==null&&d-prevDay===1)?assignment[String(prevDay)]:null;
+    const eligible=funeralMarines
+      .filter(fm=>isEligibleFn(fm.id,d)&&fm.id!==prevAssigned)
+      .sort((a,b)=>(funeralBurdenCounts[a.id]||0)-(funeralBurdenCounts[b.id]||0));
+    if(eligible.length>0) assignment[String(d)]=eligible[0].id;
+  }
+  return assignment;
+}
+
+function solveFuneralRoster(state){
   const {year,month,funeralMarines=[],funeralBlackouts=[],funeralExtraWk=[],funeralWorkdays=[],assignments:dutyAssignments={},nonAvail={}} = state;
-  const funeralHistory = state.funeralHistory || {burden:[],lastFuneralDay:{}};
-  let burden = [...(funeralHistory.burden||[])];
-  const lastFuneralDay = {...(funeralHistory.lastFuneralDay||{})};
-  const totalDays = getDIM(year,month);
+  const funeralBurdenCounts=state.funeralBurdenCounts||{};
+  const totalDays=getDIM(year,month);
 
-  // Build weekend set for funeral calendar
-  const wkSet = new Set();
-  for(let d=1;d<=totalDays;d++){
-    if(isNatWk(year,month,d)) wkSet.add(d);
-  }
-  for(const dkey of funeralExtraWk){
-    const d=parseInt(dkey.split('-').pop()); if(!isNaN(d)) wkSet.add(d);
-  }
-  for(const dkey of funeralWorkdays){
-    const d=parseInt(dkey.split('-').pop()); if(!isNaN(d)) wkSet.delete(d);
-  }
-  const blackoutSet = new Set();
-  for(const dkey of funeralBlackouts){
-    const d=parseInt(dkey.split('-').pop()); if(!isNaN(d)) blackoutSet.add(d);
-  }
+  // Build weekend/blackout sets
+  const wkSet=new Set();
+  for(let d=1;d<=totalDays;d++){if(isNatWk(year,month,d))wkSet.add(d);}
+  for(const dkey of funeralExtraWk){const d=parseInt(dkey.split('-').pop());if(!isNaN(d))wkSet.add(d);}
+  for(const dkey of funeralWorkdays){const d=parseInt(dkey.split('-').pop());if(!isNaN(d))wkSet.delete(d);}
+  const blackoutSet=new Set();
+  for(const dkey of funeralBlackouts){const d=parseInt(dkey.split('-').pop());if(!isNaN(d))blackoutSet.add(d);}
 
-  // Build duty assignment map for conflict checks (day -> duty marine id)
-  // We need to map funeral marine -> duty marine id by matching lastName
-  const funeralToDutyId = {};
+  // Map funeral marines to duty marine IDs for hard-block checks
+  const funeralToDutyId={};
   for(const fm of funeralMarines){
-    const match = (state.marines||[]).find(m=>m.lastName&&fm.lastName&&m.lastName.toUpperCase()===fm.lastName.toUpperCase());
-    if(match) funeralToDutyId[fm.id] = match.id;
+    const match=(state.marines||[]).find(m=>m.lastName&&fm.lastName&&m.lastName.toUpperCase()===fm.lastName.toUpperCase());
+    if(match) funeralToDutyId[fm.id]=match.id;
   }
 
-  // Build N/A sets per duty marine
-  const naByDutyId = {};
+  // Approved N/A sets per duty marine
+  const naByDutyId={};
   for(const [mid,naList] of Object.entries(nonAvail)){
-    naByDutyId[mid] = new Set();
+    naByDutyId[mid]=new Set();
     for(const entry of naList){
-      if(entry.approved===true){
-        const d=parseInt(entry.date.split('-').pop());
-        if(!isNaN(d)) naByDutyId[mid].add(d);
+      if(entry.approved===true){const d=parseInt(entry.date.split('-').pop());if(!isNaN(d))naByDutyId[mid].add(d);}
+    }
+  }
+
+  // Duty day map: day -> duty marine id
+  const dutyDayMap={};
+  for(const [dayStr,mid] of Object.entries(dutyAssignments)) dutyDayMap[parseInt(dayStr)]=mid;
+
+  // Available days: not weekend, not blackout
+  const availableDays=[];
+  for(let d=1;d<=totalDays;d++){if(!wkSet.has(d)&&!blackoutSet.has(d))availableDays.push(d);}
+
+  // Hard-block eligibility (baked into domains)
+  const isEligible=(fmId,day)=>{
+    const dutyId=funeralToDutyId[fmId]||fmId;
+    if(dutyDayMap[day]===dutyId) return false;
+    if(naByDutyId[dutyId]?.has(day)) return false;
+    return true;
+  };
+
+  let bestAssignment=null;
+  let bestSpread=Infinity;
+
+  if(funeralMarines.length>0&&availableDays.length>0){
+    // Build CSP: domains sorted by burden ascending (fairness bias)
+    const variables=availableDays.map(String);
+    const domains={};
+    let hasEmptyDomain=false;
+    for(const d of availableDays){
+      const eligible=funeralMarines
+        .filter(fm=>isEligible(fm.id,d))
+        .sort((a,b)=>(funeralBurdenCounts[a.id]||0)-(funeralBurdenCounts[b.id]||0))
+        .map(fm=>fm.id);
+      if(eligible.length===0) hasEmptyDomain=true;
+      domains[String(d)]=eligible;
+    }
+    // Neighbors: consecutive calendar-day pairs only
+    const neighbors={};
+    for(const d of availableDays) neighbors[String(d)]=[];
+    for(let i=0;i<availableDays.length-1;i++){
+      const a=availableDays[i],b=availableDays[i+1];
+      if(b-a===1){neighbors[String(a)].push(String(b));neighbors[String(b)].push(String(a));}
+    }
+    // Constraint: no same marine on consecutive days
+    const constraint=(A,a,B,b)=>Math.abs(parseInt(A)-parseInt(B))!==1||a!==b;
+
+    if(!hasEmptyDomain){
+      for(let attempt=0;attempt<5;attempt++){
+        try{
+          const cspInst=new csps.CSP(variables,domains,neighbors,constraint);
+          const result=csps.min_conflicts(cspInst,1000);
+          if(!result) continue;
+          // Validate: no consecutive same-marine violations remain
+          let valid=true;
+          for(let i=0;i<availableDays.length-1;i++){
+            const a=availableDays[i],b=availableDays[i+1];
+            if(b-a===1&&result[String(a)]&&result[String(a)]===result[String(b)]){valid=false;break;}
+          }
+          if(!valid) continue;
+          // Pick result with smallest (max-min) spread in cumulative burden
+          const counts={...funeralBurdenCounts};
+          for(const fmId of Object.values(result)){if(fmId) counts[fmId]=(counts[fmId]||0)+1;}
+          const vals=funeralMarines.map(fm=>counts[fm.id]||0);
+          const spread=Math.max(...vals)-Math.min(...vals);
+          if(spread<bestSpread){bestSpread=spread;bestAssignment=result;}
+        }catch(e){/* attempt failed, continue */}
       }
     }
   }
 
-  // Duty assignment map: day -> duty marine id
-  const dutyDayMap = {};
-  for(const [dayStr,mid] of Object.entries(dutyAssignments)){
-    dutyDayMap[parseInt(dayStr)] = mid;
+  // Greedy fallback if all CSP attempts returned null/invalid
+  if(!bestAssignment){
+    bestAssignment=greedyFuneralFallback(availableDays,funeralMarines,funeralBurdenCounts,isEligible);
   }
 
-  // Initialize burden queue — add any funeral marines not already in it
-  const inBurden = new Set(burden);
-  for(const fm of funeralMarines){
-    if(!inBurden.has(fm.id)) burden.push(fm.id);
-  }
-  // Remove stale ids (marines removed from funeral roster)
-  const funeralIds = new Set(funeralMarines.map(m=>m.id));
-  burden = burden.filter(id=>funeralIds.has(id));
-
-  const funeralAssignments = {};
-  const conflictDays = [];
-  const assignedDaysThisRun = {}; // fmid -> last assigned day this run
-
-  for(let day=1;day<=totalDays;day++){
-    // SNCOIC days — weekends, blackouts, extra-weekend-style
-    if(wkSet.has(day)||blackoutSet.has(day)){
-      funeralAssignments[day]='SNCOIC';
-      continue;
-    }
-
-    // Try to assign from burden queue
-    let assigned = null;
-    const queueLen = burden.length;
-    let searchCount = 0;
-
-    while(searchCount < queueLen){
-      const candidateId = burden[0];
-      const dutyId = funeralToDutyId[candidateId] || candidateId;
-      let eligible = true;
-
-      // Rule: no same-day duty conflict
-      if(dutyDayMap[day]===dutyId) eligible=false;
-
-      // Rule: no approved N/A
-      if(eligible && naByDutyId[dutyId]?.has(day)) eligible=false;
-
-      // Rule: no consecutive days (within month or cross-month)
-      if(eligible){
-        const lastDayThisRun = assignedDaysThisRun[candidateId];
-        const lastDayCrossMonth = lastFuneralDay[candidateId];
-        const lastDay = lastDayThisRun !== undefined ? lastDayThisRun : lastDayCrossMonth;
-        if(lastDay !== undefined){
-          if(day - lastDay === 1) eligible=false;
-          // Cross-month: if last day was final day of prev month and this is day 1
-          if(day===1 && lastDay>=totalDays-1) eligible=false;
-        }
-      }
-
-      if(eligible){
-        assigned = candidateId;
-        burden.shift();
-        burden.push(assigned);
-        break;
-      } else {
-        burden.push(burden.shift());
-        searchCount++;
-      }
-    }
-
-    if(assigned){
-      funeralAssignments[day]=assigned;
-      assignedDaysThisRun[assigned]=day;
-      lastFuneralDay[assigned]=day;
-    } else {
-      conflictDays.push(day);
-      funeralAssignments[day]=null;
-    }
+  // Build full-month assignment map
+  const funeralAssignments={};
+  const conflictDays=[];
+  for(let d=1;d<=totalDays;d++){
+    if(wkSet.has(d)||blackoutSet.has(d)){funeralAssignments[d]='SNCOIC';continue;}
+    const assigned=bestAssignment[String(d)]||null;
+    funeralAssignments[d]=assigned;
+    if(!assigned) conflictDays.push(d);
   }
 
-  return {assignments:funeralAssignments, conflictDays, updatedBurden:burden, updatedLastFuneralDay:lastFuneralDay};
+  // Update cumulative burden counts for assigned days
+  const updatedBurdenCounts={...funeralBurdenCounts};
+  for(const fmId of Object.values(bestAssignment)){
+    if(fmId) updatedBurdenCounts[fmId]=(updatedBurdenCounts[fmId]||0)+1;
+  }
+
+  return {assignments:funeralAssignments,conflictDays,updatedBurdenCounts};
 }
 
 // ─── API ROUTES ───────────────────────────────────────────────────────────────
@@ -594,7 +607,7 @@ app.get('/api/funeral/state',(req,res)=>{
     funeralWorkdays: appState.funeralWorkdays||[],
     funeralAssignments: appState.funeralAssignments||{},
     funeralConflictDays: appState.funeralConflictDays||[],
-    funeralHistory: appState.funeralHistory||{burden:[],lastFuneralDay:{}},
+    funeralBurdenCounts: appState.funeralBurdenCounts||{},
     // Pass duty calendar for pre-population
     blackouts: appState.blackouts||[],
     extraWk: appState.extraWk||[],
@@ -607,7 +620,7 @@ app.get('/api/funeral/state',(req,res)=>{
 
 // PATCH funeral state
 app.post('/api/funeral/state',async(req,res)=>{
-  const allowed=['funeralPhase','funeralMarines','funeralBlackouts','funeralExtraWk','funeralWorkdays','funeralAssignments','funeralConflictDays','funeralHistory'];
+  const allowed=['funeralPhase','funeralMarines','funeralBlackouts','funeralExtraWk','funeralWorkdays','funeralAssignments','funeralConflictDays','funeralBurdenCounts'];
   for(const key of allowed){
     if(req.body[key]!==undefined) appState[key]=req.body[key];
   }
@@ -617,10 +630,10 @@ app.post('/api/funeral/state',async(req,res)=>{
 
 // POST auto-assign funeral roster
 app.post('/api/funeral/auto-assign',async(req,res)=>{
-  const result=autoAssignFuneral(appState);
+  const result=solveFuneralRoster(appState);
   appState.funeralAssignments=result.assignments;
   appState.funeralConflictDays=result.conflictDays;
-  appState.funeralHistory={burden:result.updatedBurden,lastFuneralDay:result.updatedLastFuneralDay};
+  appState.funeralBurdenCounts=result.updatedBurdenCounts;
   appState.funeralPhase='assigned';
   await persist();
   res.json({assignments:result.assignments,conflictDays:result.conflictDays});
@@ -746,8 +759,8 @@ app.post('/api/next-month',async(req,res)=>{
     if(!lastDutyDay[mid]||d>lastDutyDay[mid])lastDutyDay[mid]=d;
   });
 
-  // Carry forward funeral history
-  const prevFuneralHistory=appState.funeralHistory||{burden:[],lastFuneralDay:{}};
+  // Carry forward funeral burden counts
+  const prevFuneralBurdenCounts=appState.funeralBurdenCounts||{};
 
   appState={
     phase:'setup',
@@ -764,7 +777,7 @@ app.post('/api/next-month',async(req,res)=>{
     draftOrder:[],draftIdx:0,draftLive:false,draftPaused:false,draftDone:false,
     draftScheduled:null,turnSecsRemaining:0,
     voluntaryWkTakers:[],freedMarines:[],
-    // Funeral: carry burden and lastFuneralDay, reset everything else
+    // Funeral: carry burden counts, reset everything else
     funeralPhase:'idle',
     funeralMarines:[],
     funeralBlackouts:[],
@@ -772,10 +785,7 @@ app.post('/api/next-month',async(req,res)=>{
     funeralWorkdays:[],
     funeralAssignments:{},
     funeralConflictDays:[],
-    funeralHistory:{
-      burden:prevFuneralHistory.burden||[],
-      lastFuneralDay:prevFuneralHistory.lastFuneralDay||{},
-    },
+    funeralBurdenCounts:prevFuneralBurdenCounts,
     notifications:[{id:Date.now(),title:'NEW MONTH',body:`${MONTHS[nextMonth]} ${nextYear} cycle started. Fairness history carried forward.`,icon:'📅',unread:true,targetMid:null,ts:Date.now()}]
   };
   await persist();
@@ -824,7 +834,15 @@ async function start(){
       if(appState.funeralWorkdays===undefined) appState.funeralWorkdays=[];
       if(appState.funeralAssignments===undefined) appState.funeralAssignments={};
       if(appState.funeralConflictDays===undefined) appState.funeralConflictDays=[];
-      if(appState.funeralHistory===undefined) appState.funeralHistory={burden:[],lastFuneralDay:{}};
+      // Migrate funeralHistory -> funeralBurdenCounts
+      if(appState.funeralBurdenCounts===undefined){
+        const counts={};
+        for(const[,mid] of Object.entries(appState.funeralAssignments||{})){
+          if(mid&&mid!=='SNCOIC') counts[mid]=(counts[mid]||0)+1;
+        }
+        appState.funeralBurdenCounts=counts;
+        delete appState.funeralHistory;
+      }
       console.log('State loaded from database. Phase:',appState.phase);
       if(appState.draftLive&&!appState.draftDone){
         appState.draftPaused=true;
