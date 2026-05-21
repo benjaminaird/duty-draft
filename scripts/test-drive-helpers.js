@@ -18,4 +18,6 @@ const isNatWk = (y,m,d) => {
 
 function getWeekendDates(state){ const total=getDIM(state.year,state.month); return Array.from({length:total},(_,i)=>i+1).filter(d=>{ const key=dk(state.year,state.month,d); if((state.blackouts||[]).includes(key)) return false; if((state.workdays||[]).includes(key)) return false; return isNatWk(state.year,state.month,d)||(state.extraWk||[]).includes(key); }); }
 
-module.exports = { MONTHS, GROUP_QUOTA, gradeOf, groupOf, gradeNum, dk, getDIM, isNatWk, getWeekendDates };
+function weekendQuota(wkCount){ const q={ junior:Math.round(GROUP_QUOTA.junior*wkCount), ssgt:Math.round(GROUP_QUOTA.ssgt*wkCount), gysgt:0 }; q.gysgt=Math.max(0,wkCount-q.junior-q.ssgt); if(q.junior+q.ssgt+q.gysgt!==wkCount) q.junior+=wkCount-(q.junior+q.ssgt+q.gysgt); return q; }
+
+module.exports = { MONTHS, GROUP_QUOTA, gradeOf, groupOf, gradeNum, dk, getDIM, isNatWk, getWeekendDates, weekendQuota };
