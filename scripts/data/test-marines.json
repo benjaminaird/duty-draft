@@ -1,0 +1,142 @@
+[
+  {
+    "id": "m1",
+    "rank": "GYSGT",
+    "lastName": "CASPER",
+    "firstName": "ALPHA",
+    "active": true
+  },
+  {
+    "id": "m2",
+    "rank": "GYSGT",
+    "lastName": "SLIMER",
+    "firstName": "BRAVO",
+    "active": true
+  },
+  {
+    "id": "m3",
+    "rank": "GYSGT",
+    "lastName": "MYRTLE",
+    "firstName": "CHARLIE",
+    "active": true
+  },
+  {
+    "id": "m4",
+    "rank": "SSGT",
+    "lastName": "ZERO",
+    "firstName": "DELTA",
+    "active": true
+  },
+  {
+    "id": "m5",
+    "rank": "SSGT",
+    "lastName": "BLACKBEARD",
+    "firstName": "ECHO",
+    "active": true
+  },
+  {
+    "id": "m6",
+    "rank": "SSGT",
+    "lastName": "MARLEY",
+    "firstName": "FOXTROT",
+    "active": true
+  },
+  {
+    "id": "m7",
+    "rank": "SSGT",
+    "lastName": "BEETLEJUICE",
+    "firstName": "GOLF",
+    "active": true
+  },
+  {
+    "id": "m8",
+    "rank": "SSGT",
+    "lastName": "HORSEMAN",
+    "firstName": "HOTEL",
+    "active": true
+  },
+  {
+    "id": "m9",
+    "rank": "SSGT",
+    "lastName": "BOLEYN",
+    "firstName": "INDIA",
+    "active": true
+  },
+  {
+    "id": "m10",
+    "rank": "SGT",
+    "lastName": "BARON",
+    "firstName": "JULIET",
+    "active": true
+  },
+  {
+    "id": "m11",
+    "rank": "SGT",
+    "lastName": "BINNS",
+    "firstName": "KILO",
+    "active": true
+  },
+  {
+    "id": "m12",
+    "rank": "SGT",
+    "lastName": "SWAYZE",
+    "firstName": "LIMA",
+    "active": true
+  },
+  {
+    "id": "m13",
+    "rank": "CPL",
+    "lastName": "WILLIS",
+    "firstName": "MIKE",
+    "active": true
+  },
+  {
+    "id": "m14",
+    "rank": "CPL",
+    "lastName": "CRANE",
+    "firstName": "NOVEMBER",
+    "active": true
+  },
+  {
+    "id": "m15",
+    "rank": "CPL",
+    "lastName": "BANQUO",
+    "firstName": "OSCAR",
+    "active": true
+  },
+  {
+    "id": "m16",
+    "rank": "LCPL",
+    "lastName": "PHANTOM",
+    "firstName": "PAPA",
+    "active": true
+  },
+  {
+    "id": "m17",
+    "rank": "LCPL",
+    "lastName": "BLINKY",
+    "firstName": "QUEBEC",
+    "active": true
+  },
+  {
+    "id": "m18",
+    "rank": "LCPL",
+    "lastName": "INKY",
+    "firstName": "ROMEO",
+    "active": true
+  },
+  {
+    "id": "m19",
+    "rank": "LCPL",
+    "lastName": "CLYDE",
+    "firstName": "SIERRA",
+    "active": true
+  },
+  {
+    "id": "m20",
+    "rank": "LCPL",
+    "lastName": "HAMLET",
+    "firstName": "TANGO",
+    "active": true
+  }
+]
