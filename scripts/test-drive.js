@@ -61,6 +61,9 @@ async function main() {
   try {
     const health = await waitForServer();
 
+    await axios.post(`${BASE_URL}/api/state`, { marines: TEST_MARINES, turnMins: 1 });
+    const seededState = (await axios.get(`${BASE_URL}/api/state`)).data;
+
     const report = [
       '# DutyDraft Automated Test Drive',
       '',
@@ -72,6 +75,8 @@ async function main() {
       `- Test API: ${BASE_URL}`,
       `- Health response: ${JSON.stringify(health)}`,
       `- Simulated Marines loaded: ${TEST_MARINES.length}`,
+      `- App state seeded with simulated roster: ${seededState.marines.length} Marines`,
+      `- Starting test month: ${MONTHS[seededState.month]} ${seededState.year}`,
       `- Month helper loaded: ${MONTHS[0]} through ${MONTHS[11]}`,
       '',
       'Status: test server started successfully without touching live database.',
