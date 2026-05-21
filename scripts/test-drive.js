@@ -3,7 +3,7 @@ const path = require('path');
 const axios = require('axios');
 const { spawn } = require('child_process');
 const TEST_MARINES = require('./data/test-marines.json');
-const { MONTHS, getWeekendDates, weekendQuota } = require('./test-drive-helpers');
+const { MONTHS, getWeekendDates, weekendQuota, selectWeekendMarines } = require('./test-drive-helpers');
 
 const PORT = 3999;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -64,6 +64,7 @@ async function main() {
     await axios.post(`${BASE_URL}/api/state`, { marines: TEST_MARINES, turnMins: 1 });
     const seededState = (await axios.get(`${BASE_URL}/api/state`)).data;
     const weekendDates = getWeekendDates(seededState);
+    const weekendAssignments = selectWeekendMarines(TEST_MARINES, weekendDates.length);
 
     const report = [
       '# DutyDraft Automated Test Drive',
@@ -81,6 +82,9 @@ async function main() {
       `- Weekend-style dates detected: ${weekendDates.join(', ' ) || 'None'}`,
       `- Weekend-style date count: ${weekendDates.length}`,
       `- Expected weekend ratio: E5/below ${weekendQuota(weekendDates.length).junior}, E6 ${weekendQuota(weekendDates.length).ssgt}, E7 ${weekendQuota(weekendDates.length).gysgt}`,
+      `- Selected E5/below Marines: ${weekendAssignments.junior.map(m=>m.rank + ' ' + m.lastName).join(', ')}`,
+      `- Selected E6 Marines: ${weekendAssignments.ssgt.map(m=>m.rank + ' ' + m.lastName).join(', ')}`,
+      `- Selected E7 Marines: ${weekendAssignments.gysgt.map(m=>m.rank + ' ' + m.lastName).join(', ')}`,
       `- Month helper loaded: ${MONTHS[0]} through ${MONTHS[11]}`,
       '',
       'Status: test server started successfully without touching live database.',
