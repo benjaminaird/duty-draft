@@ -66,6 +66,13 @@ async function main() {
     const weekendDates = getWeekendDates(seededState);
     const weekendAssignments = selectWeekendMarines(TEST_MARINES, weekendDates.length, seededState.history || {});
 
+    seededState.wkAssignees = weekendAssignments;
+    seededState.wkAssigneeIds = [
+      ...weekendAssignments.junior.map(m=>m.id),
+      ...weekendAssignments.ssgt.map(m=>m.id),
+      ...weekendAssignments.gysgt.map(m=>m.id)
+    ];
+
     const report = [
       '# DutyDraft Automated Test Drive',
       '',
@@ -85,6 +92,7 @@ async function main() {
       `- Selected E5/below Marines: ${weekendAssignments.junior.map(m=>m.rank + ' ' + m.lastName).join(', ')}`,
       `- Selected E6 Marines: ${weekendAssignments.ssgt.map(m=>m.rank + ' ' + m.lastName).join(', ')}`,
       `- Selected E7 Marines: ${weekendAssignments.gysgt.map(m=>m.rank + ' ' + m.lastName).join(', ')}`,
+      `- Weekend assignee IDs stored: ${seededState.wkAssigneeIds.join(', ')}`,
       `- Month helper loaded: ${MONTHS[0]} through ${MONTHS[11]}`,
       '',
       'Status: test server started successfully without touching live database.',
