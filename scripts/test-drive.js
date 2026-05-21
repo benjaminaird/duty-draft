@@ -3,7 +3,7 @@ const path = require('path');
 const axios = require('axios');
 const { spawn } = require('child_process');
 const TEST_MARINES = require('./data/test-marines.json');
-const { MONTHS, getWeekendDates, GROUP_QUOTA } = require('./test-drive-helpers');
+const { MONTHS, getWeekendDates, weekendQuota } = require('./test-drive-helpers');
 
 const PORT = 3999;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -80,7 +80,7 @@ async function main() {
       `- Starting test month: ${MONTHS[seededState.month]} ${seededState.year}`,
       `- Weekend-style dates detected: ${weekendDates.join(', ' ) || 'None'}`,
       `- Weekend-style date count: ${weekendDates.length}`,
-      `- Expected weekend ratio: E5/below ${Math.round(GROUP_QUOTA.junior * weekendDates.length)}, E6 ${Math.round(GROUP_QUOTA.ssgt * weekendDates.length)}, E7 ${weekendDates.length - Math.round(GROUP_QUOTA.junior * weekendDates.length) - Math.round(GROUP_QUOTA.ssgt * weekendDates.length)}`,
+      `- Expected weekend ratio: E5/below ${weekendQuota(weekendDates.length).junior}, E6 ${weekendQuota(weekendDates.length).ssgt}, E7 ${weekendQuota(weekendDates.length).gysgt}`,
       `- Month helper loaded: ${MONTHS[0]} through ${MONTHS[11]}`,
       '',
       'Status: test server started successfully without touching live database.',
