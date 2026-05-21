@@ -9,4 +9,11 @@ const gradeOf = rank => RANK_TO_GRADE[rank] || 'E1';
 const groupOf = rank => BURDEN_GROUP[gradeOf(rank)] || 'junior';
 const gradeNum = rank => GRADE_NUM[gradeOf(rank)] || 1;
 
-module.exports = { MONTHS, GROUP_QUOTA, gradeOf, groupOf, gradeNum };
+const dk = (y,m,d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+const getDIM = (y,m) => new Date(y,m+1,0).getDate();
+const isNatWk = (y,m,d) => {
+  const w = new Date(y,m,d).getDay();
+  return w === 0 || w === 6;
+};
+
+module.exports = { MONTHS, GROUP_QUOTA, gradeOf, groupOf, gradeNum, dk, getDIM, isNatWk };
