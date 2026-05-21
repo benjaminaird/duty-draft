@@ -20,4 +20,6 @@ function getWeekendDates(state){ const total=getDIM(state.year,state.month); ret
 
 function weekendQuota(wkCount){ const q={ junior:Math.round(GROUP_QUOTA.junior*wkCount), ssgt:Math.round(GROUP_QUOTA.ssgt*wkCount), gysgt:0 }; q.gysgt=Math.max(0,wkCount-q.junior-q.ssgt); if(q.junior+q.ssgt+q.gysgt!==wkCount) q.junior+=wkCount-(q.junior+q.ssgt+q.gysgt); return q; }
 
-module.exports = { MONTHS, GROUP_QUOTA, gradeOf, groupOf, gradeNum, dk, getDIM, isNatWk, getWeekendDates, weekendQuota };
+function selectWeekendMarines(marines,wkCount){ const q=weekendQuota(wkCount); const grouped={ junior:[], ssgt:[], gysgt:[] }; marines.forEach(m=>grouped[groupOf(m.rank)].push(m)); return { junior: grouped.junior.slice(0,q.junior), ssgt: grouped.ssgt.slice(0,q.ssgt), gysgt: grouped.gysgt.slice(0,q.gysgt) }; }
+
+module.exports = { MONTHS, GROUP_QUOTA, gradeOf, groupOf, gradeNum, dk, getDIM, isNatWk, getWeekendDates, weekendQuota, selectWeekendMarines };
