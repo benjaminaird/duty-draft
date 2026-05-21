@@ -1,6 +1,10 @@
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
+const { spawn } = require('child_process');
 
+const PORT = 3999;
+const BASE_URL = `http://127.0.0.1:${PORT}`;
 const REPORT_DIR = path.join(__dirname, '..', 'test-drive-output');
 
 function ensureReportDir() {
@@ -14,23 +18,70 @@ function writeReport(name, data) {
   return file;
 }
 
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function waitForServer() {
+  for (let i = 0; i < 40; i++) {
+    try {
+      const res = await axios.get(`${BASE_URL}/api/health`);
+      if (res.data && res.data.ok) return res.data;
+    } catch {}
+    await wait(250);
+  }
+  throw new Error('DutyDraft test server did not become ready.');
+}
+
+function startServer() {
+  return spawn('node', ['server.js'], {
+    cwd: path.join(__dirname, '..'),
+    env: {
+      ...process.env,
+      DUTYDRAFT_TEST_MODE: '1',
+      PORT: String(PORT)
+    },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+}
+
 async function main() {
   ensureReportDir();
 
-  const report = [
-    '# DutyDraft Automated Test Drive',
-    '',
-    `Generated: ${new Date().toISOString()}`,
-    '',
-    'Status: scaffold created successfully.',
-    '',
-    'Next step: connect this driver to the running DutyDraft API.'
-  ].join('\n');
+  const testStateFile = path.join(REPORT_DIR, 'test-state.json');
+  if (fs.existsSync(testStateFile)) fs.unlinkSync(testStateFile);
 
-  const reportPath = writeReport('TEST_DRIVE_REPORT.md', report);
+  const server = startServer();
 
-  console.log('✅ DutyDraft test-drive scaffold ran successfully.');
-  console.log(`Report written to: ${reportPath}`);
+  server.stdout.on('data', data => process.stdout.write(`[server] ${data}`));
+  server.stderr.on('data', data => process.stderr.write(`[server:err] ${data}`));
+
+  try {
+    const health = await waitForServer();
+
+    const report = [
+      '# DutyDraft Automated Test Drive',
+      '',
+      `Generated: ${new Date().toISOString()}`,
+      '',
+      '## Server Check',
+      '',
+      `- Test mode: ON`,
+      `- Test API: ${BASE_URL}`,
+      `- Health response: ${JSON.stringify(health)}`,
+      '',
+      'Status: test server started successfully without touching live database.',
+      '',
+      'Next step: seed simulated roster and run month-by-month workflow.'
+    ].join('\n');
+
+    const reportPath = writeReport('TEST_DRIVE_REPORT.md', report);
+
+    console.log('✅ DutyDraft test server started in safe test mode.');
+    console.log(`Report written to: ${reportPath}`);
+  } finally {
+    server.kill('SIGTERM');
+  }
 }
 
 main().catch(err => {
