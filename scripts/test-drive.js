@@ -71,6 +71,8 @@ async function main() {
       `- Test mode: ON`,
       `- Test API: ${BASE_URL}`,
       `- Health response: ${JSON.stringify(health)}`,
+      `- Simulated Marines loaded: ${TEST_MARINES.length}`,
+      `- Month helper loaded: ${MONTHS[0]} through ${MONTHS[11]}`,
       '',
       'Status: test server started successfully without touching live database.',
       '',
