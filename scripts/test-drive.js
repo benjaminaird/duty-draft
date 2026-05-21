@@ -64,7 +64,7 @@ async function main() {
     await axios.post(`${BASE_URL}/api/state`, { marines: TEST_MARINES, turnMins: 1 });
     const seededState = (await axios.get(`${BASE_URL}/api/state`)).data;
     const weekendDates = getWeekendDates(seededState);
-    const weekendAssignments = selectWeekendMarines(TEST_MARINES, weekendDates.length);
+    const weekendAssignments = selectWeekendMarines(TEST_MARINES, weekendDates.length, seededState.history || {});
 
     const report = [
       '# DutyDraft Automated Test Drive',
