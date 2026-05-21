@@ -63,6 +63,7 @@ async function main() {
 
     await axios.post(`${BASE_URL}/api/state`, { marines: TEST_MARINES, turnMins: 1 });
     const seededState = (await axios.get(`${BASE_URL}/api/state`)).data;
+    const weekendDates = getWeekendDates(seededState);
 
     const report = [
       '# DutyDraft Automated Test Drive',
@@ -77,6 +78,8 @@ async function main() {
       `- Simulated Marines loaded: ${TEST_MARINES.length}`,
       `- App state seeded with simulated roster: ${seededState.marines.length} Marines`,
       `- Starting test month: ${MONTHS[seededState.month]} ${seededState.year}`,
+      `- Weekend-style dates detected: ${weekendDates.join(', ' ) || 'None'}`,
+      `- Weekend-style date count: ${weekendDates.length}`,
       `- Month helper loaded: ${MONTHS[0]} through ${MONTHS[11]}`,
       '',
       'Status: test server started successfully without touching live database.',
