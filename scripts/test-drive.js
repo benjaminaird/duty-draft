@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const { spawn } = require('child_process');
+const TEST_MARINES = require('./data/test-marines.json');
+const { MONTHS, getWeekendDates } = require('./test-drive-helpers');
 
 const PORT = 3999;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
