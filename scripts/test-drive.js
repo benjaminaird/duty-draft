@@ -148,7 +148,7 @@ async function main() {
       `- Final assigned duty days: ${Object.keys(draftState.assignments || {}).length}`,
       `- Final weekend duty days assigned: ${Object.entries(draftState.assignments || {}).filter(([d])=>isWkDate(Number(d),draftState)).length}`,
       "",
-      "## Validation Checks",
+      "## 12-Month Expansion Readiness\n\n- One-month workflow: READY\n- Month rollover loop: TODO\n- Carry-forward weekend history: TODO\n- Annual fairness totals: TODO\n- Funeral roster simulation: TODO\n- PDF export validation: TODO\n\n## Validation Checks",
       `- Draft completed: ${draftState.draftDone ? 'PASS' : 'FAIL'}`,
       `- All duty days assigned: ${Object.keys(draftState.assignments || {}).length === 30 ? 'PASS' : 'FAIL'}`,
       `- All weekend dates assigned: ${Object.entries(draftState.assignments || {}).filter(([d])=>isWkDate(Number(d),draftState)).length === weekendDates.length ? 'PASS' : 'FAIL'}`,
