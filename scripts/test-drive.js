@@ -145,6 +145,8 @@ async function main() {
       `- Draft started: phase draft, live true`,
       `- Simulated draft picks submitted: ${simulatedPicks}`,
       `- Draft complete: ${draftState.draftDone}`,
+      `- Final assigned duty days: ${Object.keys(draftState.assignments || {}).length}`,
+      `- Final weekend duty days assigned: ${Object.entries(draftState.assignments || {}).filter(([d])=>isWkDate(Number(d),draftState)).length}`,
       `- Month helper loaded: ${MONTHS[0]} through ${MONTHS[11]}`,
       '',
       'Status: test server started successfully without touching live database.',
