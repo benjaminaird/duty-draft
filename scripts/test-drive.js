@@ -121,7 +121,7 @@ async function main() {
       '',
       `Generated: ${new Date().toISOString()}`,
       '',
-      '## Server Check',
+      '## Scope\n\n- Current run: one-month end-to-end simulation\n- Next planned upgrade: 12-month loop with carry-forward fairness history\n\n## Server Check',
       '',
       `- Test mode: ON`,
       `- Test API: ${BASE_URL}`,
