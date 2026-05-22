@@ -3,7 +3,7 @@ const path = require('path');
 const axios = require('axios');
 const { spawn } = require('child_process');
 const TEST_MARINES = require('./data/test-marines.json');
-const { MONTHS, getWeekendDates, weekendQuota, selectWeekendMarines, buildDraftOrder } = require('./test-drive-helpers');
+const { MONTHS, getWeekendDates, weekendQuota, selectWeekendMarines, buildDraftOrder, getAllDates, isDateValid, isWkDate } = require('./test-drive-helpers');
 
 const PORT = 3999;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -97,7 +97,24 @@ async function main() {
 
     const draftOrder = buildDraftOrder(reviewState.marines || [], reviewState.doubleDuty || {}, reviewState.preAssigned || {});
     const startDraftResult = await axios.post(`${BASE_URL}/api/draft/start`, { draftOrder, assignments: reviewState.preAssigned || {} });
-    const draftState = startDraftResult.data.state;
+    let draftState = startDraftResult.data.state;
+    let simulatedPicks = 0;
+    while (draftState.draftLive && !draftState.draftDone) {
+      const entry = draftState.draftOrder[draftState.draftIdx];
+      if (!entry) break;
+      const mid = entry.id;
+      const prefs = (draftState.prefs[mid] || []).map(p => p.day);
+      const asgn = draftState.assignments || {};
+      const myDays = Object.entries(asgn).filter(([,x])=>x===mid).map(([d])=>Number(d));
+      const needsWk = (draftState.wkAssigneeIds || []).includes(mid) && !(draftState.freedMarines || []).includes(mid) && !myDays.some(d=>isWkDate(d,draftState));
+      const validDays = getAllDates(draftState).filter(day => isDateValid(mid, day, asgn, draftState, needsWk));
+      const pick = prefs.find(day => validDays.includes(day)) || validDays[0];
+      if (!pick) throw new Error(`No valid pick found for ${mid}`);
+      const result = await axios.post(`${BASE_URL}/api/draft/pick`, { day: pick, mid });
+      draftState = result.data.state;
+      simulatedPicks++;
+      if (simulatedPicks > 80) throw new Error('Draft simulation exceeded safety limit');
+    }
 
     const report = [
       '# DutyDraft Automated Test Drive',
@@ -125,7 +142,9 @@ async function main() {
       `- Simulated non-availability submissions: ${Object.keys(reviewState.nonAvail || {}).length}`,
       `- Review phase reached: ${reviewState.phase}`,
       `- Draft order generated: ${draftOrder.length} turns`,
-      `- Draft started: phase ${draftState.phase}, live ${draftState.draftLive}`,
+      `- Draft started: phase draft, live true`,
+      `- Simulated draft picks submitted: ${simulatedPicks}`,
+      `- Draft complete: ${draftState.draftDone}`,
       `- Month helper loaded: ${MONTHS[0]} through ${MONTHS[11]}`,
       '',
       'Status: test server started successfully without touching live database.',
