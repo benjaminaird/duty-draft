@@ -3,7 +3,7 @@ const path = require('path');
 const axios = require('axios');
 const { spawn } = require('child_process');
 const TEST_MARINES = require('./data/test-marines.json');
-const { MONTHS, getWeekendDates, weekendQuota, selectWeekendMarines } = require('./test-drive-helpers');
+const { MONTHS, getWeekendDates, weekendQuota, selectWeekendMarines, buildDraftOrder } = require('./test-drive-helpers');
 
 const PORT = 3999;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -95,6 +95,10 @@ async function main() {
     await axios.post(`${BASE_URL}/api/state`, wkPreviewState);
     const reviewState = (await axios.get(`${BASE_URL}/api/state`)).data;
 
+    const draftOrder = buildDraftOrder(reviewState.marines || [], reviewState.doubleDuty || {}, reviewState.preAssigned || {});
+    const startDraftResult = await axios.post(`${BASE_URL}/api/draft/start`, { draftOrder, assignments: reviewState.preAssigned || {} });
+    const draftState = startDraftResult.data.state;
+
     const report = [
       '# DutyDraft Automated Test Drive',
       '',
@@ -120,6 +124,8 @@ async function main() {
       `- Simulated preference submissions: ${Object.keys(reviewState.prefs || {}).length}`,
       `- Simulated non-availability submissions: ${Object.keys(reviewState.nonAvail || {}).length}`,
       `- Review phase reached: ${reviewState.phase}`,
+      `- Draft order generated: ${draftOrder.length} turns`,
+      `- Draft started: phase ${draftState.phase}, live ${draftState.draftLive}`,
       `- Month helper loaded: ${MONTHS[0]} through ${MONTHS[11]}`,
       '',
       'Status: test server started successfully without touching live database.',
