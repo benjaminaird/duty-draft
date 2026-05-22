@@ -77,6 +77,24 @@ async function main() {
     await axios.post(`${BASE_URL}/api/state`, seededState);
     const wkPreviewState = (await axios.get(`${BASE_URL}/api/state`)).data;
 
+    wkPreviewState.prefs = {
+      m16: [{day:6},{day:7},{day:13},{day:14},{day:20}],
+      m4: [{day:6},{day:13},{day:20},{day:27},{day:28}],
+      m1: [{day:7},{day:14},{day:21},{day:28},{day:6}],
+      m10: [{day:2},{day:3},{day:4},{day:5},{day:8}],
+      m11: [{day:9},{day:10},{day:11},{day:12},{day:15}]
+    };
+
+    wkPreviewState.nonAvail = {
+      m16: [{date:`${wkPreviewState.year}-${String(wkPreviewState.month+1).padStart(2,'0')}-14`, reason:'Approved Leave', approved:true}],
+      m4: [{date:`${wkPreviewState.year}-${String(wkPreviewState.month+1).padStart(2,'0')}-20`, reason:'TAD', approved:false}],
+      m10: [{date:`${wkPreviewState.year}-${String(wkPreviewState.month+1).padStart(2,'0')}-03`, reason:'On the Roster for a Gig', approved:true}]
+    };
+
+    wkPreviewState.phase = 'review';
+    await axios.post(`${BASE_URL}/api/state`, wkPreviewState);
+    const reviewState = (await axios.get(`${BASE_URL}/api/state`)).data;
+
     const report = [
       '# DutyDraft Automated Test Drive',
       '',
@@ -99,6 +117,9 @@ async function main() {
       `- Weekend assignee IDs stored: ${seededState.wkAssigneeIds.join(', ')}`,
       `- Persisted setup phase: ${wkPreviewState.phase}`,
       `- Persisted weekend dates: ${(wkPreviewState.weekendDates || []).join(', ')}`,
+      `- Simulated preference submissions: ${Object.keys(reviewState.prefs || {}).length}`,
+      `- Simulated non-availability submissions: ${Object.keys(reviewState.nonAvail || {}).length}`,
+      `- Review phase reached: ${reviewState.phase}`,
       `- Month helper loaded: ${MONTHS[0]} through ${MONTHS[11]}`,
       '',
       'Status: test server started successfully without touching live database.',
