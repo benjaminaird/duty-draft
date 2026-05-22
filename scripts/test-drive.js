@@ -72,6 +72,10 @@ async function main() {
       ...weekendAssignments.ssgt.map(m=>m.id),
       ...weekendAssignments.gysgt.map(m=>m.id)
     ];
+    seededState.weekendDates = weekendDates;
+    seededState.phase = 'wkpreview';
+    await axios.post(`${BASE_URL}/api/state`, seededState);
+    const wkPreviewState = (await axios.get(`${BASE_URL}/api/state`)).data;
 
     const report = [
       '# DutyDraft Automated Test Drive',
@@ -93,6 +97,8 @@ async function main() {
       `- Selected E6 Marines: ${weekendAssignments.ssgt.map(m=>m.rank + ' ' + m.lastName).join(', ')}`,
       `- Selected E7 Marines: ${weekendAssignments.gysgt.map(m=>m.rank + ' ' + m.lastName).join(', ')}`,
       `- Weekend assignee IDs stored: ${seededState.wkAssigneeIds.join(', ')}`,
+      `- Persisted setup phase: ${wkPreviewState.phase}`,
+      `- Persisted weekend dates: ${(wkPreviewState.weekendDates || []).join(', ')}`,
       `- Month helper loaded: ${MONTHS[0]} through ${MONTHS[11]}`,
       '',
       'Status: test server started successfully without touching live database.',
