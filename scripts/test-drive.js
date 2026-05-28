@@ -84,6 +84,7 @@ async function main() {
       `- Test API: ${BASE_URL}`,
       `- Health response: ${JSON.stringify(health)}`,
       `- Simulated Marines loaded: ${TEST_MARINES.length}`,
+      `- Months simulated: ${monthResults.length}`,
       `- App state seeded with simulated roster: ${seededState.marines.length} Marines`,
       `- Starting test month: ${MONTHS[seededState.month]} ${seededState.year}`,
       `- Weekend-style dates detected: ${weekendDates.join(', ' ) || 'None'}`,
