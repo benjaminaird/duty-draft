@@ -63,19 +63,10 @@ async function main() {
     const health = await waitForServer();
 
     const seededState = await seedMonth(BASE_URL);
-    const weekendDates = getWeekendDates(seededState);
-    const weekendAssignments = selectWeekendMarines(TEST_MARINES, weekendDates.length, seededState.history || {});
-
-    seededState.wkAssignees = weekendAssignments;
-    seededState.wkAssigneeIds = [
-      ...weekendAssignments.junior.map(m=>m.id),
-      ...weekendAssignments.ssgt.map(m=>m.id),
-      ...weekendAssignments.gysgt.map(m=>m.id)
-    ];
-    seededState.weekendDates = weekendDates;
-    seededState.phase = 'wkpreview';
-    await axios.post(`${BASE_URL}/api/state`, seededState);
-    const wkPreviewState = (await axios.get(`${BASE_URL}/api/state`)).data;
+    const weekendSetup = await applyWeekendSetup(BASE_URL, seededState);
+    const wkPreviewState = weekendSetup.state;
+    const weekendDates = weekendSetup.weekendDates;
+    const weekendAssignments = weekendSetup.weekendAssignments;
 
     wkPreviewState.prefs = {
       m16: [{day:6},{day:7},{day:13},{day:14},{day:20}],
