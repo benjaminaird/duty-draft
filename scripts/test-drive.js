@@ -62,7 +62,8 @@ async function main() {
   try {
     const health = await waitForServer();
 
-    const monthResult = await runOneMonth(BASE_URL);
+    const monthResults = await runMultipleMonths(BASE_URL, 3);
+    const monthResult = monthResults[0];
     const seededState = monthResult.seededState;
     const weekendDates = monthResult.weekendSetup.weekendDates;
     const weekendAssignments = monthResult.weekendSetup.weekendAssignments;
@@ -77,7 +78,7 @@ async function main() {
       '',
       `Generated: ${new Date().toISOString()}`,
       '',
-      '## Scope\n\n- Current run: one-month end-to-end simulation\n- Next planned upgrade: 12-month loop with carry-forward fairness history\n\n## Server Check',
+      '## Scope\n\n- Current run: 3-month simulation, with detailed report shown for month 1\n- Next planned upgrade: 12-month loop with carry-forward fairness history\n\n## Server Check',
       '',
       `- Test mode: ON`,
       `- Test API: ${BASE_URL}`,
