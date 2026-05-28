@@ -4,7 +4,7 @@ const axios = require('axios');
 const { spawn } = require('child_process');
 const TEST_MARINES = require('./data/test-marines.json');
 const { MONTHS, getWeekendDates, weekendQuota, selectWeekendMarines, buildDraftOrder, getAllDates, isDateValid, isWkDate } = require('./test-drive-helpers');
-const { seedMonth, applyWeekendSetup, simulatePdNa, simulateDraft } = require('./test-drive-runner');
+const { runOneMonth } = require('./test-drive-runner');
 
 const PORT = 3999;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -62,18 +62,15 @@ async function main() {
   try {
     const health = await waitForServer();
 
-    const seededState = await seedMonth(BASE_URL);
-    const weekendSetup = await applyWeekendSetup(BASE_URL, seededState);
-    const wkPreviewState = weekendSetup.state;
-    const weekendDates = weekendSetup.weekendDates;
-    const weekendAssignments = weekendSetup.weekendAssignments;
-
-    const reviewState = await simulatePdNa(BASE_URL, wkPreviewState);
-
-    const draftResult = await simulateDraft(BASE_URL, reviewState);
-    const draftOrder = draftResult.draftOrder;
-    const draftState = draftResult.draftState;
-    const simulatedPicks = draftResult.simulatedPicks;
+    const monthResult = await runOneMonth(BASE_URL);
+    const seededState = monthResult.seededState;
+    const weekendDates = monthResult.weekendSetup.weekendDates;
+    const weekendAssignments = monthResult.weekendSetup.weekendAssignments;
+    const wkPreviewState = monthResult.weekendSetup.state;
+    const reviewState = monthResult.reviewState;
+    const draftOrder = monthResult.draftOrder;
+    const draftState = monthResult.draftState;
+    const simulatedPicks = monthResult.simulatedPicks;
 
     const report = [
       '# DutyDraft Automated Test Drive',
