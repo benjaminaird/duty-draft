@@ -43,3 +43,25 @@ async function applyWeekendSetup(baseUrl, state) {
 }
 
 module.exports = { TEST_MARINES, seedMonth, applyWeekendSetup };
+
+async function simulatePdNa(baseUrl, state) {
+  state.prefs = {
+    m16: [{day:6},{day:7},{day:13},{day:14},{day:20}],
+    m4: [{day:6},{day:13},{day:20},{day:27},{day:28}],
+    m1: [{day:7},{day:14},{day:21},{day:28},{day:6}],
+    m10: [{day:2},{day:3},{day:4},{day:5},{day:8}],
+    m11: [{day:9},{day:10},{day:11},{day:12},{day:15}]
+  };
+
+  state.nonAvail = {
+    m16: [{date:`${state.year}-${String(state.month+1).padStart(2,'0')}-14`, reason:'Approved Leave', approved:true}],
+    m4: [{date:`${state.year}-${String(state.month+1).padStart(2,'0')}-20`, reason:'TAD', approved:false}],
+    m10: [{date:`${state.year}-${String(state.month+1).padStart(2,'0')}-03`, reason:'On the Roster for a Gig', approved:true}]
+  };
+
+  state.phase = 'review';
+  await axios.post(`${baseUrl}/api/state`, state);
+  return (await axios.get(`${baseUrl}/api/state`)).data;
+}
+
+module.exports = { TEST_MARINES, seedMonth, applyWeekendSetup, simulatePdNa };
