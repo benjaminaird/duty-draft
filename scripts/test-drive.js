@@ -70,26 +70,10 @@ async function main() {
 
     const reviewState = await simulatePdNa(BASE_URL, wkPreviewState);
 
-    const draftOrder = buildDraftOrder(reviewState.marines || [], reviewState.doubleDuty || {}, reviewState.preAssigned || {});
-    const startDraftResult = await axios.post(`${BASE_URL}/api/draft/start`, { draftOrder, assignments: reviewState.preAssigned || {} });
-    let draftState = startDraftResult.data.state;
-    let simulatedPicks = 0;
-    while (draftState.draftLive && !draftState.draftDone) {
-      const entry = draftState.draftOrder[draftState.draftIdx];
-      if (!entry) break;
-      const mid = entry.id;
-      const prefs = (draftState.prefs[mid] || []).map(p => p.day);
-      const asgn = draftState.assignments || {};
-      const myDays = Object.entries(asgn).filter(([,x])=>x===mid).map(([d])=>Number(d));
-      const needsWk = (draftState.wkAssigneeIds || []).includes(mid) && !(draftState.freedMarines || []).includes(mid) && !myDays.some(d=>isWkDate(d,draftState));
-      const validDays = getAllDates(draftState).filter(day => isDateValid(mid, day, asgn, draftState, needsWk));
-      const pick = prefs.find(day => validDays.includes(day)) || validDays[0];
-      if (!pick) throw new Error(`No valid pick found for ${mid}`);
-      const result = await axios.post(`${BASE_URL}/api/draft/pick`, { day: pick, mid });
-      draftState = result.data.state;
-      simulatedPicks++;
-      if (simulatedPicks > 80) throw new Error('Draft simulation exceeded safety limit');
-    }
+    const draftResult = await simulateDraft(BASE_URL, reviewState);
+    const draftOrder = draftResult.draftOrder;
+    const draftState = draftResult.draftState;
+    const simulatedPicks = draftResult.simulatedPicks;
 
     const report = [
       '# DutyDraft Automated Test Drive',
