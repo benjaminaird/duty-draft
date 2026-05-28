@@ -62,8 +62,7 @@ async function main() {
   try {
     const health = await waitForServer();
 
-    await axios.post(`${BASE_URL}/api/state`, { marines: TEST_MARINES, turnMins: 1 });
-    const seededState = (await axios.get(`${BASE_URL}/api/state`)).data;
+    const seededState = await seedMonth(BASE_URL);
     const weekendDates = getWeekendDates(seededState);
     const weekendAssignments = selectWeekendMarines(TEST_MARINES, weekendDates.length, seededState.history || {});
 
