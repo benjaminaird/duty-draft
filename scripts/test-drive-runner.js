@@ -77,4 +77,13 @@ async function runOneMonth(baseUrl){
   return { seededState, weekendSetup, reviewState, ...draftResult };
 }
 
-module.exports={TEST_MARINES,seedMonth,applyWeekendSetup,simulatePdNa,simulateDraft,runOneMonth};
+
+async function runMultipleMonths(baseUrl, count = 12){
+  const results = [];
+  for(let i = 0; i < count; i++){
+    results.push(await runOneMonth(baseUrl));
+  }
+  return results;
+}
+
+module.exports={TEST_MARINES,seedMonth,applyWeekendSetup,simulatePdNa,simulateDraft,runOneMonth,runMultipleMonths};
