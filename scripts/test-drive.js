@@ -68,23 +68,7 @@ async function main() {
     const weekendDates = weekendSetup.weekendDates;
     const weekendAssignments = weekendSetup.weekendAssignments;
 
-    wkPreviewState.prefs = {
-      m16: [{day:6},{day:7},{day:13},{day:14},{day:20}],
-      m4: [{day:6},{day:13},{day:20},{day:27},{day:28}],
-      m1: [{day:7},{day:14},{day:21},{day:28},{day:6}],
-      m10: [{day:2},{day:3},{day:4},{day:5},{day:8}],
-      m11: [{day:9},{day:10},{day:11},{day:12},{day:15}]
-    };
-
-    wkPreviewState.nonAvail = {
-      m16: [{date:`${wkPreviewState.year}-${String(wkPreviewState.month+1).padStart(2,'0')}-14`, reason:'Approved Leave', approved:true}],
-      m4: [{date:`${wkPreviewState.year}-${String(wkPreviewState.month+1).padStart(2,'0')}-20`, reason:'TAD', approved:false}],
-      m10: [{date:`${wkPreviewState.year}-${String(wkPreviewState.month+1).padStart(2,'0')}-03`, reason:'On the Roster for a Gig', approved:true}]
-    };
-
-    wkPreviewState.phase = 'review';
-    await axios.post(`${BASE_URL}/api/state`, wkPreviewState);
-    const reviewState = (await axios.get(`${BASE_URL}/api/state`)).data;
+    const reviewState = await simulatePdNa(BASE_URL, wkPreviewState);
 
     const draftOrder = buildDraftOrder(reviewState.marines || [], reviewState.doubleDuty || {}, reviewState.preAssigned || {});
     const startDraftResult = await axios.post(`${BASE_URL}/api/draft/start`, { draftOrder, assignments: reviewState.preAssigned || {} });
