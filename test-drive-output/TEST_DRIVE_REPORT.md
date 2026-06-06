@@ -1,6 +1,6 @@
 # DutyDraft Automated Test Drive
 
-Generated: 2026-06-06T17:57:47.292Z
+Generated: 2026-06-06T18:09:08.373Z
 
 ## Scope
 
@@ -11,7 +11,7 @@ Generated: 2026-06-06T17:57:47.292Z
 
 - Test mode: ON
 - Test API: http://127.0.0.1:3999
-- Health response: {"ok":true,"phase":"setup","draftLive":false,"ts":1780768666275}
+- Health response: {"ok":true,"phase":"setup","draftLive":false,"ts":1780769347493}
 - Simulated Marines loaded: 20
 - Months simulated: 12
 - App state seeded with simulated roster: 20 Marines
@@ -43,6 +43,7 @@ Generated: 2026-06-06T17:57:47.292Z
 - Month rollover loop: ACTIVE via /api/next-month
 - Weekend history preserved before months 2-12: YES
 - Fairness balancing preserved: YES, weekendBurden history is carried into selectWeekendMarines().
+- Voluntary weekend picks counted as weekend burden history: YES
 - Each month starts from scratch: NO
 - Previous framework gap: runMultipleMonths() called runOneMonth() repeatedly, and runOneMonth() reseeded state each time instead of advancing through /api/next-month.
 - Minimum framework fix applied: month 1 seeds the safe test roster, months 2-12 call /api/next-month before setup, and the test helper's previous-month consecutive-day check now matches the server rule.
@@ -93,6 +94,51 @@ Generated: 2026-06-06T17:57:47.292Z
 | SSgt (E6) | 4 | 5 | 1 | 3 | 6 | 3 | PASS |
 | GySgt (E7) | 4 | 5 | 1 | 5 | 6 | 1 | PASS |
 
+## Weekend History Accounting Audit
+
+- Production rollover code path: /api/next-month copies final assignments into allAsgn, then pushes every isWkDate(day, appState) assignment into history.weekendBurden for that Marine's burden group.
+- Audit method: for each simulated month, compare final weekend assignment IDs against the next month's history.weekendBurden delta. The 12th month is verified by one final safe-mode /api/next-month rollover after the 12 simulated drafts.
+- Are voluntary weekend picks counted as weekend burden? YES
+
+| Month | Group | Required selected | Voluntary weekend picks | Final weekend assignments | History delta | Counted in history |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| July 2026 | Junior Marines (E1-E5) | 5 | 1 | 5 | 5 | PASS |
+| July 2026 | SSgt (E6) | 2 | 0 | 2 | 2 | PASS |
+| July 2026 | GySgt (E7) | 1 | 0 | 1 | 1 | PASS |
+| August 2026 | Junior Marines (E1-E5) | 6 | 0 | 6 | 6 | PASS |
+| August 2026 | SSgt (E6) | 3 | 0 | 2 | 2 | PASS |
+| August 2026 | GySgt (E7) | 1 | 1 | 2 | 2 | PASS |
+| September 2026 | Junior Marines (E1-E5) | 5 | 1 | 5 | 5 | PASS |
+| September 2026 | SSgt (E6) | 2 | 2 | 2 | 2 | PASS |
+| September 2026 | GySgt (E7) | 1 | 0 | 1 | 1 | PASS |
+| October 2026 | Junior Marines (E1-E5) | 5 | 0 | 5 | 5 | PASS |
+| October 2026 | SSgt (E6) | 2 | 0 | 2 | 2 | PASS |
+| October 2026 | GySgt (E7) | 2 | 0 | 2 | 2 | PASS |
+| November 2026 | Junior Marines (E1-E5) | 5 | 0 | 5 | 5 | PASS |
+| November 2026 | SSgt (E6) | 2 | 0 | 2 | 2 | PASS |
+| November 2026 | GySgt (E7) | 2 | 0 | 2 | 2 | PASS |
+| December 2026 | Junior Marines (E1-E5) | 5 | 0 | 5 | 5 | PASS |
+| December 2026 | SSgt (E6) | 2 | 0 | 2 | 2 | PASS |
+| December 2026 | GySgt (E7) | 1 | 0 | 1 | 1 | PASS |
+| January 2027 | Junior Marines (E1-E5) | 6 | 0 | 6 | 6 | PASS |
+| January 2027 | SSgt (E6) | 3 | 0 | 3 | 3 | PASS |
+| January 2027 | GySgt (E7) | 1 | 0 | 1 | 1 | PASS |
+| February 2027 | Junior Marines (E1-E5) | 5 | 0 | 5 | 5 | PASS |
+| February 2027 | SSgt (E6) | 2 | 0 | 2 | 2 | PASS |
+| February 2027 | GySgt (E7) | 1 | 0 | 1 | 1 | PASS |
+| March 2027 | Junior Marines (E1-E5) | 5 | 0 | 5 | 5 | PASS |
+| March 2027 | SSgt (E6) | 2 | 1 | 2 | 2 | PASS |
+| March 2027 | GySgt (E7) | 1 | 1 | 1 | 1 | PASS |
+| April 2027 | Junior Marines (E1-E5) | 5 | 0 | 5 | 5 | PASS |
+| April 2027 | SSgt (E6) | 2 | 0 | 2 | 2 | PASS |
+| April 2027 | GySgt (E7) | 1 | 0 | 1 | 1 | PASS |
+| May 2027 | Junior Marines (E1-E5) | 6 | 0 | 6 | 6 | PASS |
+| May 2027 | SSgt (E6) | 3 | 0 | 2 | 2 | PASS |
+| May 2027 | GySgt (E7) | 1 | 1 | 2 | 2 | PASS |
+| June 2027 | Junior Marines (E1-E5) | 5 | 0 | 5 | 5 | PASS |
+| June 2027 | SSgt (E6) | 2 | 0 | 2 | 2 | PASS |
+| June 2027 | GySgt (E7) | 1 | 0 | 1 | 1 | PASS |
+
 ## SSgt Spread Diagnosis
 
 - Diagnosis: Downstream draft-simulation driven after weekend selection, not a weekend-selector history failure.
@@ -105,16 +151,18 @@ Generated: 2026-06-06T17:57:47.292Z
 - SSgt actual weekend picks from preferences: 5
 - SSgt actual weekend picks from simulator fallback: 20
 - SSgt voluntary weekend picks while not selected for weekend obligation: 3
-- Interpretation: double-duty, approved N/A, and consecutive-day blocking did not drive the SSgt spread in this run. The selector used carried-forward history correctly; the spread appears after the draft simulation because preferences and fallback picks can add voluntary weekend duty beyond selected weekend obligations.
+- SSgt selected weekend turns freed before pick by another Marine's voluntary weekend: 5
+- Interpretation: double-duty, approved N/A, and consecutive-day blocking did not drive the SSgt spread in this run. The selector used carried-forward history correctly, and production history accounting counted final weekend assignments including voluntary picks. The spread remains because actual draft choices can add or cover weekend duty after required weekend burden is selected.
+- Does final annual spread become fair once voluntary weekends are counted? NO; voluntary weekends are already counted in final annual burden, and SSgt final spread remains 3.
 
-| SSgt | Selected weekend obligations | Actual weekend duties | Delta | Preference weekends | Fallback weekends | Voluntary weekends | Double-duty months | Approved weekend NA |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| SSGT ZERO | 5 | 6 | +1 | 5 | 1 | 2 | 0 | 0 |
-| SSGT BLACKBEARD | 5 | 4 | -1 | 0 | 4 | 0 | 0 | 0 |
-| SSGT MARLEY | 5 | 3 | -2 | 0 | 3 | 0 | 0 | 0 |
-| SSGT BEETLEJUICE | 4 | 5 | +1 | 0 | 5 | 1 | 0 | 0 |
-| SSGT HORSEMAN | 4 | 4 | +0 | 0 | 4 | 0 | 0 | 0 |
-| SSGT BOLEYN | 4 | 3 | -1 | 0 | 3 | 0 | 0 | 0 |
+| SSgt | Selected weekend obligations | Actual weekend duties | Delta | Preference weekends | Fallback weekends | Voluntary weekends | Freed selected turns | Double-duty months | Approved weekend NA |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| SSGT ZERO | 5 | 6 | +1 | 5 | 1 | 2 | 1 | 0 | 0 |
+| SSGT BLACKBEARD | 5 | 4 | -1 | 0 | 4 | 0 | 1 | 0 | 0 |
+| SSGT MARLEY | 5 | 3 | -2 | 0 | 3 | 0 | 2 | 0 | 0 |
+| SSGT BEETLEJUICE | 4 | 5 | +1 | 0 | 5 | 1 | 0 | 0 | 0 |
+| SSGT HORSEMAN | 4 | 4 | +0 | 0 | 4 | 0 | 0 | 0 | 0 |
+| SSGT BOLEYN | 4 | 3 | -1 | 0 | 3 | 0 | 1 | 0 | 0 |
 
 ## Month 1 Per-Marine Assignment Summary
 - GYSGT CASPER: 2 total, 1 weekend
@@ -163,6 +211,10 @@ Generated: 2026-06-06T17:57:47.292Z
 ## Conclusion
 
 - Is the existing scheduling algorithm fair over a full year? FAIL
+- Is the required weekend selector fair? YES
+- Are voluntary weekend picks counted as weekend burden? YES
+- Does final annual spread become fair once voluntary weekends are counted? NO
+- Why does it still fail? SSgt required weekend selection is balanced, but final served weekend burden remains spread 3 after voluntary picks and freed selected turns are included in history accounting.
 - Fairness criteria: all drafts complete, all duty and weekend days assigned, approved N/A protected, rank-group weekend variance within 5 percentage points, and within-group weekend spread <= 1.
 - Month helper loaded: January through December
 

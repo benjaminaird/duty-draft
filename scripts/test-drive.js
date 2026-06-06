@@ -119,6 +119,78 @@ function selectedGroupStats(selectedTotals) {
   });
 }
 
+function idsByGroup(ids) {
+  const grouped = { junior: [], ssgt: [], gysgt: [] };
+  ids.forEach(mid => {
+    const marine = TEST_MARINES.find(m => m.id === mid);
+    if (!marine) return;
+    grouped[groupOf(marine.rank)].push(mid);
+  });
+  return grouped;
+}
+
+function finalWeekendIdsByGroup(result) {
+  return idsByGroup(weekendAssignmentEntries(result).map(entry => entry.mid));
+}
+
+function voluntaryWeekendIdsByGroup(result) {
+  return idsByGroup((result.pickTrace || [])
+    .filter(entry => entry.pickedWeekend && !entry.selectedForWeekend)
+    .map(entry => entry.mid));
+}
+
+function requiredWeekendIdsByGroup(result) {
+  return {
+    junior: result.weekendSetup.weekendAssignments.junior.map(m => m.id),
+    ssgt: result.weekendSetup.weekendAssignments.ssgt.map(m => m.id),
+    gysgt: result.weekendSetup.weekendAssignments.gysgt.map(m => m.id)
+  };
+}
+
+function countIds(ids) {
+  return ids.reduce((counts, id) => {
+    counts[id] = (counts[id] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+function sameIdMultiset(a, b) {
+  const ac = countIds(a);
+  const bc = countIds(b);
+  const keys = new Set([...Object.keys(ac), ...Object.keys(bc)]);
+  return [...keys].every(key => (ac[key] || 0) === (bc[key] || 0));
+}
+
+function historyAccountingAudit(monthResults, finalAccountingState) {
+  return monthResults.map((result, index) => {
+    const nextState = index < monthResults.length - 1
+      ? monthResults[index + 1].seededState
+      : finalAccountingState;
+    const finalIds = finalWeekendIdsByGroup(result);
+    const requiredIds = requiredWeekendIdsByGroup(result);
+    const voluntaryIds = voluntaryWeekendIdsByGroup(result);
+    const label = `${MONTHS[result.draftState.month]} ${result.draftState.year}`;
+    const groups = groupDefinitions().map(group => {
+      const before = result.seededState.history?.weekendBurden?.[group.key] || [];
+      const after = nextState.history?.weekendBurden?.[group.key] || [];
+      const delta = after.slice(before.length);
+      return {
+        ...group,
+        required: requiredIds[group.key].length,
+        voluntary: voluntaryIds[group.key].length,
+        final: finalIds[group.key].length,
+        historyDelta: delta.length,
+        counted: sameIdMultiset(finalIds[group.key], delta)
+      };
+    });
+    return {
+      label,
+      groups,
+      counted: groups.every(group => group.counted)
+    };
+  });
+}
+
 function traceEntries(monthResults) {
   return monthResults.flatMap(result => (result.pickTrace || []).map(entry => ({
     ...entry,
@@ -137,6 +209,7 @@ function ssgtDiagnosisRows(monthResults, totals, selectedTotals) {
       const preferenceWeekends = myWeekendPicks.filter(t => t.pickSource === 'preference').length;
       const fallbackWeekends = myWeekendPicks.filter(t => t.pickSource === 'fallback').length;
       const voluntaryWeekends = myWeekendPicks.filter(t => !t.selectedForWeekend).length;
+      const freedSelectedTurns = traces.filter(t => t.mid === m.id && t.selectedForWeekend && t.freedBeforePick).length;
       const doubleDutyMonths = monthResults.filter(r => (r.draftState.doubleDuty || {})[m.id]).length;
       const approvedWeekendNa = monthResults.reduce((sum, r) => {
         return sum + ((r.reviewState.nonAvail || {})[m.id] || [])
@@ -155,6 +228,7 @@ function ssgtDiagnosisRows(monthResults, totals, selectedTotals) {
         preferenceWeekends,
         fallbackWeekends,
         voluntaryWeekends,
+        freedSelectedTurns,
         doubleDutyMonths,
         approvedWeekendNa
       };
@@ -209,6 +283,8 @@ async function main() {
     const health = await waitForServer();
 
     const monthResults = await runMultipleMonths(BASE_URL, 12);
+    await axios.post(`${BASE_URL}/api/next-month`);
+    const finalAccountingState = (await axios.get(`${BASE_URL}/api/state`)).data;
     const monthResult = monthResults[0];
     const seededState = monthResult.seededState;
     const weekendDates = monthResult.weekendSetup.weekendDates;
@@ -252,8 +328,11 @@ async function main() {
     const ssgtDoubleDutyMonths = ssgtRows.reduce((sum, row) => sum + row.doubleDutyMonths, 0);
     const ssgtApprovedWeekendNa = ssgtRows.reduce((sum, row) => sum + row.approvedWeekendNa, 0);
     const ssgtVoluntaryWeekends = ssgtRows.reduce((sum, row) => sum + row.voluntaryWeekends, 0);
+    const ssgtFreedSelectedTurns = ssgtRows.reduce((sum, row) => sum + row.freedSelectedTurns, 0);
     const ssgtPreferenceWeekends = ssgtRows.reduce((sum, row) => sum + row.preferenceWeekends, 0);
     const ssgtFallbackWeekends = ssgtRows.reduce((sum, row) => sum + row.fallbackWeekends, 0);
+    const historyAudit = historyAccountingAudit(monthResults, finalAccountingState);
+    const historyAccountingPass = historyAudit.every(month => month.counted);
     const ssgtSpreadCause = ssgtSelectedSpread <= maxWeekendSpread && ssgtActualSpread > maxWeekendSpread
       ? 'Downstream draft-simulation driven after weekend selection, not a weekend-selector history failure.'
       : 'Weekend-selector selection spread also exceeds tolerance; investigate selector fairness before blaming downstream constraints.';
@@ -304,6 +383,7 @@ async function main() {
       `- Month rollover loop: ${rolloverExists ? 'ACTIVE via /api/next-month' : 'NOT ACTIVE'}`,
       `- Weekend history preserved before months 2-12: ${weekendHistoryPreserved ? 'YES' : 'NO'}`,
       `- Fairness balancing preserved: ${weekendHistoryPreserved ? 'YES, weekendBurden history is carried into selectWeekendMarines().' : 'NO, later months start without weekendBurden history.'}`,
+      `- Voluntary weekend picks counted as weekend burden history: ${historyAccountingPass ? 'YES' : 'NO'}`,
       `- Each month starts from scratch: ${rolloverExists && weekendHistoryPreserved ? 'NO' : 'YES'}`,
       `- Previous framework gap: runMultipleMonths() called runOneMonth() repeatedly, and runOneMonth() reseeded state each time instead of advancing through /api/next-month.`,
       `- Minimum framework fix applied: month 1 seeds the safe test roster, months 2-12 call /api/next-month before setup, and the test helper's previous-month consecutive-day check now matches the server rule.`,
@@ -342,6 +422,16 @@ async function main() {
         return `| ${s.label} | ${s.spread.min} | ${s.spread.max} | ${s.spread.spread} | ${actual.min} | ${actual.max} | ${actual.spread} | ${passFail(s.spread.spread <= maxWeekendSpread)} |`;
       }),
       '',
+      '## Weekend History Accounting Audit',
+      '',
+      `- Production rollover code path: /api/next-month copies final assignments into allAsgn, then pushes every isWkDate(day, appState) assignment into history.weekendBurden for that Marine's burden group.`,
+      `- Audit method: for each simulated month, compare final weekend assignment IDs against the next month's history.weekendBurden delta. The 12th month is verified by one final safe-mode /api/next-month rollover after the 12 simulated drafts.`,
+      `- Are voluntary weekend picks counted as weekend burden? ${historyAccountingPass ? 'YES' : 'NO'}`,
+      '',
+      '| Month | Group | Required selected | Voluntary weekend picks | Final weekend assignments | History delta | Counted in history |',
+      '| --- | --- | ---: | ---: | ---: | ---: | --- |',
+      ...historyAudit.flatMap(month => month.groups.map(group => `| ${month.label} | ${group.label} | ${group.required} | ${group.voluntary} | ${group.final} | ${group.historyDelta} | ${passFail(group.counted)} |`)),
+      '',
       '## SSgt Spread Diagnosis',
       '',
       `- Diagnosis: ${ssgtSpreadCause}`,
@@ -354,11 +444,13 @@ async function main() {
       `- SSgt actual weekend picks from preferences: ${ssgtPreferenceWeekends}`,
       `- SSgt actual weekend picks from simulator fallback: ${ssgtFallbackWeekends}`,
       `- SSgt voluntary weekend picks while not selected for weekend obligation: ${ssgtVoluntaryWeekends}`,
-      `- Interpretation: double-duty, approved N/A, and consecutive-day blocking did not drive the SSgt spread in this run. The selector used carried-forward history correctly; the spread appears after the draft simulation because preferences and fallback picks can add voluntary weekend duty beyond selected weekend obligations.`,
+      `- SSgt selected weekend turns freed before pick by another Marine's voluntary weekend: ${ssgtFreedSelectedTurns}`,
+      `- Interpretation: double-duty, approved N/A, and consecutive-day blocking did not drive the SSgt spread in this run. The selector used carried-forward history correctly, and production history accounting counted final weekend assignments including voluntary picks. The spread remains because actual draft choices can add or cover weekend duty after required weekend burden is selected.`,
+      `- Does final annual spread become fair once voluntary weekends are counted? ${inGroupFairnessPass ? 'YES' : 'NO'}; voluntary weekends are already counted in final annual burden, and SSgt final spread remains ${ssgtActualSpread}.`,
       '',
-      '| SSgt | Selected weekend obligations | Actual weekend duties | Delta | Preference weekends | Fallback weekends | Voluntary weekends | Double-duty months | Approved weekend NA |',
-      '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
-      ...ssgtRows.map(row => `| ${marineName(row)} | ${row.selected} | ${row.actual} | ${row.delta >= 0 ? '+' : ''}${row.delta} | ${row.preferenceWeekends} | ${row.fallbackWeekends} | ${row.voluntaryWeekends} | ${row.doubleDutyMonths} | ${row.approvedWeekendNa} |`),
+      '| SSgt | Selected weekend obligations | Actual weekend duties | Delta | Preference weekends | Fallback weekends | Voluntary weekends | Freed selected turns | Double-duty months | Approved weekend NA |',
+      '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+      ...ssgtRows.map(row => `| ${marineName(row)} | ${row.selected} | ${row.actual} | ${row.delta >= 0 ? '+' : ''}${row.delta} | ${row.preferenceWeekends} | ${row.fallbackWeekends} | ${row.voluntaryWeekends} | ${row.freedSelectedTurns} | ${row.doubleDutyMonths} | ${row.approvedWeekendNa} |`),
       '',
       '## Month 1 Per-Marine Assignment Summary',
       ...TEST_MARINES.map(m=>{ const entries=Object.entries(draftState.assignments || {}).filter(([,mid])=>mid===m.id); const wk=entries.filter(([d])=>isWkDate(Number(d),draftState)).length; return `- ${m.rank} ${m.lastName}: ${entries.length} total, ${wk} weekend`; }),
@@ -369,6 +461,10 @@ async function main() {
       '## Conclusion',
       '',
       `- Is the existing scheduling algorithm fair over a full year? ${annualFairnessPass ? 'PASS' : 'FAIL'}`,
+      `- Is the required weekend selector fair? ${selectedStats.every(s => s.spread.spread <= maxWeekendSpread) ? 'YES' : 'NO'}`,
+      `- Are voluntary weekend picks counted as weekend burden? ${historyAccountingPass ? 'YES' : 'NO'}`,
+      `- Does final annual spread become fair once voluntary weekends are counted? ${inGroupFairnessPass ? 'YES' : 'NO'}`,
+      `- Why does it still fail? SSgt required weekend selection is balanced, but final served weekend burden remains spread ${ssgtActualSpread} after voluntary picks and freed selected turns are included in history accounting.`,
       `- Fairness criteria: all drafts complete, all duty and weekend days assigned, approved N/A protected, rank-group weekend variance within ${ratioTolerancePts} percentage points, and within-group weekend spread <= ${maxWeekendSpread}.`,
       `- Month helper loaded: ${MONTHS[0]} through ${MONTHS[11]}`,
       '',
