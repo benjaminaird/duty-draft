@@ -203,6 +203,9 @@ function doAutoPick(mid,state,asgn){
 function checkVoluntaryWk(pickerMid,day,asgn,state){
   if(!isWkDate(day,state))return state;
   if((state.wkAssigneeIds||[]).includes(pickerMid))return state;
+  const pickerM=(state.marines||[]).find(m=>m.id===pickerMid);
+  if(!pickerM)return state;
+  const pickerGroup=groupOf(pickerM.rank);
   const newVol=[...(state.voluntaryWkTakers||[])];
   if(!newVol.includes(pickerMid))newVol.push(pickerMid);
   const newFreed=[...(state.freedMarines||[])];
@@ -212,14 +215,15 @@ function checkVoluntaryWk(pickerMid,day,asgn,state){
     const mid=order[i].id;
     const isSlotted=(state.wkAssigneeIds||[]).includes(mid);
     const alreadyFreed=newFreed.includes(mid);
+    const candidateM=(state.marines||[]).find(m=>m.id===mid);
+    if(!candidateM||groupOf(candidateM.rank)!==pickerGroup)continue;
     const theirDays=Object.entries({...asgn,[day]:pickerMid}).filter(([,x])=>x===mid).map(([d])=>Number(d));
     const alreadyHasWk=theirDays.some(d=>isWkDate(d,state));
     if(!isSlotted)continue;
     if(alreadyFreed)continue;
     if(!alreadyHasWk){
       newFreed.push(mid);
-      const pickerM=(state.marines||[]).find(m=>m.id===pickerMid);
-      const freedM=(state.marines||[]).find(m=>m.id===mid);
+      const freedM=candidateM;
       if(freedM&&pickerM)addNotif('WEEKEND OBLIGATION COVERED',`${dName(pickerM)} has voluntarily taken a weekend duty day. Your weekend obligation for ${MONTHS[state.month]} is fulfilled -- all dates are open on your turn.`,'🟢',mid);
       break;
     }

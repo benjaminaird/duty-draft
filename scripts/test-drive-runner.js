@@ -6,6 +6,7 @@ const {
   selectWeekendMarines,
   buildDraftOrder,
   getAllDates,
+  groupOf,
   isDateValid,
   isWkDate
 } = require('./test-drive-helpers');
@@ -66,6 +67,31 @@ async function simulatePdNa(baseUrl, state) {
 
 
 
+function expectedVoluntaryFreedId(state, pickerMid, pickedDay, asgnAfterPick) {
+  if (!isWkDate(pickedDay, state)) return null;
+  if ((state.wkAssigneeIds || []).includes(pickerMid)) return null;
+
+  const picker = (state.marines || []).find(m => m.id === pickerMid);
+  if (!picker) return null;
+
+  const pickerGroup = groupOf(picker.rank);
+  const newFreed = [...(state.freedMarines || [])];
+  const order = state.draftOrder || [];
+  const searchFrom = (state.draftIdx || 0) + 1;
+
+  for (let i = searchFrom; i < order.length; i++) {
+    const mid = order[i].id;
+    const candidate = (state.marines || []).find(m => m.id === mid);
+    if (!candidate || groupOf(candidate.rank) !== pickerGroup) continue;
+    if (!(state.wkAssigneeIds || []).includes(mid)) continue;
+    if (newFreed.includes(mid)) continue;
+    const theirDays = Object.entries(asgnAfterPick).filter(([, x]) => x === mid).map(([d]) => Number(d));
+    if (!theirDays.some(d => isWkDate(d, state))) return mid;
+  }
+
+  return null;
+}
+
 async function simulateDraft(baseUrl, state) {
   const draftOrder = buildDraftOrder(state.marines || [], state.doubleDuty || {}, state.preAssigned || {});
   const startDraftResult = await axios.post(`${baseUrl}/api/draft/start`, { draftOrder, assignments: state.preAssigned || {} });
@@ -91,7 +117,10 @@ async function simulateDraft(baseUrl, state) {
 
     if (!pick) throw new Error(`No valid pick found for ${mid}`);
 
-    pickTrace.push({
+    const asgnAfterPick = { ...asgn, [pick]: mid };
+    const freedBeforeIds = [...(draftState.freedMarines || [])];
+    const expectedFreedId = expectedVoluntaryFreedId(draftState, mid, pick, asgnAfterPick);
+    const traceEntry = {
       mid,
       turn: entry.turn || 1,
       day: pick,
@@ -102,12 +131,20 @@ async function simulateDraft(baseUrl, state) {
       validWeekendDays: validDays.filter(day => isWkDate(day, draftState)),
       validDayCount: validDays.length,
       freedBeforePick: (draftState.freedMarines || []).includes(mid),
+      expectedVoluntaryFreedId: expectedFreedId,
+      freedBeforeIds,
       month: draftState.month,
       year: draftState.year
-    });
+    };
 
     const result = await axios.post(`${baseUrl}/api/draft/pick`, { day: pick, mid });
     draftState = result.data.state;
+    traceEntry.freedAfterIds = [...(draftState.freedMarines || [])];
+    traceEntry.newlyFreedIds = traceEntry.freedAfterIds.filter(id => !freedBeforeIds.includes(id));
+    traceEntry.expectedVoluntaryFreedApplied = expectedFreedId
+      ? traceEntry.freedAfterIds.includes(expectedFreedId)
+      : true;
+    pickTrace.push(traceEntry);
     simulatedPicks++;
     if (simulatedPicks > 80) throw new Error("Draft simulation exceeded safety limit");
   }

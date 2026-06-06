@@ -228,6 +228,46 @@ function traceEntries(monthResults) {
   })));
 }
 
+function marineById(mid) {
+  return TEST_MARINES.find(m => m.id === mid);
+}
+
+function groupOfMid(mid) {
+  const marine = marineById(mid);
+  return marine ? groupOf(marine.rank) : null;
+}
+
+function voluntaryCreditAudit(monthResults) {
+  const rows = traceEntries(monthResults)
+    .filter(entry => entry.pickedWeekend && !entry.selectedForWeekend)
+    .map(entry => {
+      const pickerGroup = groupOfMid(entry.mid);
+      const expectedFreedGroup = groupOfMid(entry.expectedVoluntaryFreedId);
+      const crossGroupNewlyFreed = (entry.newlyFreedIds || [])
+        .filter(mid => mid !== entry.expectedVoluntaryFreedId)
+        .filter(mid => groupOfMid(mid) && groupOfMid(mid) !== pickerGroup);
+      return {
+        label: entry.label,
+        pickerMid: entry.mid,
+        pickerGroup,
+        expectedFreedId: entry.expectedVoluntaryFreedId || null,
+        expectedFreedGroup,
+        expectedApplied: !!entry.expectedVoluntaryFreedApplied,
+        crossGroupNewlyFreed,
+        sameGroupTarget: !entry.expectedVoluntaryFreedId || expectedFreedGroup === pickerGroup
+      };
+    });
+
+  return {
+    rows,
+    sameGroupOnly: rows.every(row => row.sameGroupTarget && row.expectedApplied && row.crossGroupNewlyFreed.length === 0),
+    voluntaryPicks: rows.length,
+    sameGroupCreditsApplied: rows.filter(row => row.expectedFreedId && row.expectedApplied).length,
+    noSameGroupAvailable: rows.filter(row => !row.expectedFreedId).length,
+    crossGroupNewlyFreedCount: rows.reduce((sum, row) => sum + row.crossGroupNewlyFreed.length, 0)
+  };
+}
+
 function ssgtDiagnosisRows(monthResults, totals, selectedTotals) {
   const traces = traceEntries(monthResults);
   return TEST_MARINES
@@ -365,6 +405,7 @@ async function main() {
     const historyAccountingPass = historyAudit.every(month => month.counted);
     const priorityAudit = selectorPriorityAudit(monthResults);
     const selectorCountPriorityPass = priorityAudit.every(month => month.countPriorityHonored);
+    const voluntaryAudit = voluntaryCreditAudit(monthResults);
     const voluntaryReducesFuturePriority = historyAccountingPass && selectorCountPriorityPass;
     const priorSsgtSpreadBaseline = 3;
     const ssgtSpreadImproved = ssgtActualSpread < priorSsgtSpreadBaseline;
@@ -420,6 +461,7 @@ async function main() {
       `- Fairness balancing preserved: ${weekendHistoryPreserved ? 'YES, weekendBurden history is carried into count-based selectWeekendMarines().' : 'NO, later months start without weekendBurden history.'}`,
       `- Weekend selector priority count-based: ${selectorCountPriorityPass ? 'YES' : 'NO'}`,
       `- Voluntary weekend picks counted as weekend burden history: ${historyAccountingPass ? 'YES' : 'NO'}`,
+      `- Voluntary weekend picks free only same-group selected Marines: ${voluntaryAudit.sameGroupOnly ? 'YES' : 'NO'}`,
       `- Volunteering for a weekend reduces future required weekend priority: ${voluntaryReducesFuturePriority ? 'YES' : 'NO'}`,
       `- Each month starts from scratch: ${rolloverExists && weekendHistoryPreserved ? 'NO' : 'YES'}`,
       `- Previous framework gap: runMultipleMonths() called runOneMonth() repeatedly, and runOneMonth() reseeded state each time instead of advancing through /api/next-month.`,
@@ -468,6 +510,23 @@ async function main() {
       '| --- | --- | ---: | ---: | ---: | ---: | --- |',
       ...priorityAudit.flatMap(month => month.groups.map(group => `| ${month.label} | ${group.label} | ${group.selected} | ${group.selectedMin} | ${group.selectedMax} | ${group.unselectedMin} | ${passFail(group.countPriorityHonored)} |`)),
       '',
+      '## Same-Group Voluntary Weekend Credit Audit',
+      '',
+      `- Voluntary weekend picks observed: ${voluntaryAudit.voluntaryPicks}`,
+      `- Same-group selected assignees freed by voluntary picks: ${voluntaryAudit.sameGroupCreditsApplied}`,
+      `- Voluntary picks with no same-group selected assignee available to free: ${voluntaryAudit.noSameGroupAvailable}`,
+      `- Cross-group frees in voluntary pick responses: ${voluntaryAudit.crossGroupNewlyFreedCount}`,
+      `- Did voluntary weekend picks free only same-group selected Marines? ${voluntaryAudit.sameGroupOnly ? 'YES' : 'NO'}`,
+      '',
+      '| Month | Volunteer | Volunteer group | Same-group assignee freed | Cross-group frees | Result |',
+      '| --- | --- | --- | --- | ---: | --- |',
+      ...voluntaryAudit.rows.map(row => {
+        const picker = marineById(row.pickerMid);
+        const freed = row.expectedFreedId ? marineById(row.expectedFreedId) : null;
+        const result = row.sameGroupTarget && row.expectedApplied && row.crossGroupNewlyFreed.length === 0;
+        return `| ${row.label} | ${picker ? marineName(picker) : row.pickerMid} | ${row.pickerGroup || 'unknown'} | ${freed ? marineName(freed) : 'None available'} | ${row.crossGroupNewlyFreed.length} | ${passFail(result)} |`;
+      }),
+      '',
       '## Weekend History Accounting Audit',
       '',
       `- Production rollover code path: /api/next-month copies final assignments into allAsgn, then pushes every isWkDate(day, appState) assignment into history.weekendBurden for that Marine's burden group.`,
@@ -494,6 +553,7 @@ async function main() {
       `- Did annual final SSgt weekend spread improve after the count-based selector change? ${ssgtSpreadImproved ? 'YES' : 'NO'}; previous baseline spread was ${priorSsgtSpreadBaseline}, current spread is ${ssgtActualSpread}.`,
       `- Interpretation: double-duty, approved N/A, and consecutive-day blocking did not drive the SSgt spread in this run. The selector now uses served weekend counts first and honors that priority each month, and production history accounting counts final weekend assignments including voluntary picks. The spread remains because actual draft choices can add weekend duty to one Marine while voluntary weekend picks can free another selected Marine before they serve one.`,
       `- Does final annual spread become fair once voluntary weekends are counted? ${inGroupFairnessPass ? 'YES' : 'NO'}; voluntary weekends are already counted in final annual burden, and SSgt final spread remains ${ssgtActualSpread}.`,
+      `- Did voluntary weekend picks free only same-group selected Marines? ${voluntaryAudit.sameGroupOnly ? 'YES' : 'NO'}.`,
       '',
       '| SSgt | Selected weekend obligations | Actual weekend duties | Delta | Preference weekends | Fallback weekends | Voluntary weekends | Freed selected turns | Double-duty months | Approved weekend NA |',
       '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
@@ -510,6 +570,7 @@ async function main() {
       `- Is the existing scheduling algorithm fair over a full year? ${annualFairnessPass ? 'PASS' : 'FAIL'}`,
       `- Is the required weekend selector count-priority fair? ${selectorCountPriorityPass ? 'YES' : 'NO'}`,
       `- Are voluntary weekend picks counted as weekend burden? ${historyAccountingPass ? 'YES' : 'NO'}`,
+      `- Did voluntary weekend picks free only same-group selected Marines? ${voluntaryAudit.sameGroupOnly ? 'YES' : 'NO'}`,
       `- Does volunteering for a weekend reduce future required weekend priority? ${voluntaryReducesFuturePriority ? 'YES' : 'NO'}`,
       `- Did annual final weekend spread improve after the change? ${ssgtSpreadImproved ? 'YES' : 'NO'}; SSgt spread is ${ssgtActualSpread} versus prior baseline ${priorSsgtSpreadBaseline}.`,
       `- Does final annual spread become fair once voluntary weekends are counted? ${inGroupFairnessPass ? 'YES' : 'NO'}`,
