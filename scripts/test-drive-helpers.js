@@ -22,7 +22,7 @@ function getWeekendDates(state){ const total=getDIM(state.year,state.month); ret
 
 function isConsec(d,arr){ return arr.some(x=>Math.abs(x-d)===1); }
 
-function consecPrev(d,lastDay,year,month){ if(lastDay==null)return false; const prev=new Date(year,month,d-1); return prev.getDate()===lastDay; }
+function consecPrev(d,lastDay,year,month){ if(lastDay==null)return false; const lm=month===0?getDIM(year-1,11):getDIM(year,month-1); return lastDay===lm&&d===1; }
 
 function isWkDate(d,state){ const k=dk(state.year,state.month,d); if((state.workdays||[]).includes(k))return false; return isNatWk(state.year,state.month,d)||(state.extraWk||[]).includes(k); }
 
