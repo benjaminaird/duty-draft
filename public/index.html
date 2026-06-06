@@ -328,16 +328,18 @@ function computeWkAssignees(marines,wkCount,history){
   const q={junior:Math.round(GROUP_QUOTA.junior*wkCount),ssgt:Math.round(GROUP_QUOTA.ssgt*wkCount),gysgt:0};
   q.gysgt=Math.max(0,wkCount-q.junior-q.ssgt);
   if(q.junior+q.ssgt+q.gysgt!==wkCount)q.junior+=wkCount-(q.junior+q.ssgt+q.gysgt);
+  const countIn=(arr,id)=>arr.filter(x=>x===id).length;
+  const wkSort=(hist,a,b)=>{const ac=countIn(hist,a.id),bc=countIn(hist,b.id);if(ac!==bc)return ac-bc;const ai=hist.lastIndexOf(a.id),bi=hist.lastIndexOf(b.id);return ai!==bi?ai-bi:gradeNum(a.rank)-gradeNum(b.rank);};
   const result={junior:[],ssgt:[],gysgt:[]};let total=0;
   Object.entries(groups).forEach(([g,gMs])=>{
     if(!gMs.length||q[g]<=0)return;
     const hist=(history.weekendBurden||{})[g]||[];
-    const sorted=[...gMs].sort((a,b)=>{const ai=hist.lastIndexOf(a.id),bi=hist.lastIndexOf(b.id);return ai!==bi?ai-bi:gradeNum(a.rank)-gradeNum(b.rank);});
+    const sorted=[...gMs].sort((a,b)=>wkSort(hist,a,b));
     result[g]=sorted.slice(0,Math.min(q[g],sorted.length));total+=result[g].length;
   });
   while(total<wkCount){
     const hist=(history.weekendBurden||{}).junior||[];
-    const sorted=[...groups.junior].sort((a,b)=>{const ai=hist.lastIndexOf(a.id),bi=hist.lastIndexOf(b.id);return ai!==bi?ai-bi:gradeNum(a.rank)-gradeNum(b.rank);});
+    const sorted=[...groups.junior].sort((a,b)=>wkSort(hist,a,b));
     const have=new Set(result.junior.map(m=>m.id));
     const next=sorted.find(m=>!have.has(m.id));
     if(next){result.junior.push(next);total++;}else break;

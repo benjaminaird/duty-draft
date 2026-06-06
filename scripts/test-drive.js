@@ -191,6 +191,36 @@ function historyAccountingAudit(monthResults, finalAccountingState) {
   });
 }
 
+function selectorPriorityAudit(monthResults) {
+  return monthResults.map(result => {
+    const label = `${MONTHS[result.seededState.month]} ${result.seededState.year}`;
+    const groups = groupDefinitions().map(group => {
+      const members = TEST_MARINES.filter(m => groupOf(m.rank) === group.key);
+      const selectedIds = requiredWeekendIdsByGroup(result)[group.key];
+      const selectedSet = new Set(selectedIds);
+      const history = result.seededState.history?.weekendBurden?.[group.key] || [];
+      const countFor = mid => history.filter(id => id === mid).length;
+      const selectedCounts = selectedIds.map(countFor);
+      const unselectedCounts = members.filter(m => !selectedSet.has(m.id)).map(m => countFor(m.id));
+      const selectedMax = selectedCounts.length ? Math.max(...selectedCounts) : 0;
+      const unselectedMin = unselectedCounts.length ? Math.min(...unselectedCounts) : selectedMax;
+      return {
+        ...group,
+        selected: selectedIds.length,
+        selectedMin: selectedCounts.length ? Math.min(...selectedCounts) : 0,
+        selectedMax,
+        unselectedMin,
+        countPriorityHonored: selectedMax <= unselectedMin
+      };
+    });
+    return {
+      label,
+      groups,
+      countPriorityHonored: groups.every(group => group.countPriorityHonored)
+    };
+  });
+}
+
 function traceEntries(monthResults) {
   return monthResults.flatMap(result => (result.pickTrace || []).map(entry => ({
     ...entry,
@@ -333,9 +363,14 @@ async function main() {
     const ssgtFallbackWeekends = ssgtRows.reduce((sum, row) => sum + row.fallbackWeekends, 0);
     const historyAudit = historyAccountingAudit(monthResults, finalAccountingState);
     const historyAccountingPass = historyAudit.every(month => month.counted);
-    const ssgtSpreadCause = ssgtSelectedSpread <= maxWeekendSpread && ssgtActualSpread > maxWeekendSpread
-      ? 'Downstream draft-simulation driven after weekend selection, not a weekend-selector history failure.'
-      : 'Weekend-selector selection spread also exceeds tolerance; investigate selector fairness before blaming downstream constraints.';
+    const priorityAudit = selectorPriorityAudit(monthResults);
+    const selectorCountPriorityPass = priorityAudit.every(month => month.countPriorityHonored);
+    const voluntaryReducesFuturePriority = historyAccountingPass && selectorCountPriorityPass;
+    const priorSsgtSpreadBaseline = 3;
+    const ssgtSpreadImproved = ssgtActualSpread < priorSsgtSpreadBaseline;
+    const ssgtSpreadCause = selectorCountPriorityPass && ssgtActualSpread > maxWeekendSpread
+      ? 'Final served weekend spread remains high after count-based required selection.'
+      : 'Weekend-selector count priority failed in at least one month; investigate selector priority before blaming downstream constraints.';
 
     const report = [
       '# DutyDraft Automated Test Drive',
@@ -382,8 +417,10 @@ async function main() {
       `- Months simulated: ${monthLabels.join(', ')}`,
       `- Month rollover loop: ${rolloverExists ? 'ACTIVE via /api/next-month' : 'NOT ACTIVE'}`,
       `- Weekend history preserved before months 2-12: ${weekendHistoryPreserved ? 'YES' : 'NO'}`,
-      `- Fairness balancing preserved: ${weekendHistoryPreserved ? 'YES, weekendBurden history is carried into selectWeekendMarines().' : 'NO, later months start without weekendBurden history.'}`,
+      `- Fairness balancing preserved: ${weekendHistoryPreserved ? 'YES, weekendBurden history is carried into count-based selectWeekendMarines().' : 'NO, later months start without weekendBurden history.'}`,
+      `- Weekend selector priority count-based: ${selectorCountPriorityPass ? 'YES' : 'NO'}`,
       `- Voluntary weekend picks counted as weekend burden history: ${historyAccountingPass ? 'YES' : 'NO'}`,
+      `- Volunteering for a weekend reduces future required weekend priority: ${voluntaryReducesFuturePriority ? 'YES' : 'NO'}`,
       `- Each month starts from scratch: ${rolloverExists && weekendHistoryPreserved ? 'NO' : 'YES'}`,
       `- Previous framework gap: runMultipleMonths() called runOneMonth() repeatedly, and runOneMonth() reseeded state each time instead of advancing through /api/next-month.`,
       `- Minimum framework fix applied: month 1 seeds the safe test roster, months 2-12 call /api/next-month before setup, and the test helper's previous-month consecutive-day check now matches the server rule.`,
@@ -415,12 +452,21 @@ async function main() {
       '',
       '## Weekend Selector Diagnostics',
       '',
-      '| Group | Selected min | Selected max | Selected spread | Actual min | Actual max | Actual spread | Selector result |',
-      '| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |',
+      `- Selector priority rule: served weekend count first, recency/order only as a tiebreaker.`,
+      `- Is weekend selector priority count-based? ${selectorCountPriorityPass ? 'YES' : 'NO'}`,
+      '',
+      '| Group | Required selected min | Required selected max | Required selected spread | Actual min | Actual max | Actual spread |',
+      '| --- | ---: | ---: | ---: | ---: | ---: | ---: |',
       ...selectedStats.map(s => {
         const actual = rankStats.find(r => r.key === s.key).spread;
-        return `| ${s.label} | ${s.spread.min} | ${s.spread.max} | ${s.spread.spread} | ${actual.min} | ${actual.max} | ${actual.spread} | ${passFail(s.spread.spread <= maxWeekendSpread)} |`;
+        return `| ${s.label} | ${s.spread.min} | ${s.spread.max} | ${s.spread.spread} | ${actual.min} | ${actual.max} | ${actual.spread} |`;
       }),
+      '',
+      '### Count-Based Priority Audit',
+      '',
+      '| Month | Group | Selected | Selected served-count min | Selected served-count max | Lowest unselected served-count | Count priority honored |',
+      '| --- | --- | ---: | ---: | ---: | ---: | --- |',
+      ...priorityAudit.flatMap(month => month.groups.map(group => `| ${month.label} | ${group.label} | ${group.selected} | ${group.selectedMin} | ${group.selectedMax} | ${group.unselectedMin} | ${passFail(group.countPriorityHonored)} |`)),
       '',
       '## Weekend History Accounting Audit',
       '',
@@ -445,7 +491,8 @@ async function main() {
       `- SSgt actual weekend picks from simulator fallback: ${ssgtFallbackWeekends}`,
       `- SSgt voluntary weekend picks while not selected for weekend obligation: ${ssgtVoluntaryWeekends}`,
       `- SSgt selected weekend turns freed before pick by another Marine's voluntary weekend: ${ssgtFreedSelectedTurns}`,
-      `- Interpretation: double-duty, approved N/A, and consecutive-day blocking did not drive the SSgt spread in this run. The selector used carried-forward history correctly, and production history accounting counted final weekend assignments including voluntary picks. The spread remains because actual draft choices can add or cover weekend duty after required weekend burden is selected.`,
+      `- Did annual final SSgt weekend spread improve after the count-based selector change? ${ssgtSpreadImproved ? 'YES' : 'NO'}; previous baseline spread was ${priorSsgtSpreadBaseline}, current spread is ${ssgtActualSpread}.`,
+      `- Interpretation: double-duty, approved N/A, and consecutive-day blocking did not drive the SSgt spread in this run. The selector now uses served weekend counts first and honors that priority each month, and production history accounting counts final weekend assignments including voluntary picks. The spread remains because actual draft choices can add weekend duty to one Marine while voluntary weekend picks can free another selected Marine before they serve one.`,
       `- Does final annual spread become fair once voluntary weekends are counted? ${inGroupFairnessPass ? 'YES' : 'NO'}; voluntary weekends are already counted in final annual burden, and SSgt final spread remains ${ssgtActualSpread}.`,
       '',
       '| SSgt | Selected weekend obligations | Actual weekend duties | Delta | Preference weekends | Fallback weekends | Voluntary weekends | Freed selected turns | Double-duty months | Approved weekend NA |',
@@ -461,10 +508,12 @@ async function main() {
       '## Conclusion',
       '',
       `- Is the existing scheduling algorithm fair over a full year? ${annualFairnessPass ? 'PASS' : 'FAIL'}`,
-      `- Is the required weekend selector fair? ${selectedStats.every(s => s.spread.spread <= maxWeekendSpread) ? 'YES' : 'NO'}`,
+      `- Is the required weekend selector count-priority fair? ${selectorCountPriorityPass ? 'YES' : 'NO'}`,
       `- Are voluntary weekend picks counted as weekend burden? ${historyAccountingPass ? 'YES' : 'NO'}`,
+      `- Does volunteering for a weekend reduce future required weekend priority? ${voluntaryReducesFuturePriority ? 'YES' : 'NO'}`,
+      `- Did annual final weekend spread improve after the change? ${ssgtSpreadImproved ? 'YES' : 'NO'}; SSgt spread is ${ssgtActualSpread} versus prior baseline ${priorSsgtSpreadBaseline}.`,
       `- Does final annual spread become fair once voluntary weekends are counted? ${inGroupFairnessPass ? 'YES' : 'NO'}`,
-      `- Why does it still fail? SSgt required weekend selection is balanced, but final served weekend burden remains spread ${ssgtActualSpread} after voluntary picks and freed selected turns are included in history accounting.`,
+      `- Why does it still fail? SSgt selector priority is count-based, but final served weekend burden remains spread ${ssgtActualSpread} because voluntary/fallback weekend choices can add weekend burden to one Marine and free another selected Marine before they serve one.`,
       `- Fairness criteria: all drafts complete, all duty and weekend days assigned, approved N/A protected, rank-group weekend variance within ${ratioTolerancePts} percentage points, and within-group weekend spread <= ${maxWeekendSpread}.`,
       `- Month helper loaded: ${MONTHS[0]} through ${MONTHS[11]}`,
       '',

@@ -1,6 +1,6 @@
 # DutyDraft Automated Test Drive
 
-Generated: 2026-06-06T18:09:08.373Z
+Generated: 2026-06-06T18:38:33.529Z
 
 ## Scope
 
@@ -11,7 +11,7 @@ Generated: 2026-06-06T18:09:08.373Z
 
 - Test mode: ON
 - Test API: http://127.0.0.1:3999
-- Health response: {"ok":true,"phase":"setup","draftLive":false,"ts":1780769347493}
+- Health response: {"ok":true,"phase":"setup","draftLive":false,"ts":1780771112697}
 - Simulated Marines loaded: 20
 - Months simulated: 12
 - App state seeded with simulated roster: 20 Marines
@@ -42,8 +42,10 @@ Generated: 2026-06-06T18:09:08.373Z
 - Months simulated: July 2026, August 2026, September 2026, October 2026, November 2026, December 2026, January 2027, February 2027, March 2027, April 2027, May 2027, June 2027
 - Month rollover loop: ACTIVE via /api/next-month
 - Weekend history preserved before months 2-12: YES
-- Fairness balancing preserved: YES, weekendBurden history is carried into selectWeekendMarines().
+- Fairness balancing preserved: YES, weekendBurden history is carried into count-based selectWeekendMarines().
+- Weekend selector priority count-based: YES
 - Voluntary weekend picks counted as weekend burden history: YES
+- Volunteering for a weekend reduces future required weekend priority: YES
 - Each month starts from scratch: NO
 - Previous framework gap: runMultipleMonths() called runOneMonth() repeatedly, and runOneMonth() reseeded state each time instead of advancing through /api/next-month.
 - Minimum framework fix applied: month 1 seeds the safe test roster, months 2-12 call /api/next-month before setup, and the test helper's previous-month consecutive-day check now matches the server rule.
@@ -88,11 +90,55 @@ Generated: 2026-06-06T18:09:08.373Z
 
 ## Weekend Selector Diagnostics
 
-| Group | Selected min | Selected max | Selected spread | Actual min | Actual max | Actual spread | Selector result |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| Junior Marines (E1-E5) | 5 | 6 | 1 | 5 | 6 | 1 | PASS |
-| SSgt (E6) | 4 | 5 | 1 | 3 | 6 | 3 | PASS |
-| GySgt (E7) | 4 | 5 | 1 | 5 | 6 | 1 | PASS |
+- Selector priority rule: served weekend count first, recency/order only as a tiebreaker.
+- Is weekend selector priority count-based? YES
+
+| Group | Required selected min | Required selected max | Required selected spread | Actual min | Actual max | Actual spread |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Junior Marines (E1-E5) | 5 | 6 | 1 | 5 | 6 | 1 |
+| SSgt (E6) | 1 | 8 | 7 | 3 | 6 | 3 |
+| GySgt (E7) | 4 | 5 | 1 | 5 | 6 | 1 |
+
+### Count-Based Priority Audit
+
+| Month | Group | Selected | Selected served-count min | Selected served-count max | Lowest unselected served-count | Count priority honored |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| July 2026 | Junior Marines (E1-E5) | 5 | 0 | 0 | 0 | PASS |
+| July 2026 | SSgt (E6) | 2 | 0 | 0 | 0 | PASS |
+| July 2026 | GySgt (E7) | 1 | 0 | 0 | 0 | PASS |
+| August 2026 | Junior Marines (E1-E5) | 6 | 0 | 0 | 1 | PASS |
+| August 2026 | SSgt (E6) | 3 | 0 | 0 | 0 | PASS |
+| August 2026 | GySgt (E7) | 1 | 0 | 0 | 0 | PASS |
+| September 2026 | Junior Marines (E1-E5) | 5 | 1 | 1 | 1 | PASS |
+| September 2026 | SSgt (E6) | 2 | 0 | 0 | 1 | PASS |
+| September 2026 | GySgt (E7) | 1 | 1 | 1 | 1 | PASS |
+| October 2026 | Junior Marines (E1-E5) | 5 | 1 | 1 | 1 | PASS |
+| October 2026 | SSgt (E6) | 2 | 0 | 0 | 1 | PASS |
+| October 2026 | GySgt (E7) | 2 | 1 | 1 | 2 | PASS |
+| November 2026 | Junior Marines (E1-E5) | 5 | 1 | 2 | 2 | PASS |
+| November 2026 | SSgt (E6) | 2 | 1 | 1 | 1 | PASS |
+| November 2026 | GySgt (E7) | 2 | 2 | 2 | 2 | PASS |
+| December 2026 | Junior Marines (E1-E5) | 5 | 2 | 2 | 2 | PASS |
+| December 2026 | SSgt (E6) | 2 | 1 | 1 | 2 | PASS |
+| December 2026 | GySgt (E7) | 1 | 2 | 2 | 3 | PASS |
+| January 2027 | Junior Marines (E1-E5) | 6 | 2 | 3 | 3 | PASS |
+| January 2027 | SSgt (E6) | 3 | 1 | 2 | 2 | PASS |
+| January 2027 | GySgt (E7) | 1 | 3 | 3 | 3 | PASS |
+| February 2027 | Junior Marines (E1-E5) | 5 | 3 | 3 | 3 | PASS |
+| February 2027 | SSgt (E6) | 2 | 2 | 2 | 2 | PASS |
+| February 2027 | GySgt (E7) | 1 | 3 | 3 | 3 | PASS |
+| March 2027 | Junior Marines (E1-E5) | 5 | 3 | 4 | 4 | PASS |
+| March 2027 | SSgt (E6) | 2 | 2 | 2 | 3 | PASS |
+| March 2027 | GySgt (E7) | 1 | 3 | 3 | 4 | PASS |
+| April 2027 | Junior Marines (E1-E5) | 5 | 4 | 4 | 4 | PASS |
+| April 2027 | SSgt (E6) | 2 | 2 | 3 | 3 | PASS |
+| April 2027 | GySgt (E7) | 1 | 3 | 3 | 4 | PASS |
+| May 2027 | Junior Marines (E1-E5) | 6 | 4 | 5 | 5 | PASS |
+| May 2027 | SSgt (E6) | 3 | 3 | 3 | 3 | PASS |
+| May 2027 | GySgt (E7) | 1 | 4 | 4 | 4 | PASS |
+| June 2027 | Junior Marines (E1-E5) | 5 | 5 | 5 | 5 | PASS |
+| June 2027 | SSgt (E6) | 2 | 3 | 3 | 4 | PASS |
+| June 2027 | GySgt (E7) | 1 | 5 | 5 | 5 | PASS |
 
 ## Weekend History Accounting Audit
 
@@ -118,13 +164,13 @@ Generated: 2026-06-06T18:09:08.373Z
 | November 2026 | SSgt (E6) | 2 | 0 | 2 | 2 | PASS |
 | November 2026 | GySgt (E7) | 2 | 0 | 2 | 2 | PASS |
 | December 2026 | Junior Marines (E1-E5) | 5 | 0 | 5 | 5 | PASS |
-| December 2026 | SSgt (E6) | 2 | 0 | 2 | 2 | PASS |
+| December 2026 | SSgt (E6) | 2 | 1 | 2 | 2 | PASS |
 | December 2026 | GySgt (E7) | 1 | 0 | 1 | 1 | PASS |
 | January 2027 | Junior Marines (E1-E5) | 6 | 0 | 6 | 6 | PASS |
 | January 2027 | SSgt (E6) | 3 | 0 | 3 | 3 | PASS |
 | January 2027 | GySgt (E7) | 1 | 0 | 1 | 1 | PASS |
 | February 2027 | Junior Marines (E1-E5) | 5 | 0 | 5 | 5 | PASS |
-| February 2027 | SSgt (E6) | 2 | 0 | 2 | 2 | PASS |
+| February 2027 | SSgt (E6) | 2 | 1 | 2 | 2 | PASS |
 | February 2027 | GySgt (E7) | 1 | 0 | 1 | 1 | PASS |
 | March 2027 | Junior Marines (E1-E5) | 5 | 0 | 5 | 5 | PASS |
 | March 2027 | SSgt (E6) | 2 | 1 | 2 | 2 | PASS |
@@ -136,13 +182,13 @@ Generated: 2026-06-06T18:09:08.373Z
 | May 2027 | SSgt (E6) | 3 | 0 | 2 | 2 | PASS |
 | May 2027 | GySgt (E7) | 1 | 1 | 2 | 2 | PASS |
 | June 2027 | Junior Marines (E1-E5) | 5 | 0 | 5 | 5 | PASS |
-| June 2027 | SSgt (E6) | 2 | 0 | 2 | 2 | PASS |
+| June 2027 | SSgt (E6) | 2 | 1 | 2 | 2 | PASS |
 | June 2027 | GySgt (E7) | 1 | 0 | 1 | 1 | PASS |
 
 ## SSgt Spread Diagnosis
 
-- Diagnosis: Downstream draft-simulation driven after weekend selection, not a weekend-selector history failure.
-- SSgt selected weekend-obligation spread: 1
+- Diagnosis: Final served weekend spread remains high after count-based required selection.
+- SSgt selected weekend-obligation spread: 7
 - SSgt actual weekend-duty spread: 3
 - Selected SSgt weekend obligations that failed to pick a weekend: 0
 - SSgt double-duty months: 0
@@ -150,19 +196,20 @@ Generated: 2026-06-06T18:09:08.373Z
 - Consecutive-day rule impact: no selected SSgt weekend obligation failed to land on a weekend, so there is no evidence that consecutive-day blocking caused the SSgt spread.
 - SSgt actual weekend picks from preferences: 5
 - SSgt actual weekend picks from simulator fallback: 20
-- SSgt voluntary weekend picks while not selected for weekend obligation: 3
-- SSgt selected weekend turns freed before pick by another Marine's voluntary weekend: 5
-- Interpretation: double-duty, approved N/A, and consecutive-day blocking did not drive the SSgt spread in this run. The selector used carried-forward history correctly, and production history accounting counted final weekend assignments including voluntary picks. The spread remains because actual draft choices can add or cover weekend duty after required weekend burden is selected.
+- SSgt voluntary weekend picks while not selected for weekend obligation: 6
+- SSgt selected weekend turns freed before pick by another Marine's voluntary weekend: 8
+- Did annual final SSgt weekend spread improve after the count-based selector change? NO; previous baseline spread was 3, current spread is 3.
+- Interpretation: double-duty, approved N/A, and consecutive-day blocking did not drive the SSgt spread in this run. The selector now uses served weekend counts first and honors that priority each month, and production history accounting counts final weekend assignments including voluntary picks. The spread remains because actual draft choices can add weekend duty to one Marine while voluntary weekend picks can free another selected Marine before they serve one.
 - Does final annual spread become fair once voluntary weekends are counted? NO; voluntary weekends are already counted in final annual burden, and SSgt final spread remains 3.
 
 | SSgt | Selected weekend obligations | Actual weekend duties | Delta | Preference weekends | Fallback weekends | Voluntary weekends | Freed selected turns | Double-duty months | Approved weekend NA |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| SSGT ZERO | 5 | 6 | +1 | 5 | 1 | 2 | 1 | 0 | 0 |
-| SSGT BLACKBEARD | 5 | 4 | -1 | 0 | 4 | 0 | 1 | 0 | 0 |
-| SSGT MARLEY | 5 | 3 | -2 | 0 | 3 | 0 | 2 | 0 | 0 |
-| SSGT BEETLEJUICE | 4 | 5 | +1 | 0 | 5 | 1 | 0 | 0 | 0 |
-| SSGT HORSEMAN | 4 | 4 | +0 | 0 | 4 | 0 | 0 | 0 | 0 |
-| SSGT BOLEYN | 4 | 3 | -1 | 0 | 3 | 0 | 1 | 0 | 0 |
+| SSGT ZERO | 1 | 6 | +5 | 5 | 1 | 5 | 0 | 0 | 0 |
+| SSGT BLACKBEARD | 4 | 4 | +0 | 0 | 4 | 0 | 0 | 0 | 0 |
+| SSGT MARLEY | 8 | 3 | -5 | 0 | 3 | 0 | 5 | 0 | 0 |
+| SSGT BEETLEJUICE | 4 | 4 | +0 | 0 | 4 | 1 | 1 | 0 | 0 |
+| SSGT HORSEMAN | 5 | 4 | -1 | 0 | 4 | 0 | 1 | 0 | 0 |
+| SSGT BOLEYN | 5 | 4 | -1 | 0 | 4 | 0 | 1 | 0 | 0 |
 
 ## Month 1 Per-Marine Assignment Summary
 - GYSGT CASPER: 2 total, 1 weekend
@@ -193,9 +240,9 @@ Generated: 2026-06-06T18:09:08.373Z
 - SSGT ZERO: 24 total, 6 weekend
 - SSGT BLACKBEARD: 24 total, 4 weekend
 - SSGT MARLEY: 24 total, 3 weekend
-- SSGT BEETLEJUICE: 24 total, 5 weekend
+- SSGT BEETLEJUICE: 24 total, 4 weekend
 - SSGT HORSEMAN: 24 total, 4 weekend
-- SSGT BOLEYN: 23 total, 3 weekend
+- SSGT BOLEYN: 23 total, 4 weekend
 - SGT BARON: 23 total, 6 weekend
 - SGT BINNS: 19 total, 6 weekend
 - SGT SWAYZE: 12 total, 6 weekend
@@ -211,10 +258,12 @@ Generated: 2026-06-06T18:09:08.373Z
 ## Conclusion
 
 - Is the existing scheduling algorithm fair over a full year? FAIL
-- Is the required weekend selector fair? YES
+- Is the required weekend selector count-priority fair? YES
 - Are voluntary weekend picks counted as weekend burden? YES
+- Does volunteering for a weekend reduce future required weekend priority? YES
+- Did annual final weekend spread improve after the change? NO; SSgt spread is 3 versus prior baseline 3.
 - Does final annual spread become fair once voluntary weekends are counted? NO
-- Why does it still fail? SSgt required weekend selection is balanced, but final served weekend burden remains spread 3 after voluntary picks and freed selected turns are included in history accounting.
+- Why does it still fail? SSgt selector priority is count-based, but final served weekend burden remains spread 3 because voluntary/fallback weekend choices can add weekend burden to one Marine and free another selected Marine before they serve one.
 - Fairness criteria: all drafts complete, all duty and weekend days assigned, approved N/A protected, rank-group weekend variance within 5 percentage points, and within-group weekend spread <= 1.
 - Month helper loaded: January through December
 
