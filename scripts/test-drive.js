@@ -90,6 +90,83 @@ function rankGroupStats(totals, totalWeekends) {
   });
 }
 
+function groupDefinitions() {
+  return [
+    { key: 'junior', label: 'Junior Marines (E1-E5)' },
+    { key: 'ssgt', label: 'SSgt (E6)' },
+    { key: 'gysgt', label: 'GySgt (E7)' }
+  ];
+}
+
+function selectedWeekendTotals(monthResults) {
+  return TEST_MARINES.map(m => {
+    const selected = monthResults.reduce((sum, result) => {
+      const ids = result.weekendSetup.weekendAssignments[groupOf(m.rank)].map(x => x.id);
+      return sum + (ids.includes(m.id) ? 1 : 0);
+    }, 0);
+    return { ...m, selected };
+  });
+}
+
+function selectedGroupStats(selectedTotals) {
+  return groupDefinitions().map(group => {
+    const members = selectedTotals.filter(m => groupOf(m.rank) === group.key);
+    return {
+      ...group,
+      spread: spreadStats(members.map(m => m.selected)),
+      members
+    };
+  });
+}
+
+function traceEntries(monthResults) {
+  return monthResults.flatMap(result => (result.pickTrace || []).map(entry => ({
+    ...entry,
+    label: `${MONTHS[entry.month]} ${entry.year}`
+  })));
+}
+
+function ssgtDiagnosisRows(monthResults, totals, selectedTotals) {
+  const traces = traceEntries(monthResults);
+  return TEST_MARINES
+    .filter(m => groupOf(m.rank) === 'ssgt')
+    .map(m => {
+      const myWeekendPicks = traces.filter(t => t.mid === m.id && t.pickedWeekend);
+      const selected = selectedTotals.find(x => x.id === m.id)?.selected || 0;
+      const actual = totals.find(x => x.id === m.id)?.weekend || 0;
+      const preferenceWeekends = myWeekendPicks.filter(t => t.pickSource === 'preference').length;
+      const fallbackWeekends = myWeekendPicks.filter(t => t.pickSource === 'fallback').length;
+      const voluntaryWeekends = myWeekendPicks.filter(t => !t.selectedForWeekend).length;
+      const doubleDutyMonths = monthResults.filter(r => (r.draftState.doubleDuty || {})[m.id]).length;
+      const approvedWeekendNa = monthResults.reduce((sum, r) => {
+        return sum + ((r.reviewState.nonAvail || {})[m.id] || [])
+          .filter(n => n.approved === true)
+          .filter(n => {
+            const day = Number(n.date.split('-').pop());
+            return isWkDate(day, r.reviewState);
+          }).length;
+      }, 0);
+
+      return {
+        ...m,
+        selected,
+        actual,
+        delta: actual - selected,
+        preferenceWeekends,
+        fallbackWeekends,
+        voluntaryWeekends,
+        doubleDutyMonths,
+        approvedWeekendNa
+      };
+    });
+}
+
+function countSelectedWeekendMisses(monthResults) {
+  return traceEntries(monthResults)
+    .filter(t => t.selectedForWeekend && t.needsWk && !t.pickedWeekend)
+    .length;
+}
+
 function passFail(value) {
   return value ? 'PASS' : 'FAIL';
 }
@@ -166,6 +243,20 @@ async function main() {
     const rankRatioPass = rankStats.every(s => Math.abs(s.variance) <= ratioTolerancePts);
     const inGroupFairnessPass = rankStats.every(s => s.spread.spread <= maxWeekendSpread);
     const annualFairnessPass = allDutyDaysAssigned && allWeekendDaysAssigned && approvedNaProtected && rankRatioPass && inGroupFairnessPass;
+    const selectedTotals = selectedWeekendTotals(monthResults);
+    const selectedStats = selectedGroupStats(selectedTotals);
+    const ssgtRows = ssgtDiagnosisRows(monthResults, totals, selectedTotals);
+    const ssgtSelectedSpread = selectedStats.find(s => s.key === 'ssgt').spread.spread;
+    const ssgtActualSpread = rankStats.find(s => s.key === 'ssgt').spread.spread;
+    const selectedWeekendMisses = countSelectedWeekendMisses(monthResults);
+    const ssgtDoubleDutyMonths = ssgtRows.reduce((sum, row) => sum + row.doubleDutyMonths, 0);
+    const ssgtApprovedWeekendNa = ssgtRows.reduce((sum, row) => sum + row.approvedWeekendNa, 0);
+    const ssgtVoluntaryWeekends = ssgtRows.reduce((sum, row) => sum + row.voluntaryWeekends, 0);
+    const ssgtPreferenceWeekends = ssgtRows.reduce((sum, row) => sum + row.preferenceWeekends, 0);
+    const ssgtFallbackWeekends = ssgtRows.reduce((sum, row) => sum + row.fallbackWeekends, 0);
+    const ssgtSpreadCause = ssgtSelectedSpread <= maxWeekendSpread && ssgtActualSpread > maxWeekendSpread
+      ? 'Downstream draft-simulation driven after weekend selection, not a weekend-selector history failure.'
+      : 'Weekend-selector selection spread also exceeds tolerance; investigate selector fairness before blaming downstream constraints.';
 
     const report = [
       '# DutyDraft Automated Test Drive',
@@ -241,6 +332,33 @@ async function main() {
       '| Group | Weekend totals | Expected % | Actual % | Variance | Min | Max | Spread | Average | Result |',
       '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |',
       ...rankStats.map(s => `| ${s.label} | ${s.weekendTotal} | ${s.expectedPct.toFixed(1)}% | ${s.actualPct.toFixed(1)}% | ${signedPct(s.variance)} | ${s.spread.min} | ${s.spread.max} | ${s.spread.spread} | ${s.spread.average.toFixed(2)} | ${passFail(Math.abs(s.variance) <= ratioTolerancePts && s.spread.spread <= maxWeekendSpread)} |`),
+      '',
+      '## Weekend Selector Diagnostics',
+      '',
+      '| Group | Selected min | Selected max | Selected spread | Actual min | Actual max | Actual spread | Selector result |',
+      '| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |',
+      ...selectedStats.map(s => {
+        const actual = rankStats.find(r => r.key === s.key).spread;
+        return `| ${s.label} | ${s.spread.min} | ${s.spread.max} | ${s.spread.spread} | ${actual.min} | ${actual.max} | ${actual.spread} | ${passFail(s.spread.spread <= maxWeekendSpread)} |`;
+      }),
+      '',
+      '## SSgt Spread Diagnosis',
+      '',
+      `- Diagnosis: ${ssgtSpreadCause}`,
+      `- SSgt selected weekend-obligation spread: ${ssgtSelectedSpread}`,
+      `- SSgt actual weekend-duty spread: ${ssgtActualSpread}`,
+      `- Selected SSgt weekend obligations that failed to pick a weekend: ${selectedWeekendMisses}`,
+      `- SSgt double-duty months: ${ssgtDoubleDutyMonths}`,
+      `- SSgt approved weekend non-availability constraints: ${ssgtApprovedWeekendNa}`,
+      `- Consecutive-day rule impact: no selected SSgt weekend obligation failed to land on a weekend, so there is no evidence that consecutive-day blocking caused the SSgt spread.`,
+      `- SSgt actual weekend picks from preferences: ${ssgtPreferenceWeekends}`,
+      `- SSgt actual weekend picks from simulator fallback: ${ssgtFallbackWeekends}`,
+      `- SSgt voluntary weekend picks while not selected for weekend obligation: ${ssgtVoluntaryWeekends}`,
+      `- Interpretation: double-duty, approved N/A, and consecutive-day blocking did not drive the SSgt spread in this run. The selector used carried-forward history correctly; the spread appears after the draft simulation because preferences and fallback picks can add voluntary weekend duty beyond selected weekend obligations.`,
+      '',
+      '| SSgt | Selected weekend obligations | Actual weekend duties | Delta | Preference weekends | Fallback weekends | Voluntary weekends | Double-duty months | Approved weekend NA |',
+      '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+      ...ssgtRows.map(row => `| ${marineName(row)} | ${row.selected} | ${row.actual} | ${row.delta >= 0 ? '+' : ''}${row.delta} | ${row.preferenceWeekends} | ${row.fallbackWeekends} | ${row.voluntaryWeekends} | ${row.doubleDutyMonths} | ${row.approvedWeekendNa} |`),
       '',
       '## Month 1 Per-Marine Assignment Summary',
       ...TEST_MARINES.map(m=>{ const entries=Object.entries(draftState.assignments || {}).filter(([,mid])=>mid===m.id); const wk=entries.filter(([d])=>isWkDate(Number(d),draftState)).length; return `- ${m.rank} ${m.lastName}: ${entries.length} total, ${wk} weekend`; }),

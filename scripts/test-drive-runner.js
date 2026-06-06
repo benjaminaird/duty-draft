@@ -66,7 +66,54 @@ async function simulatePdNa(baseUrl, state) {
 
 
 
-async function simulateDraft(baseUrl,state){ const draftOrder=buildDraftOrder(state.marines||[],state.doubleDuty||{},state.preAssigned||{}); const startDraftResult=await axios.post(`${baseUrl}/api/draft/start`,{draftOrder,assignments:state.preAssigned||{}}); let draftState=startDraftResult.data.state; let simulatedPicks=0; while(draftState.draftLive&&!draftState.draftDone){ const entry=draftState.draftOrder[draftState.draftIdx]; if(!entry)break; const mid=entry.id; const prefs=(draftState.prefs[mid]||[]).map(p=>p.day); const asgn=draftState.assignments||{}; const myDays=Object.entries(asgn).filter(([,x])=>x===mid).map(([d])=>Number(d)); const needsWk=(draftState.wkAssigneeIds||[]).includes(mid)&&!(draftState.freedMarines||[]).includes(mid)&&!myDays.some(d=>isWkDate(d,draftState)); const validDays=getAllDates(draftState).filter(day=>isDateValid(mid,day,asgn,draftState,needsWk)); const pick=prefs.find(day=>validDays.includes(day))||validDays[0]; if(!pick)throw new Error(`No valid pick found for ${mid}`); const result=await axios.post(`${baseUrl}/api/draft/pick`,{day:pick,mid}); draftState=result.data.state; simulatedPicks++; if(simulatedPicks>80)throw new Error("Draft simulation exceeded safety limit"); } return {draftOrder,draftState,simulatedPicks}; }
+async function simulateDraft(baseUrl, state) {
+  const draftOrder = buildDraftOrder(state.marines || [], state.doubleDuty || {}, state.preAssigned || {});
+  const startDraftResult = await axios.post(`${baseUrl}/api/draft/start`, { draftOrder, assignments: state.preAssigned || {} });
+  let draftState = startDraftResult.data.state;
+  let simulatedPicks = 0;
+  const pickTrace = [];
+
+  while (draftState.draftLive && !draftState.draftDone) {
+    const entry = draftState.draftOrder[draftState.draftIdx];
+    if (!entry) break;
+
+    const mid = entry.id;
+    const prefs = (draftState.prefs[mid] || []).map(p => p.day);
+    const asgn = draftState.assignments || {};
+    const myDays = Object.entries(asgn).filter(([, x]) => x === mid).map(([d]) => Number(d));
+    const selectedForWeekend = (draftState.wkAssigneeIds || []).includes(mid);
+    const needsWk = selectedForWeekend
+      && !(draftState.freedMarines || []).includes(mid)
+      && !myDays.some(d => isWkDate(d, draftState));
+    const validDays = getAllDates(draftState).filter(day => isDateValid(mid, day, asgn, draftState, needsWk));
+    const prefPick = prefs.find(day => validDays.includes(day));
+    const pick = prefPick || validDays[0];
+
+    if (!pick) throw new Error(`No valid pick found for ${mid}`);
+
+    pickTrace.push({
+      mid,
+      turn: entry.turn || 1,
+      day: pick,
+      selectedForWeekend,
+      needsWk,
+      pickedWeekend: isWkDate(pick, draftState),
+      pickSource: prefPick ? 'preference' : 'fallback',
+      validWeekendDays: validDays.filter(day => isWkDate(day, draftState)),
+      validDayCount: validDays.length,
+      freedBeforePick: (draftState.freedMarines || []).includes(mid),
+      month: draftState.month,
+      year: draftState.year
+    });
+
+    const result = await axios.post(`${baseUrl}/api/draft/pick`, { day: pick, mid });
+    draftState = result.data.state;
+    simulatedPicks++;
+    if (simulatedPicks > 80) throw new Error("Draft simulation exceeded safety limit");
+  }
+
+  return { draftOrder, draftState, simulatedPicks, pickTrace };
+}
 
 
 async function advanceToNextMonth(baseUrl) {

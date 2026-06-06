@@ -1,6 +1,6 @@
 # DutyDraft Automated Test Drive
 
-Generated: 2026-06-06T17:49:41.301Z
+Generated: 2026-06-06T17:57:47.292Z
 
 ## Scope
 
@@ -11,7 +11,7 @@ Generated: 2026-06-06T17:49:41.301Z
 
 - Test mode: ON
 - Test API: http://127.0.0.1:3999
-- Health response: {"ok":true,"phase":"setup","draftLive":false,"ts":1780768180234}
+- Health response: {"ok":true,"phase":"setup","draftLive":false,"ts":1780768666275}
 - Simulated Marines loaded: 20
 - Months simulated: 12
 - App state seeded with simulated roster: 20 Marines
@@ -84,6 +84,37 @@ Generated: 2026-06-06T17:49:41.301Z
 | Junior Marines (E1-E5) | 63 | 60.0% | 60.6% | +0.6 pts | 5 | 6 | 1 | 5.73 | PASS |
 | SSgt (E6) | 25 | 25.0% | 24.0% | -1.0 pts | 3 | 6 | 3 | 4.17 | FAIL |
 | GySgt (E7) | 16 | 15.0% | 15.4% | +0.4 pts | 5 | 6 | 1 | 5.33 | PASS |
+
+## Weekend Selector Diagnostics
+
+| Group | Selected min | Selected max | Selected spread | Actual min | Actual max | Actual spread | Selector result |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Junior Marines (E1-E5) | 5 | 6 | 1 | 5 | 6 | 1 | PASS |
+| SSgt (E6) | 4 | 5 | 1 | 3 | 6 | 3 | PASS |
+| GySgt (E7) | 4 | 5 | 1 | 5 | 6 | 1 | PASS |
+
+## SSgt Spread Diagnosis
+
+- Diagnosis: Downstream draft-simulation driven after weekend selection, not a weekend-selector history failure.
+- SSgt selected weekend-obligation spread: 1
+- SSgt actual weekend-duty spread: 3
+- Selected SSgt weekend obligations that failed to pick a weekend: 0
+- SSgt double-duty months: 0
+- SSgt approved weekend non-availability constraints: 0
+- Consecutive-day rule impact: no selected SSgt weekend obligation failed to land on a weekend, so there is no evidence that consecutive-day blocking caused the SSgt spread.
+- SSgt actual weekend picks from preferences: 5
+- SSgt actual weekend picks from simulator fallback: 20
+- SSgt voluntary weekend picks while not selected for weekend obligation: 3
+- Interpretation: double-duty, approved N/A, and consecutive-day blocking did not drive the SSgt spread in this run. The selector used carried-forward history correctly; the spread appears after the draft simulation because preferences and fallback picks can add voluntary weekend duty beyond selected weekend obligations.
+
+| SSgt | Selected weekend obligations | Actual weekend duties | Delta | Preference weekends | Fallback weekends | Voluntary weekends | Double-duty months | Approved weekend NA |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| SSGT ZERO | 5 | 6 | +1 | 5 | 1 | 2 | 0 | 0 |
+| SSGT BLACKBEARD | 5 | 4 | -1 | 0 | 4 | 0 | 0 | 0 |
+| SSGT MARLEY | 5 | 3 | -2 | 0 | 3 | 0 | 0 | 0 |
+| SSGT BEETLEJUICE | 4 | 5 | +1 | 0 | 5 | 1 | 0 | 0 |
+| SSGT HORSEMAN | 4 | 4 | +0 | 0 | 4 | 0 | 0 | 0 |
+| SSGT BOLEYN | 4 | 3 | -1 | 0 | 3 | 0 | 0 | 0 |
 
 ## Month 1 Per-Marine Assignment Summary
 - GYSGT CASPER: 2 total, 1 weekend
