@@ -1237,7 +1237,7 @@ function App(){
         if(approvedNA.has(k))return false;
         return true;
       })())return;
-      const isVoluntaryWk=isWkDate(d)&&!isWkSlotted&&!isFreed;
+      const isVoluntaryWk=isWkDate(d)&&!needsWk;
       const isSecondDDWk=isDD&&isWkSlotted&&hasWk&&e.turn===2&&isWkDate(d);
       if((isVoluntaryWk||isSecondDDWk)&&d!==pendingDay){setWkWarnModal({day:d,isSecondDD:isSecondDDWk});return;}
       setPendingDay(prev=>prev===d?null:d);
@@ -1437,8 +1437,8 @@ function App(){
           <div className="modal-title">⚠ WEEKEND DATE</div>
           <div style={{color:'var(--muted)',fontSize:12,margin:'6px 0 12px',lineHeight:1.6}}>You are about to select <strong style={{color:'var(--accent)'}}>{MONTHS[st.month]} {wkWarnModal.day}</strong>  --  a weekend duty date.</div>
           {wkWarnModal.isSecondDD
-            ?<div className="alert a-w" style={{marginBottom:14}}><strong>ALREADY FULFILLED</strong>Your weekend obligation is met. A second weekend pick will free another slotted duty and update the rotation.</div>
-            :<div className="alert a-w" style={{marginBottom:14}}><strong>NOT REQUIRED OF YOU</strong>Another duty is already slotted for a weekend. Selecting this date frees them and takes their weekend obligation.</div>
+            ?<div className="alert a-w" style={{marginBottom:14}}><strong>ALREADY FULFILLED</strong>Your weekend obligation is met. This weekend will still count toward your served weekend burden and may put you ahead of peers in your rank group.</div>
+            :<div className="alert a-w" style={{marginBottom:14}}><strong>NOT REQUIRED OF YOU</strong>You are choosing a weekend even though you are not currently required to take one. This weekend will count toward your served weekend burden and may put you ahead of peers in your rank group.</div>
           }
           <div className="row"><button className="btn btn-gold" onClick={()=>{setPendingDay(wkWarnModal.day);setWkWarnModal(null);}}>YES, I'LL TAKE IT</button><button className="btn btn-ghost" onClick={()=>setWkWarnModal(null)}>CHOOSE A DIFFERENT DATE</button></div>
         </div></div>)}

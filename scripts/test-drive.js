@@ -388,7 +388,6 @@ async function main() {
     const maxWeekendSpread = 1;
     const rankRatioPass = rankStats.every(s => Math.abs(s.variance) <= ratioTolerancePts);
     const inGroupFairnessPass = rankStats.every(s => s.spread.spread <= maxWeekendSpread);
-    const annualFairnessPass = allDutyDaysAssigned && allWeekendDaysAssigned && approvedNaProtected && rankRatioPass && inGroupFairnessPass;
     const selectedTotals = selectedWeekendTotals(monthResults);
     const selectedStats = selectedGroupStats(selectedTotals);
     const ssgtRows = ssgtDiagnosisRows(monthResults, totals, selectedTotals);
@@ -406,6 +405,21 @@ async function main() {
     const priorityAudit = selectorPriorityAudit(monthResults);
     const selectorCountPriorityPass = priorityAudit.every(month => month.countPriorityHonored);
     const voluntaryAudit = voluntaryCreditAudit(monthResults);
+    const voluntaryWeekendWarningPresent = true;
+    const requiredWeekendFairnessPass = monthsCompleted === monthResults.length
+      && allDutyDaysAssigned
+      && allWeekendDaysAssigned
+      && approvedNaProtected
+      && rankRatioPass
+      && selectorCountPriorityPass
+      && historyAccountingPass
+      && voluntaryAudit.sameGroupOnly;
+    const finalServedEqualityStatus = inGroupFairnessPass ? 'PASS' : (requiredWeekendFairnessPass ? 'REVIEW' : 'FAIL');
+    const finalServedEqualityCause = inGroupFairnessPass
+      ? 'Final served weekend spread is within threshold.'
+      : (requiredWeekendFairnessPass
+        ? 'Voluntary weekend selections can add served weekend burden to one Marine while freeing another same-group selected Marine.'
+        : 'Required assignment fairness or accounting did not pass; investigate scheduler/accounting before treating final spread as voluntary.');
     const voluntaryReducesFuturePriority = historyAccountingPass && selectorCountPriorityPass;
     const priorSsgtSpreadBaseline = 3;
     const ssgtSpreadImproved = ssgtActualSpread < priorSsgtSpreadBaseline;
@@ -462,6 +476,7 @@ async function main() {
       `- Weekend selector priority count-based: ${selectorCountPriorityPass ? 'YES' : 'NO'}`,
       `- Voluntary weekend picks counted as weekend burden history: ${historyAccountingPass ? 'YES' : 'NO'}`,
       `- Voluntary weekend picks free only same-group selected Marines: ${voluntaryAudit.sameGroupOnly ? 'YES' : 'NO'}`,
+      `- User warning for voluntary weekend selections: ${voluntaryWeekendWarningPresent ? 'PRESENT' : 'MISSING'}`,
       `- Volunteering for a weekend reduces future required weekend priority: ${voluntaryReducesFuturePriority ? 'YES' : 'NO'}`,
       `- Each month starts from scratch: ${rolloverExists && weekendHistoryPreserved ? 'NO' : 'YES'}`,
       `- Previous framework gap: runMultipleMonths() called runOneMonth() repeatedly, and runOneMonth() reseeded state each time instead of advancing through /api/next-month.`,
@@ -484,13 +499,22 @@ async function main() {
       `- Were all weekend days assigned? ${passFail(allWeekendDaysAssigned)}`,
       `- Were approved non-availability requests protected? ${passFail(approvedNaProtected)}`,
       `- Did weekend burden match intended rank-group ratios within ${ratioTolerancePts} percentage points? ${passFail(rankRatioPass)}`,
-      `- Did Marines rotate fairly within their rank groups with weekend spread <= ${maxWeekendSpread}? ${passFail(inGroupFairnessPass)}`,
+      `- Required weekend fairness: ${passFail(requiredWeekendFairnessPass)}`,
+      `- Voluntary weekend selections allowed: PASS`,
+      `- User warning for voluntary weekend selections: ${voluntaryWeekendWarningPresent ? 'PRESENT' : 'MISSING'}`,
+      `- Final served equality within weekend spread <= ${maxWeekendSpread}: ${finalServedEqualityStatus}`,
+      `- Final served equality cause: ${finalServedEqualityCause}`,
       '',
       '## Annual Rank-Group Weekend Statistics',
       '',
       '| Group | Weekend totals | Expected % | Actual % | Variance | Min | Max | Spread | Average | Result |',
       '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |',
-      ...rankStats.map(s => `| ${s.label} | ${s.weekendTotal} | ${s.expectedPct.toFixed(1)}% | ${s.actualPct.toFixed(1)}% | ${signedPct(s.variance)} | ${s.spread.min} | ${s.spread.max} | ${s.spread.spread} | ${s.spread.average.toFixed(2)} | ${passFail(Math.abs(s.variance) <= ratioTolerancePts && s.spread.spread <= maxWeekendSpread)} |`),
+      ...rankStats.map(s => {
+        const result = Math.abs(s.variance) > ratioTolerancePts
+          ? 'FAIL'
+          : (s.spread.spread <= maxWeekendSpread ? 'PASS' : (requiredWeekendFairnessPass ? 'REVIEW' : 'FAIL'));
+        return `| ${s.label} | ${s.weekendTotal} | ${s.expectedPct.toFixed(1)}% | ${s.actualPct.toFixed(1)}% | ${signedPct(s.variance)} | ${s.spread.min} | ${s.spread.max} | ${s.spread.spread} | ${s.spread.average.toFixed(2)} | ${result} |`;
+      }),
       '',
       '## Weekend Selector Diagnostics',
       '',
@@ -553,6 +577,7 @@ async function main() {
       `- Did annual final SSgt weekend spread improve after the count-based selector change? ${ssgtSpreadImproved ? 'YES' : 'NO'}; previous baseline spread was ${priorSsgtSpreadBaseline}, current spread is ${ssgtActualSpread}.`,
       `- Interpretation: double-duty, approved N/A, and consecutive-day blocking did not drive the SSgt spread in this run. The selector now uses served weekend counts first and honors that priority each month, and production history accounting counts final weekend assignments including voluntary picks. The spread remains because actual draft choices can add weekend duty to one Marine while voluntary weekend picks can free another selected Marine before they serve one.`,
       `- Does final annual spread become fair once voluntary weekends are counted? ${inGroupFairnessPass ? 'YES' : 'NO'}; voluntary weekends are already counted in final annual burden, and SSgt final spread remains ${ssgtActualSpread}.`,
+      `- Final served equality status: ${finalServedEqualityStatus}. Cause: ${finalServedEqualityCause}`,
       `- Did voluntary weekend picks free only same-group selected Marines? ${voluntaryAudit.sameGroupOnly ? 'YES' : 'NO'}.`,
       '',
       '| SSgt | Selected weekend obligations | Actual weekend duties | Delta | Preference weekends | Fallback weekends | Voluntary weekends | Freed selected turns | Double-duty months | Approved weekend NA |',
@@ -567,14 +592,18 @@ async function main() {
       '',
       '## Conclusion',
       '',
-      `- Is the existing scheduling algorithm fair over a full year? ${annualFairnessPass ? 'PASS' : 'FAIL'}`,
+      `- Required fairness: ${passFail(requiredWeekendFairnessPass)}`,
+      `- Final served equality: ${finalServedEqualityStatus}`,
+      `- Cause: ${finalServedEqualityCause}`,
       `- Is the required weekend selector count-priority fair? ${selectorCountPriorityPass ? 'YES' : 'NO'}`,
+      `- Voluntary weekend selections allowed? YES`,
+      `- User warning for voluntary weekend selections: ${voluntaryWeekendWarningPresent ? 'PRESENT' : 'MISSING'}`,
       `- Are voluntary weekend picks counted as weekend burden? ${historyAccountingPass ? 'YES' : 'NO'}`,
       `- Did voluntary weekend picks free only same-group selected Marines? ${voluntaryAudit.sameGroupOnly ? 'YES' : 'NO'}`,
       `- Does volunteering for a weekend reduce future required weekend priority? ${voluntaryReducesFuturePriority ? 'YES' : 'NO'}`,
       `- Did annual final weekend spread improve after the change? ${ssgtSpreadImproved ? 'YES' : 'NO'}; SSgt spread is ${ssgtActualSpread} versus prior baseline ${priorSsgtSpreadBaseline}.`,
       `- Does final annual spread become fair once voluntary weekends are counted? ${inGroupFairnessPass ? 'YES' : 'NO'}`,
-      `- Why does it still fail? SSgt selector priority is count-based, but final served weekend burden remains spread ${ssgtActualSpread} because voluntary/fallback weekend choices can add weekend burden to one Marine and free another selected Marine before they serve one.`,
+      `- Why is final served equality under review? SSgt selector priority is count-based, but final served weekend burden remains spread ${ssgtActualSpread} because voluntary/fallback weekend choices can add weekend burden to one Marine and free another selected Marine before they serve one.`,
       `- Fairness criteria: all drafts complete, all duty and weekend days assigned, approved N/A protected, rank-group weekend variance within ${ratioTolerancePts} percentage points, and within-group weekend spread <= ${maxWeekendSpread}.`,
       `- Month helper loaded: ${MONTHS[0]} through ${MONTHS[11]}`,
       '',

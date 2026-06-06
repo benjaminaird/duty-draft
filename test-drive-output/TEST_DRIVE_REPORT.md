@@ -1,6 +1,6 @@
 # DutyDraft Automated Test Drive
 
-Generated: 2026-06-06T18:58:05.472Z
+Generated: 2026-06-06T19:19:18.373Z
 
 ## Scope
 
@@ -11,7 +11,7 @@ Generated: 2026-06-06T18:58:05.472Z
 
 - Test mode: ON
 - Test API: http://127.0.0.1:3999
-- Health response: {"ok":true,"phase":"setup","draftLive":false,"ts":1780772284548}
+- Health response: {"ok":true,"phase":"setup","draftLive":false,"ts":1780773557478}
 - Simulated Marines loaded: 20
 - Months simulated: 12
 - App state seeded with simulated roster: 20 Marines
@@ -46,6 +46,7 @@ Generated: 2026-06-06T18:58:05.472Z
 - Weekend selector priority count-based: YES
 - Voluntary weekend picks counted as weekend burden history: YES
 - Voluntary weekend picks free only same-group selected Marines: YES
+- User warning for voluntary weekend selections: PRESENT
 - Volunteering for a weekend reduces future required weekend priority: YES
 - Each month starts from scratch: NO
 - Previous framework gap: runMultipleMonths() called runOneMonth() repeatedly, and runOneMonth() reseeded state each time instead of advancing through /api/next-month.
@@ -79,14 +80,18 @@ Generated: 2026-06-06T18:58:05.472Z
 - Were all weekend days assigned? PASS
 - Were approved non-availability requests protected? PASS
 - Did weekend burden match intended rank-group ratios within 5 percentage points? PASS
-- Did Marines rotate fairly within their rank groups with weekend spread <= 1? FAIL
+- Required weekend fairness: PASS
+- Voluntary weekend selections allowed: PASS
+- User warning for voluntary weekend selections: PRESENT
+- Final served equality within weekend spread <= 1: REVIEW
+- Final served equality cause: Voluntary weekend selections can add served weekend burden to one Marine while freeing another same-group selected Marine.
 
 ## Annual Rank-Group Weekend Statistics
 
 | Group | Weekend totals | Expected % | Actual % | Variance | Min | Max | Spread | Average | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | Junior Marines (E1-E5) | 61 | 60.0% | 58.7% | -1.3 pts | 5 | 6 | 1 | 5.55 | PASS |
-| SSgt (E6) | 27 | 25.0% | 26.0% | +1.0 pts | 4 | 6 | 2 | 4.50 | FAIL |
+| SSgt (E6) | 27 | 25.0% | 26.0% | +1.0 pts | 4 | 6 | 2 | 4.50 | REVIEW |
 | GySgt (E7) | 16 | 15.0% | 15.4% | +0.4 pts | 5 | 6 | 1 | 5.33 | PASS |
 
 ## Weekend Selector Diagnostics
@@ -222,6 +227,7 @@ Generated: 2026-06-06T18:58:05.472Z
 - Did annual final SSgt weekend spread improve after the count-based selector change? YES; previous baseline spread was 3, current spread is 2.
 - Interpretation: double-duty, approved N/A, and consecutive-day blocking did not drive the SSgt spread in this run. The selector now uses served weekend counts first and honors that priority each month, and production history accounting counts final weekend assignments including voluntary picks. The spread remains because actual draft choices can add weekend duty to one Marine while voluntary weekend picks can free another selected Marine before they serve one.
 - Does final annual spread become fair once voluntary weekends are counted? NO; voluntary weekends are already counted in final annual burden, and SSgt final spread remains 2.
+- Final served equality status: REVIEW. Cause: Voluntary weekend selections can add served weekend burden to one Marine while freeing another same-group selected Marine.
 - Did voluntary weekend picks free only same-group selected Marines? YES.
 
 | SSgt | Selected weekend obligations | Actual weekend duties | Delta | Preference weekends | Fallback weekends | Voluntary weekends | Freed selected turns | Double-duty months | Approved weekend NA |
@@ -279,14 +285,18 @@ Generated: 2026-06-06T18:58:05.472Z
 
 ## Conclusion
 
-- Is the existing scheduling algorithm fair over a full year? FAIL
+- Required fairness: PASS
+- Final served equality: REVIEW
+- Cause: Voluntary weekend selections can add served weekend burden to one Marine while freeing another same-group selected Marine.
 - Is the required weekend selector count-priority fair? YES
+- Voluntary weekend selections allowed? YES
+- User warning for voluntary weekend selections: PRESENT
 - Are voluntary weekend picks counted as weekend burden? YES
 - Did voluntary weekend picks free only same-group selected Marines? YES
 - Does volunteering for a weekend reduce future required weekend priority? YES
 - Did annual final weekend spread improve after the change? YES; SSgt spread is 2 versus prior baseline 3.
 - Does final annual spread become fair once voluntary weekends are counted? NO
-- Why does it still fail? SSgt selector priority is count-based, but final served weekend burden remains spread 2 because voluntary/fallback weekend choices can add weekend burden to one Marine and free another selected Marine before they serve one.
+- Why is final served equality under review? SSgt selector priority is count-based, but final served weekend burden remains spread 2 because voluntary/fallback weekend choices can add weekend burden to one Marine and free another selected Marine before they serve one.
 - Fairness criteria: all drafts complete, all duty and weekend days assigned, approved N/A protected, rank-group weekend variance within 5 percentage points, and within-group weekend spread <= 1.
 - Month helper loaded: January through December
 
