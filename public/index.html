@@ -392,7 +392,13 @@ function computeDoubleDuty(marines,totalDays,preAssigned,history){
   const rem=totalDays-Object.keys(preAssigned).length;
   if(rem<=elig.length)return{};
   const hist=history.extraDuty||[];
-  const sorted=[...elig].sort((a,b)=>{const ai=hist.lastIndexOf(a.id),bi=hist.lastIndexOf(b.id);return ai!==bi?ai-bi:gradeNum(a.rank)-gradeNum(b.rank);});
+  // Double duty rotates by seniority, most JUNIOR first. The roster is in
+  // seniority order (most senior first), so a higher index = more junior.
+  // Primary key: who stood double duty longest ago (never = -1) goes first;
+  // tiebreak: most junior. This makes the most junior Marines take it this
+  // month, climb up to the most senior over following months, then wrap back.
+  const seniorityIdx={};marines.forEach((m,i)=>{seniorityIdx[m.id]=i;});
+  const sorted=[...elig].sort((a,b)=>{const ai=hist.lastIndexOf(a.id),bi=hist.lastIndexOf(b.id);return ai!==bi?ai-bi:seniorityIdx[b.id]-seniorityIdx[a.id];});
   const dd={};sorted.slice(0,Math.min(rem-elig.length,4)).forEach(m=>{dd[m.id]=2;});return dd;
 }
 
