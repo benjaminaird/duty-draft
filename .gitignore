@@ -3,4 +3,5 @@ node_modules
 __pycache__/
 *.pyc
 test-drive-output/
+.localdata/
 scripts/test-drive.backup.js
