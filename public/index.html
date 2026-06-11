@@ -468,6 +468,23 @@ function CalGrid({year,month,renderCell}){
   );
 }
 
+// PD/NA submission window: open to Marines from the 1st of the month BEFORE the
+// duty month, and stays open until the SNCOIC closes submissions (advances to
+// 'review'). Date check uses the local clock (good enough — server still only
+// lets a Marine write their own prefs/non-availability).
+function subWindowOpen(st){
+  if(!st)return false;
+  if(PHASE_ORDER.indexOf(st.phase)>=PHASE_ORDER.indexOf('review'))return false;
+  return new Date()>=new Date(st.year,st.month-1,1);
+}
+function subWindowClosed(st){
+  return !!st&&PHASE_ORDER.indexOf(st.phase)>=PHASE_ORDER.indexOf('review');
+}
+function subWindowLabel(st){
+  const d=new Date(st.year,st.month-1,1);
+  return MONTHS[d.getMonth()]+' 1, '+d.getFullYear();
+}
+
 function App({authUser,onLogout}){
   // Identity is bound to the logged-in account: admins act as the NCOIC,
   // a linked Marine acts as themselves. No free "view as" switching.
@@ -1002,7 +1019,7 @@ function App({authUser,onLogout}){
       return(
         <div className="card">
           <div className="card-title">PD / NA PHASE</div>
-          <div className="card-sub">Marines are submitting preferred dates and non-availability. Use the DEMO selector to switch perspectives.</div>
+          <div className="card-sub">Marines are submitting preferred dates and non-availability. Close submissions when you are ready to review and schedule the draft.</div>
           <div className={'cdwn'+(totalS<1800?' urg':'')}>{fmtCD(totalS)}</div>
           <div className="cdwn-labels"><div className="cdwn-seg">DAYS</div><div className="cdwn-seg">HRS</div><div className="cdwn-seg">MIN</div><div className="cdwn-seg">SEC</div></div>
           <div style={{color:'var(--muted)',fontSize:11,margin:'8px 0'}}>{Object.values(prefs).filter(v=>v&&v.length>0).length}/{marines.length} preferred dates submitted</div>
@@ -1967,7 +1984,16 @@ function App({authUser,onLogout}){
       if(st.phase==='review')return Review();
       return <div className="card"><div className="card-sub">No NCOIC action needed. Phase: {PL[st.phase]}.</div></div>;
     }
-    if(tab==='pdna')return(st.phase==='top5'||st.phase==='nonavail'||activeUser!=='ncoic')?PdNaView():<div className="card"><div className="card-sub">Preferred dates and non-availability submission is not open yet.</div></div>;
+    if(tab==='pdna'){
+      const subOpen=subWindowOpen(st);
+      if(activeUser==='ncoic'){
+        if(st.phase==='top5'||st.phase==='nonavail')return PdNaView();
+        if(subOpen)return <div className="card"><div className="card-sub">Submissions are open — {Object.values(prefs).filter(v=>v&&v.length>0).length}/{marines.length} Marines have submitted preferred dates so far. Finish setup, then close submissions to review and schedule the draft.</div></div>;
+        return <div className="card"><div className="card-sub">Preferred dates and non-availability submission is not open yet.</div></div>;
+      }
+      if(subOpen)return PdNaView();
+      return <div className="card"><div className="card-sub">{subWindowClosed(st)?'Preferred dates and non-availability submission is closed for this cycle.':('Preferred dates and non-availability submission opens '+subWindowLabel(st)+'.')}</div></div>;
+    }
     if(tab==='draft')return(st.phase==='draft'||st.phase==='draft-scheduled'||st.draftDone)?DraftView():<div className="card"><div className="card-sub">Draft not started yet.</div></div>;
     if(tab==='roster')return(st.phase==='postdraft'||st.phase==='published')?RosterView():<div className="card"><div className="card-sub">Roster not available yet.</div></div>;
     if(tab==='funeral'){
