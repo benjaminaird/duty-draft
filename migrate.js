@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { pool, PG_MODE } = require('./db');
 
 async function migrate() {
