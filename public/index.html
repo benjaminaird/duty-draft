@@ -1849,7 +1849,7 @@ function App({authUser,onLogout}){
     const phaseIdx=PHASE_ORDER.indexOf(st.phase);
     async function goBack(){if(phaseIdx>0)await patch({phase:PHASE_ORDER[phaseIdx-1]});}
     async function reset(){
-      if(!confirm('FULL RESET will erase the current DutyDraft app state. Download a backup first if this data matters. Continue?'))return;
+      if(!confirm('FULL RESET clears the current month, all assignments, preferences, and ALL fairness history, and starts a fresh cycle. Your roster and funeral buglers are KEPT. Download a backup first if this data matters. Continue?'))return;
       if(!confirm('Are you absolutely sure? This cannot be undone without a saved backup.'))return;
       await api.reset();
       window.location.reload();

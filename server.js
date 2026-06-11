@@ -576,7 +576,13 @@ app.post('/api/notif/read',auth.requireAuth,async(req,res)=>{
 
 app.post('/api/reset',auth.requireAdmin,async(req,res)=>{
   stopTimer();
-  appState=getInitialState();
+  // Full Reset clears the current cycle and ALL fairness history, but KEEPS the
+  // roster, funeral buglers, and turn timer (do not restore the demo roster).
+  const fresh=getInitialState();
+  if(Array.isArray(appState.marines)&&appState.marines.length)fresh.marines=appState.marines;
+  fresh.funeralMarines=appState.funeralMarines||[];
+  if(appState.turnMins)fresh.turnMins=appState.turnMins;
+  appState=fresh;
   await persist();
   res.json({ok:true});
 });
