@@ -73,16 +73,17 @@ Generate a secret: `node -e "console.log(require('crypto').randomBytes(32).toStr
    - Safe by design: it will **not** overwrite a real (non-demo) roster without
      `--force`, never duplicates users, and never resets an existing master's
      password. Use `--dry-run` to preview.
-4. **Log in** as `baird_master_admin` / `SetUpDutyDraft` and **change the
-   password immediately** (Settings → Change Password).
+4. **Log in** as `baird_master_admin` with the password the seed printed (or the
+   one you passed via `--password=`) and **change it immediately**
+   (Settings → Change Password).
 5. Have **SSgt Weiland** sign up, then (as master) **link** his account to the
    Weiland roster Marine and **assign him SNCOIC** in the Accounts tab.
 6. Other Marines sign up; an admin links each to their roster Marine.
 
 ### The master admin account
-- Created only by `npm run seed:v1` (username `baird_master_admin`, default
-  password `SetUpDutyDraft`). Override the password with
-  `node scripts/seed-v1.js --password=YOURPASS`.
+- Created only by `npm run seed:v1` (username `baird_master_admin`). The seed
+  prints a random password on creation; or set one with
+  `node scripts/seed-v1.js --password=YOURPASS`. Never commit the value.
 - It is a row in the `users` table with `role='master'`, `marine_id=NULL`.
 - **To change it:** log in and change the password, or update the row directly.
 - **To remove it later:** delete that row from the `users` table.

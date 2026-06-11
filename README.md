@@ -31,8 +31,9 @@ One-time production setup (details in V1_SETUP.md):
     npm run migrate     # create/upgrade the users + app_meta tables (idempotent)
     npm run seed:v1     # seed the real roster, funeral buglers, master admin
 
-Set `SESSION_SECRET` in the environment for stable login tokens. Default master
-login is `baird_master_admin` / `SetUpDutyDraft` — change it immediately.
+Set `SESSION_SECRET` in the environment for stable login tokens. The seed
+creates the master account `baird_master_admin` and prints a random password
+(or pass `--password=...`); log in and change it immediately.
 
 ## Quick checks
 

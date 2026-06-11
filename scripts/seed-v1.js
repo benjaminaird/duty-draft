@@ -32,7 +32,10 @@ const FORCE = args.includes('--force');
 const DRY = args.includes('--dry-run');
 const pwArg = args.find(a => a.startsWith('--password='));
 const MASTER_USERNAME = 'baird_master_admin';
-const MASTER_PASSWORD = pwArg ? pwArg.split('=').slice(1).join('=') : 'SetUpDutyDraft';
+// Default to a printed random password so a fresh seed never creates a
+// known-default admin. Override deterministically with --password=...
+const GENERATED_PW = require('crypto').randomBytes(9).toString('base64').replace(/[+/=]/g, '').slice(0, 12);
+const MASTER_PASSWORD = pwArg ? pwArg.split('=').slice(1).join('=') : GENERATED_PW;
 
 // Seniority-ordered roster: [rank, lastName, firstName]
 const V1_ROSTER = [
@@ -161,7 +164,8 @@ async function main() {
       role: 'master',
       marineId: null
     });
-    console.log(`• Created master admin '${MASTER_USERNAME}' (password: ${pwArg ? '«from --password»' : MASTER_PASSWORD}).`);
+    console.log(`• Created master admin '${MASTER_USERNAME}'.`);
+    console.log(`  PASSWORD (save this, then change it after first login): ${MASTER_PASSWORD}`);
   }
 
   console.log('');
