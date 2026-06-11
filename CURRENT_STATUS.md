@@ -1,10 +1,17 @@
 # DutyDraft Current Status
 
-Last updated: May 2026
+Last updated: June 2026
 
 ## Current state
 
-DutyDraft is stable and deployed.
+DutyDraft is stable and deployed (demo mode).
+
+A **V1 production-readiness layer** is staged on the `automated-test-drive`
+branch (NOT yet merged or deployed): username/password login, roles
+(master / SNCOIC / marine / pending), a seeded real roster + funeral buglers,
+server-side role enforcement, and an admin Accounts panel. The duty draft,
+funeral roster, fairness policy, auto-pick, and PDF formatting are unchanged.
+See **V1_SETUP.md** for setup, env vars, seeding, and deployment.
 
 Live app:
 
@@ -14,9 +21,10 @@ GitHub repo:
 
 https://github.com/benjaminaird/duty-draft
 
-Known-good rollback tag:
+Rollback tags:
 
-stable-working-demo
+- stable-working-demo (original demo baseline)
+- pre-v1-readiness (branch state just before the V1 work)
 
 ## Current safety baseline
 
