@@ -71,7 +71,7 @@ const V1_ROSTER = [
 ];
 
 // Funeral buglers (by last name) — all are on the duty roster.
-const FUNERAL_LASTNAMES = ['Weiland', 'Kotasenski', 'Miller', 'Cendan', 'Mashler', 'Ramos', 'Walter', 'Sakamoto', 'McBride'];
+const FUNERAL_LASTNAMES = ['Weiland', 'Kotasenski', 'Miller', 'Rosie', 'Cendan', 'Mashler', 'Ramos', 'Walter', 'Sakamoto', 'McBride'];
 
 // A few distinctive demo last names — presence means the roster is still the demo.
 const DEMO_SIGNATURE = new Set(['SLIMER', 'BEETLEJUICE', 'BLACKBEARD', 'DANNY PHANTOM', 'CASPER THE FRIENDLY GHOST', 'ZERO', 'KING HAMLET']);
