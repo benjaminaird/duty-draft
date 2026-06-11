@@ -2,12 +2,18 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { getState, saveState } = require('./db');
+const db = require('./db');
+const { getState, saveState } = db;
+const auth = require('./auth');
 const csps = require('csps');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
+
+// Populate req.user from the bearer token on every /api request (no-op bypass
+// to a synthetic admin when DUTYDRAFT_TEST_MODE=1). Guards enforce; this only reads.
+app.use('/api', auth.makeAuthMiddleware(db));
 
 app.get('/favicon.png',(req,res)=>{
   res.setHeader('Content-Type','image/png');
@@ -599,6 +605,108 @@ app.get('/api/health',(req,res)=>{
   res.json({ok:true,phase:appState.phase,draftLive:appState.draftLive,ts:Date.now()});
 });
 
+// ─── AUTH & ACCOUNTS ───────────────────────────────────────────────────────────
+const VALID_RANKS=new Set(['PVT','PFC','LCPL','CPL','SGT','SSGT','GYSGT']);
+
+function normRank(r){return String(r||'').trim().toUpperCase();}
+
+// Human-readable name for a user: linked Marine's roster name if linked,
+// otherwise the rank/name captured at signup, else the username.
+function userDisplayName(u){
+  if(!u)return '';
+  if(u.marineId){
+    const m=(appState.marines||[]).find(x=>x.id===u.marineId);
+    if(m)return dName(m);
+  }
+  if(u.role==='master')return 'MASTER ADMIN';
+  const r=normRank(u.rank),ln=(u.lastName||'').trim(),fn=(u.firstName||'').trim();
+  const built=`${r} ${ln}${fn?' '+fn:''}`.trim().toUpperCase();
+  return built||u.username;
+}
+
+// Public-safe view of a user (never includes the password hash).
+function publicUser(u){
+  if(!u)return null;
+  return {
+    id:u.id,username:u.username,role:u.role,marineId:u.marineId||null,
+    rank:u.rank||null,firstName:u.firstName||null,lastName:u.lastName||null,
+    displayName:userDisplayName(u),pending:u.role==='pending'
+  };
+}
+
+// Sign up -> always creates a PENDING account. Returns a token so the client
+// can show the "waiting for admin assignment" screen with a live session.
+app.post('/api/auth/signup',async(req,res)=>{
+  const{username,password,rank,firstName,lastName}=req.body||{};
+  const uname=String(username||'').trim();
+  const pw=String(password||'');
+  const rk=normRank(rank);
+  const fn=String(firstName||'').trim();
+  const ln=String(lastName||'').trim();
+  if(uname.length<3)return res.status(400).json({error:'Username must be at least 3 characters.'});
+  if(pw.length<4)return res.status(400).json({error:'Password must be at least 4 characters.'});
+  if(!VALID_RANKS.has(rk))return res.status(400).json({error:'Please choose a valid rank.'});
+  if(!fn||!ln)return res.status(400).json({error:'First and last name are required.'});
+  try{
+    if(await db.getUserByUsername(uname))return res.status(409).json({error:'That username is already taken.'});
+    const user=await db.createUser({username:uname,passwordHash:auth.hashPassword(pw),role:'pending',marineId:null,rank:rk,firstName:fn,lastName:ln});
+    const token=auth.signToken(user);
+    res.json({ok:true,token,user:publicUser(user)});
+  }catch(err){
+    console.error('signup error:',err.message);
+    res.status(500).json({error:'Could not create account.'});
+  }
+});
+
+app.post('/api/auth/login',async(req,res)=>{
+  const{username,password}=req.body||{};
+  const uname=String(username||'').trim();
+  if(!uname||!password)return res.status(400).json({error:'Username and password are required.'});
+  try{
+    const user=await db.getUserByUsername(uname);
+    if(!user||!auth.verifyPassword(String(password),user.passwordHash)){
+      return res.status(401).json({error:'Invalid username or password.'});
+    }
+    const token=auth.signToken(user);
+    res.json({ok:true,token,user:publicUser(user)});
+  }catch(err){
+    console.error('login error:',err.message);
+    res.status(500).json({error:'Login failed.'});
+  }
+});
+
+// Current session. 401 if no/invalid token. Pending users get a 200 with their
+// pending flag so the client can show the waiting screen.
+app.get('/api/auth/me',async(req,res)=>{
+  if(!req.user)return res.status(401).json({error:'Not authenticated'});
+  try{
+    const u=req.user.testMode?req.user:(await db.getUserById(req.user.id));
+    if(!u)return res.status(401).json({error:'Not authenticated'});
+    res.json({user:publicUser(u)});
+  }catch(err){
+    res.status(401).json({error:'Not authenticated'});
+  }
+});
+
+app.post('/api/auth/change-password',async(req,res)=>{
+  if(!req.user)return res.status(401).json({error:'Not authenticated'});
+  const{currentPassword,newPassword}=req.body||{};
+  const np=String(newPassword||'');
+  if(np.length<4)return res.status(400).json({error:'New password must be at least 4 characters.'});
+  try{
+    const u=await db.getUserById(req.user.id);
+    if(!u)return res.status(401).json({error:'Not authenticated'});
+    if(!auth.verifyPassword(String(currentPassword||''),u.passwordHash)){
+      return res.status(400).json({error:'Current password is incorrect.'});
+    }
+    await db.updateUser(u.id,{passwordHash:auth.hashPassword(np)});
+    res.json({ok:true});
+  }catch(err){
+    console.error('change-password error:',err.message);
+    res.status(500).json({error:'Could not change password.'});
+  }
+});
+
 // ─── FUNERAL ROSTER API ───────────────────────────────────────────────────────
 
 // GET funeral state subset
@@ -863,6 +971,7 @@ async function start(){
     console.error('Failed to load state from DB, using initial state:',err.message);
     appState=getInitialState();
   }
+  await auth.initAuth(db);
   app.listen(PORT,()=>console.log(`DutyDraft running on port ${PORT}`));
 }
 
