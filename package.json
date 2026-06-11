@@ -5,8 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "migrate": "node migrate.js",
+    "seed:v1": "node scripts/seed-v1.js",
     "smoke": "./scripts/smoke-test.sh",
-    "check": "node --check server.js && python3 -m py_compile generate_roster.py",
+    "check": "node --check server.js && node --check auth.js && node --check db.js && node --check state-defaults.js && node --check scripts/seed-v1.js && python3 -m py_compile generate_roster.py",
     "test": "jest",
     "test-drive": "node scripts/test-drive.js"
   },
