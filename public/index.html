@@ -1011,8 +1011,6 @@ function App({authUser,onLogout}){
     const myPrefs=mid?(prefs[mid]||[]):[];
     const myNA=mid?(nonAvail[mid]||[]):[];
     const isWkSlotted=mid?(wkAssigneeIds||[]).includes(mid):false;
-    const deadline=new Date();deadline.setHours(16,30,0,0);
-    const totalS=Math.max(0,Math.floor((deadline-new Date())/1000));
 
     // NCOIC sees phase controls only
     if(isNcoic){
@@ -1020,8 +1018,6 @@ function App({authUser,onLogout}){
         <div className="card">
           <div className="card-title">PD / NA PHASE</div>
           <div className="card-sub">Marines are submitting preferred dates and non-availability. Close submissions when you are ready to review and schedule the draft.</div>
-          <div className={'cdwn'+(totalS<1800?' urg':'')}>{fmtCD(totalS)}</div>
-          <div className="cdwn-labels"><div className="cdwn-seg">DAYS</div><div className="cdwn-seg">HRS</div><div className="cdwn-seg">MIN</div><div className="cdwn-seg">SEC</div></div>
           <div style={{color:'var(--muted)',fontSize:11,margin:'8px 0'}}>{Object.values(prefs).filter(v=>v&&v.length>0).length}/{marines.length} preferred dates submitted</div>
           <button className="btn btn-gold mt" onClick={async()=>{await patch({phase:'review'});await api.addNotif('REVIEW REQUIRED','Submissions closed. NCOIC: review non-availability and schedule the draft.','🛡');}}>CLOSE SUBMISSIONS →</button>
         </div>
@@ -1139,8 +1135,6 @@ function App({authUser,onLogout}){
 
     return(
       <div>
-        <div className={'cdwn'+(totalS<1800?' urg':'')}>{fmtCD(totalS)}</div>
-        <div className="cdwn-labels"><div className="cdwn-seg">DAYS</div><div className="cdwn-seg">HRS</div><div className="cdwn-seg">MIN</div><div className="cdwn-seg">SEC</div></div>
         <div className="card">
           <div className="card-sub" style={{marginBottom:0}}>{marine?dName(marine):''}</div>
           <div className="pill-switch mt">
