@@ -479,14 +479,14 @@ function solveFuneralRoster(state){
 }
 
 // ─── API ROUTES ───────────────────────────────────────────────────────────────
-app.get('/api/state',(req,res)=>{
+app.get('/api/state',auth.requireAuth,(req,res)=>{
   if(appState.draftLive&&!appState.draftDone&&!appState.draftPaused&&draftTimer.turnEndsAt){
     appState.turnSecsRemaining=Math.max(0,Math.round((draftTimer.turnEndsAt-Date.now())/1000));
   }
   res.json(appState);
 });
 
-app.get('/api/backup',(req,res)=>{
+app.get('/api/backup',auth.requireAdmin,(req,res)=>{
   const stamp=new Date().toISOString().replace(/[:.]/g,'-');
   const filename=`dutydraft-backup-${stamp}.json`;
   res.setHeader('Content-Type','application/json');
@@ -498,14 +498,51 @@ app.get('/api/backup',(req,res)=>{
   },null,2));
 });
 
-app.post('/api/state',async(req,res)=>{
+app.post('/api/state',auth.requireAuth,async(req,res)=>{
   if(!req.body||typeof req.body!=='object')return res.status(400).json({error:'Invalid state'});
-  appState={...appState,...req.body};
+
+  // Admins (SNCOIC / Master) drive the whole workflow — full state write.
+  if(auth.isAdmin(req.user)){
+    appState={...appState,...req.body};
+    await persist();
+    return res.json({ok:true});
+  }
+
+  // Linked Marines may ONLY update their own preferences and non-availability.
+  // The client posts whole prefs/nonAvail maps; the server extracts only the
+  // caller's slot and ignores everything else. Marines cannot self-approve N/A.
+  const mid=req.user.marineId;
+  if(!mid)return res.status(403).json({error:'Your account is not linked to a roster Marine.'});
+  let changed=false;
+
+  if(req.body.prefs&&typeof req.body.prefs==='object'){
+    const mine=req.body.prefs[mid];
+    appState.prefs={...(appState.prefs||{})};
+    appState.prefs[mid]=Array.isArray(mine)?mine:[];
+    changed=true;
+  }
+
+  if(req.body.nonAvail&&typeof req.body.nonAvail==='object'){
+    const mineRaw=Array.isArray(req.body.nonAvail[mid])?req.body.nonAvail[mid]:[];
+    const existing=((appState.nonAvail||{})[mid])||[];
+    const priorByDate={};existing.forEach(n=>{priorByDate[n.date]=n;});
+    const sanitized=mineRaw.map(n=>{
+      const prev=priorByDate[n.date];
+      // Preserve the admin's prior approve/deny decision; new entries are pending.
+      const approved=prev?prev.approved:null;
+      return{date:n.date,reason:String(n.reason||''),approved,needsDiscussion:!!n.needsDiscussion};
+    });
+    appState.nonAvail={...(appState.nonAvail||{})};
+    appState.nonAvail[mid]=sanitized;
+    changed=true;
+  }
+
+  if(!changed)return res.status(403).json({error:'Marines may only submit their own preferences and non-availability.'});
   await persist();
   res.json({ok:true});
 });
 
-app.post('/api/draft/start',async(req,res)=>{
+app.post('/api/draft/start',auth.requireAdmin,async(req,res)=>{
   const{draftOrder,assignments}=req.body;
   appState.draftOrder=draftOrder;
   appState.assignments=assignments||{};
@@ -526,10 +563,15 @@ app.post('/api/draft/start',async(req,res)=>{
   res.json({ok:true,state:appState});
 });
 
-app.post('/api/draft/pick',async(req,res)=>{
+app.post('/api/draft/pick',auth.requireAuth,async(req,res)=>{
   if(!appState.draftLive||appState.draftDone)return res.status(400).json({error:'Draft not live'});
   if(appState.draftPaused)return res.status(400).json({error:'Draft is paused'});
   const{day,mid}=req.body;
+  // A Marine may only pick for their own linked Marine. Admins running the
+  // draft may submit for the Marine whose turn it is.
+  if(!auth.isAdmin(req.user)&&req.user.marineId!==mid){
+    return res.status(403).json({error:'You can only pick on your own turn.'});
+  }
   const e=(appState.draftOrder||[])[appState.draftIdx||0];
   if(!e||e.id!==mid)return res.status(400).json({error:'Not your turn'});
 
@@ -555,21 +597,21 @@ app.post('/api/draft/pick',async(req,res)=>{
   res.json({ok:true,state:appState});
 });
 
-app.post('/api/draft/pause',async(req,res)=>{
+app.post('/api/draft/pause',auth.requireAdmin,async(req,res)=>{
   pauseTimer();
   addNotif('DRAFT PAUSED','The draft has been paused by the NCOIC.','⏸');
   await persist();
   res.json({ok:true});
 });
 
-app.post('/api/draft/resume',async(req,res)=>{
+app.post('/api/draft/resume',auth.requireAdmin,async(req,res)=>{
   resumeTimer();
   addNotif('DRAFT RESUMED','The draft has resumed.','▶️');
   await persist();
   res.json({ok:true});
 });
 
-app.post('/api/draft/restart',async(req,res)=>{
+app.post('/api/draft/restart',auth.requireAdmin,async(req,res)=>{
   stopTimer();
   appState={...appState,draftIdx:0,draftLive:false,draftDone:false,draftPaused:false,assignments:{},voluntaryWkTakers:[],freedMarines:[],turnSecsRemaining:0};
   addNotif('DRAFT RESTARTED','The draft has been restarted. All picks cleared.','↺');
@@ -577,14 +619,14 @@ app.post('/api/draft/restart',async(req,res)=>{
   res.json({ok:true});
 });
 
-app.post('/api/notif',async(req,res)=>{
+app.post('/api/notif',auth.requireAdmin,async(req,res)=>{
   const{title,body,icon,targetMid}=req.body;
   const n=addNotif(title,body,icon||'🔔',targetMid||null);
   await persist();
   res.json({ok:true,notif:n});
 });
 
-app.post('/api/notif/read',async(req,res)=>{
+app.post('/api/notif/read',auth.requireAuth,async(req,res)=>{
   const{mid}=req.body;
   appState.notifications=appState.notifications.map(n=>{
     if(mid==='all'||!n.targetMid||n.targetMid===mid)return{...n,unread:false};
@@ -594,7 +636,7 @@ app.post('/api/notif/read',async(req,res)=>{
   res.json({ok:true});
 });
 
-app.post('/api/reset',async(req,res)=>{
+app.post('/api/reset',auth.requireAdmin,async(req,res)=>{
   stopTimer();
   appState=getInitialState();
   await persist();
@@ -707,10 +749,150 @@ app.post('/api/auth/change-password',async(req,res)=>{
   }
 });
 
+// Next free roster-Marine id (m1, m2, ...).
+function nextMarineId(){
+  let max=0;
+  for(const m of (appState.marines||[])){
+    const mt=/^m(\d+)$/.exec(m.id||'');
+    if(mt)max=Math.max(max,Number(mt[1]));
+  }
+  return 'm'+(max+1);
+}
+
+// List all accounts (admin account-management view).
+app.get('/api/admin/users',auth.requireAdmin,async(req,res)=>{
+  try{
+    const users=await db.getUsers();
+    res.json({users:users.map(publicUser)});
+  }catch(err){
+    console.error('list users error:',err.message);
+    res.status(500).json({error:'Could not load accounts.'});
+  }
+});
+
+// Create a new roster Marine (no account link).
+app.post('/api/admin/marines',auth.requireAdmin,async(req,res)=>{
+  const rank=normRank(req.body&&req.body.rank);
+  const lastName=String((req.body&&req.body.lastName)||'').trim();
+  const firstName=String((req.body&&req.body.firstName)||'').trim();
+  if(!VALID_RANKS.has(rank))return res.status(400).json({error:'Valid rank required.'});
+  if(!lastName)return res.status(400).json({error:'Last name required.'});
+  const marine={id:nextMarineId(),rank,lastName,firstName,active:true};
+  appState.marines=[...(appState.marines||[]),marine];
+  await persist();
+  res.json({ok:true,marine});
+});
+
+// Edit an existing roster Marine's rank / name (fix spelling, matching).
+app.post('/api/admin/marines/:mid',auth.requireAdmin,async(req,res)=>{
+  const mid=req.params.mid;
+  const marines=appState.marines||[];
+  const idx=marines.findIndex(m=>m.id===mid);
+  if(idx===-1)return res.status(404).json({error:'Marine not found.'});
+  const patch={};
+  if(req.body.rank!==undefined){
+    const rank=normRank(req.body.rank);
+    if(!VALID_RANKS.has(rank))return res.status(400).json({error:'Valid rank required.'});
+    patch.rank=rank;
+  }
+  if(req.body.lastName!==undefined){
+    const ln=String(req.body.lastName).trim();
+    if(!ln)return res.status(400).json({error:'Last name required.'});
+    patch.lastName=ln;
+  }
+  if(req.body.firstName!==undefined)patch.firstName=String(req.body.firstName).trim();
+  appState.marines=marines.map(m=>m.id===mid?{...m,...patch}:m);
+  await persist();
+  res.json({ok:true,marine:appState.marines[idx]});
+});
+
+// Link a pending account to a roster Marine — existing one, or create+link.
+app.post('/api/admin/users/:id/link',auth.requireAdmin,async(req,res)=>{
+  try{
+    const target=await db.getUserById(req.params.id);
+    if(!target)return res.status(404).json({error:'Account not found.'});
+    if(target.role==='master')return res.status(400).json({error:'The master admin is not a roster Marine.'});
+
+    let marineId=req.body&&req.body.marineId;
+    if(!marineId&&req.body&&req.body.newMarine){
+      const nm=req.body.newMarine;
+      const rank=normRank(nm.rank);
+      const lastName=String(nm.lastName||'').trim();
+      const firstName=String(nm.firstName||'').trim();
+      if(!VALID_RANKS.has(rank))return res.status(400).json({error:'Valid rank required for the new Marine.'});
+      if(!lastName)return res.status(400).json({error:'Last name required for the new Marine.'});
+      const marine={id:nextMarineId(),rank,lastName,firstName,active:true};
+      appState.marines=[...(appState.marines||[]),marine];
+      await persist();
+      marineId=marine.id;
+    }
+    if(!marineId)return res.status(400).json({error:'Provide a marineId or a newMarine to link.'});
+    if(!(appState.marines||[]).some(m=>m.id===marineId))return res.status(400).json({error:'That roster Marine does not exist.'});
+
+    const other=await db.getUserByMarineId(marineId);
+    if(other&&String(other.id)!==String(target.id))return res.status(409).json({error:'That Marine is already linked to another account.'});
+
+    const newRole=target.role==='pending'?'marine':target.role;
+    const updated=await db.updateUser(target.id,{marineId,role:newRole});
+    res.json({ok:true,user:publicUser(updated)});
+  }catch(err){
+    console.error('link error:',err.message);
+    res.status(500).json({error:'Could not link account.'});
+  }
+});
+
+// Unlink an account (revert to pending, drop SNCOIC/marine role).
+app.post('/api/admin/users/:id/unlink',auth.requireAdmin,async(req,res)=>{
+  try{
+    const target=await db.getUserById(req.params.id);
+    if(!target)return res.status(404).json({error:'Account not found.'});
+    if(target.role==='master')return res.status(400).json({error:'Cannot unlink the master admin.'});
+    const updated=await db.updateUser(target.id,{marineId:null,role:'pending'});
+    res.json({ok:true,user:publicUser(updated)});
+  }catch(err){
+    console.error('unlink error:',err.message);
+    res.status(500).json({error:'Could not unlink account.'});
+  }
+});
+
+// Assign / transfer the single SNCOIC Admin role to a linked Marine account.
+app.post('/api/admin/sncoic',auth.requireAdmin,async(req,res)=>{
+  try{
+    const target=await db.getUserById(req.body&&req.body.userId);
+    if(!target)return res.status(404).json({error:'Account not found.'});
+    if(!target.marineId)return res.status(400).json({error:'SNCOIC must be a linked Marine account.'});
+    if(target.role==='master')return res.status(400).json({error:'The master admin cannot also hold the SNCOIC role.'});
+    // Demote any current SNCOIC(s) back to marine — only one active at a time.
+    const users=await db.getUsers();
+    for(const u of users){
+      if(u.role==='sncoic'&&String(u.id)!==String(target.id))await db.updateUser(u.id,{role:'marine'});
+    }
+    const updated=await db.updateUser(target.id,{role:'sncoic'});
+    res.json({ok:true,user:publicUser(updated)});
+  }catch(err){
+    console.error('sncoic assign error:',err.message);
+    res.status(500).json({error:'Could not assign SNCOIC.'});
+  }
+});
+
+// Delete an account (master only) — e.g. removing a stale signup.
+app.delete('/api/admin/users/:id',auth.requireMaster,async(req,res)=>{
+  try{
+    const target=await db.getUserById(req.params.id);
+    if(!target)return res.status(404).json({error:'Account not found.'});
+    if(target.role==='master')return res.status(400).json({error:'Cannot delete the master admin here.'});
+    await db.deleteUser(target.id);
+    res.json({ok:true});
+  }catch(err){
+    console.error('delete user error:',err.message);
+    res.status(500).json({error:'Could not delete account.'});
+  }
+});
+
 // ─── FUNERAL ROSTER API ───────────────────────────────────────────────────────
 
 // GET funeral state subset
-app.get('/api/funeral/state',(req,res)=>{
+app.get('/api/funeral/state',auth.requireAuth,(req,res)=>{
   res.json({
     funeralPhase: appState.funeralPhase||'idle',
     funeralMarines: appState.funeralMarines||[],
@@ -731,7 +913,7 @@ app.get('/api/funeral/state',(req,res)=>{
 });
 
 // PATCH funeral state
-app.post('/api/funeral/state',async(req,res)=>{
+app.post('/api/funeral/state',auth.requireAdmin,async(req,res)=>{
   const allowed=['funeralPhase','funeralMarines','funeralBlackouts','funeralExtraWk','funeralWorkdays','funeralAssignments','funeralConflictDays','funeralBurdenCounts'];
   for(const key of allowed){
     if(req.body[key]!==undefined) appState[key]=req.body[key];
@@ -741,7 +923,7 @@ app.post('/api/funeral/state',async(req,res)=>{
 });
 
 // POST auto-assign funeral roster
-app.post('/api/funeral/auto-assign',async(req,res)=>{
+app.post('/api/funeral/auto-assign',auth.requireAdmin,async(req,res)=>{
   const result=solveFuneralRoster(appState);
   appState.funeralAssignments=result.assignments;
   appState.funeralConflictDays=result.conflictDays;
@@ -752,7 +934,7 @@ app.post('/api/funeral/auto-assign',async(req,res)=>{
 });
 
 // POST manually assign a conflict day
-app.post('/api/funeral/manual-assign',async(req,res)=>{
+app.post('/api/funeral/manual-assign',auth.requireAdmin,async(req,res)=>{
   const{day,marineId}=req.body;
   if(!day||!marineId)return res.status(400).json({error:'day and marineId required'});
   appState.funeralAssignments[day]=marineId;
@@ -762,7 +944,7 @@ app.post('/api/funeral/manual-assign',async(req,res)=>{
 });
 
 // POST publish funeral roster + notify Marines
-app.post('/api/funeral/publish',async(req,res)=>{
+app.post('/api/funeral/publish',auth.requireAdmin,async(req,res)=>{
   appState.funeralPhase='published';
   const monthUpper=MONTHS[appState.month].toUpperCase();
   const year=appState.year;
@@ -784,7 +966,7 @@ app.post('/api/funeral/publish',async(req,res)=>{
 });
 
 // POST export funeral roster PDF
-app.post('/api/export-funeral-roster',async(req,res)=>{
+app.post('/api/export-funeral-roster',auth.requireAdmin,async(req,res)=>{
   const {execFile}=require('child_process');
   const os=require('os');
   const fs=require('fs');
@@ -826,7 +1008,7 @@ app.post('/api/export-funeral-roster',async(req,res)=>{
 });
 
 // ─── NEXT MONTH ───────────────────────────────────────────────────────────────
-app.post('/api/next-month',async(req,res)=>{
+app.post('/api/next-month',auth.requireAdmin,async(req,res)=>{
   stopTimer();
   const nextMonth=appState.month===11?0:appState.month+1;
   const nextYear=appState.month===11?appState.year+1:appState.year;
@@ -905,7 +1087,7 @@ app.post('/api/next-month',async(req,res)=>{
 });
 
 // ─── DUTY ROSTER PDF EXPORT ───────────────────────────────────────────────────
-app.post('/api/export-roster',async(req,res)=>{
+app.post('/api/export-roster',auth.requireAdmin,async(req,res)=>{
   const {execFile}=require('child_process');
   const os=require('os');
   const fs=require('fs');
