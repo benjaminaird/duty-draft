@@ -1,0 +1,94 @@
+<!doctype html><html><head><meta charset="utf-8"><title>DutyDraft COA Brief</title>
+<style>
+@page { size: Letter; margin: 0.7in 0.75in; }
+* { box-sizing: border-box; }
+body { font-family: Georgia, 'Times New Roman', serif; color: #1a1a1a; font-size: 10.5pt; line-height: 1.45; margin: 0; }
+h1 { font-size: 19pt; margin: 0 0 2px; letter-spacing: .3px; }
+h2 { font-size: 13pt; margin: 22px 0 6px; padding-bottom: 3px; border-bottom: 2px solid #2c3e50; color: #2c3e50; }
+h2.first { margin-top: 8px; }
+.sub { color: #555; font-size: 9.5pt; }
+.meta { color:#555; font-size: 9pt; margin-top: 4px; }
+.rule { height:3px; background:#8a6d3b; margin:10px 0 4px; }
+p { margin: 6px 0; }
+ul { margin: 6px 0 6px 18px; padding: 0; }
+li { margin: 2px 0; }
+table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9.5pt; }
+th, td { border: 1px solid #cfcfcf; padding: 4px 7px; text-align: left; vertical-align: top; }
+th { background: #2c3e50; color: #fff; font-family: Helvetica, Arial, sans-serif; font-size: 8.5pt; letter-spacing:.3px; }
+td.num, td.c { font-family: 'Courier New', monospace; }
+td.c { text-align: center; }
+td.num { text-align: left; }
+.good { color: #1a7a3a; font-weight: bold; }
+.warn { color: #9a6b00; font-weight: bold; }
+.bad  { color: #b02020; font-weight: bold; }
+.bad-cell { color:#b02020; }
+.callout { background:#f5f1e6; border-left: 4px solid #8a6d3b; padding: 8px 12px; margin: 10px 0; }
+.q { background:#eef2f6; border:1px solid #d4dde6; padding:8px 12px; margin:8px 0; }
+.small { font-size: 8.5pt; color:#666; }
+.page { page-break-before: always; }
+.foot { margin-top: 6px; font-size: 8pt; color:#888; }
+.mono { font-family:'Courier New',monospace; }
+.tag { display:inline-block; font-family:Helvetica,Arial,sans-serif; font-size:8pt; padding:1px 6px; border-radius:3px; color:#fff; }
+</style></head><body>
+
+<h1>DutyDraft — Draft-Order Course of Action (COA) Comparison</h1>
+<div class="sub">Decision brief for the Commanding Officer · The Commandant&rsquo;s Own</div>
+<div class="meta">Prepared by SNCOIC (GySgt Aird) · 2026-06-13 · Internal decision document</div>
+<div class="rule"></div>
+
+<h2 class="first">Purpose &amp; the decision</h2>
+<p>DutyDraft schedules monthly duty by <strong>fixed rules — not AI and not chance</strong>. One policy decision remains: <strong>how the monthly draft order is generated</strong>. Weekend burden is already distributed <strong>equally</strong> across every Marine and is unaffected by this choice. This brief compares the four candidate methods using a <strong>12-month simulation on the real 29-Marine roster</strong> (July 2026 – June 2027).</p>
+<div class="q"><strong>Questions for command as you read:</strong>
+<ul>
+<li>Can leadership explain <em>every</em> Marine&rsquo;s pick, every month?</li>
+<li>Does seniority still mean something?</li>
+<li>Is recent burden (weekends, double duty) actually compensated?</li>
+<li>Can a Marine end up at the bottom of the order <em>by chance</em> — and be told only &ldquo;the draw&rdquo;?</li>
+</ul></div>
+
+<h2>How this was tested (assumptions)</h2>
+<ul>
+<li>The real roster and 12 consecutive real months were used; the same engine that runs the live draft generated every order.</li>
+<li>Weekend days each month were assigned <strong>equally</strong> (least recent burden first) — the system the unit already uses.</li>
+<li><strong>Double duty rotates up the seniority line</strong>: when a month has more duty days than Marines, the most-junior Marines on rotation stand it (and pick first that month as compensation). No Marine is hit twice before all are hit once.</li>
+<li>The two random methods (COA 2 &amp; 3) were each simulated 400× to report expected outcomes, not a single lucky draw.</li>
+</ul>
+
+<h2>Finding 1 — Weekend burden is equal, under every COA</h2>
+<p>Over 12 months every Marine stood between <strong>2 and 4 weekends</strong> (about 3.6 each) — a spread of just <strong>2</strong>. This is <strong>identical under all four COAs</strong>, because weekend assignment never touches the draft order. <em>The COA decision does not affect weekend fairness — that is already solved.</em></p>
+
+<h2>Finding 2 — Explainability: how much of the order is chance</h2>
+<p>The key measure is the <strong>&ldquo;luck swing&rdquo;</strong>: on average, how many positions a Marine&rsquo;s monthly pick lands away from the order the rules alone would have given (rank + earned burden). <strong>Zero means every pick is explainable.</strong></p>
+<table><thead><tr><th style="width:34%">Method</th><th style="width:18%">Luck swing</th><th>What it means in practice</th></tr></thead><tbody><tr><td>COA 1 — Weighted Seniority</td><td class="num good">0 spots</td><td>Every pick traceable to rank + earned burden. No chance.</td></tr><tr><td>COA 3 — Hybrid</td><td class="num warn">2.9 spots</td><td>Bounded chance: only the top five slots are a draw.</td></tr><tr><td>COA 2 — Weighted Lottery</td><td class="num bad">7 spots</td><td>Roughly 7 positions of pure chance layered on top of the rules.</td></tr></tbody></table>
+<p class="small">Per Marine, per month, averaged over the 12-month simulation. COA 1 is the rules-based baseline, so it is 0 by definition.</p>
+
+<div class="page"></div>
+<h2 class="first">Finding 3 — What it feels like to the Marine (trust &amp; morale)</h2>
+<p>Consider <strong>GySgt Aird (#3 most senior)</strong> — same Marine, same earned burden, across the 12 months. Only the method changes:</p>
+<table><thead><tr><th style="width:26%">Method</th><th>Monthly draft pick (Jul → Jun)</th></tr></thead><tbody>
+<tr><td>COA 1 — Weighted Seniority</td><td class="mono">8, 9, 3, 8, 6, 10, 6, 3, 8, 4, 7, 7</td></tr>
+<tr><td>COA 2 — Weighted Lottery</td><td class="mono">21, 20, 10, 13, 3, 5, 24, 19, 19, 22, 14, 26</td></tr>
+</tbody></table>
+<div class="callout"><p>Under the rules-based order this senior Marine drafts in the single digits every month — exactly what his seniority earns. Under the lottery, <strong>the same Gunnery Sergeant is dropped as deep as #26</strong>, repeatedly, by chance. There is no reason to give him beyond &ldquo;the draw.&rdquo;</p>
+<p>A rules-based order gives <strong>every</strong> Marine a reliable path to good picks: senior Marines through rank, junior Marines through their double-duty compensation month. A lottery removes that guarantee — a Marine can sit near the bottom month after month with no recourse and no explanation. <strong>A duty tool the Marines do not trust will not be used.</strong></p></div>
+
+<h2>Double-duty rotation (climbs the seniority line, fairly)</h2>
+<p>Proof the compensation rotates and no one is hit twice before all are hit once:</p>
+<table><thead><tr><th style="width:18%">Month</th><th>Stands double duty (→ picks first that month)</th></tr></thead><tbody><tr><td>Jul 2026</td><td>LCpl McBride (#29),  LCpl Sakamoto (#28)</td></tr><tr><td>Aug 2026</td><td>LCpl Walter (#27),  LCpl Collins (#26)</td></tr><tr><td>Sep 2026</td><td>LCpl Arriaga (#25)</td></tr><tr><td>Oct 2026</td><td>Cpl Osterhout (#24),  Cpl Cendan (#23)</td></tr><tr><td>Nov 2026</td><td>Cpl Ezeta (#22)</td></tr><tr><td>Dec 2026</td><td>Cpl Mashler (#21),  Cpl Ramos (#20)</td></tr><tr><td>Jan 2027</td><td>Sgt Capone (#16),  Sgt Gaskin (#15)</td></tr><tr><td>Feb 2027</td><td>— (short month)</td></tr><tr><td>Mar 2027</td><td>SSgt Johnson (#14),  SSgt Bumgarner (#13)</td></tr><tr><td>Apr 2027</td><td>SSgt Mueller (#12)</td></tr><tr><td>May 2027</td><td>SSgt Miller (#11),  SSgt Donaldson (#10)</td></tr><tr><td>Jun 2027</td><td>SSgt Jensen (#9)</td></tr></tbody></table>
+
+<div class="page"></div>
+<h2 class="first">One month, side by side — the real Jul 2026 draft</h2>
+<p>The actual order each method would produce next month. <span class="small">(×2 = double-duty Marine, two picks.)</span></p>
+<table><thead><tr><th style="width:8%">Pick</th><th>COA 1 — Weighted Seniority</th><th>COA 2 — Weighted Lottery</th><th>COA 3 — Hybrid</th></tr></thead><tbody><tr><td class="c">1</td><td>LCpl Sakamoto (×2·t1)</td><td>LCpl Sakamoto (×2·t1)</td><td>LCpl Sakamoto (×2·t1)</td></tr><tr><td class="c">2</td><td>LCpl Sakamoto (×2·t2)</td><td>LCpl Sakamoto (×2·t2)</td><td>LCpl Sakamoto (×2·t2)</td></tr><tr><td class="c">3</td><td>LCpl McBride (×2·t1)</td><td>LCpl McBride (×2·t1)</td><td>LCpl McBride (×2·t1)</td></tr><tr><td class="c">4</td><td>LCpl McBride (×2·t2)</td><td>LCpl McBride (×2·t2)</td><td>LCpl McBride (×2·t2)</td></tr><tr><td class="c">5</td><td>GySgt Walker</td><td>SSgt Donaldson</td><td>SSgt Donaldson</td></tr><tr><td class="c">6</td><td>GySgt McCreary</td><td>GySgt Walker</td><td>GySgt Walker</td></tr><tr><td class="c">7</td><td>GySgt Steel</td><td>GySgt Steel</td><td>GySgt Steel</td></tr><tr><td class="c">8</td><td>GySgt Aird</td><td>SSgt Weiland</td><td>SSgt Weiland</td></tr><tr><td class="c">9</td><td>GySgt Pena</td><td>Sgt Hallam</td><td>Sgt Hallam</td></tr><tr><td class="c">10</td><td>GySgt Menz</td><td>SSgt Mueller</td><td>GySgt McCreary</td></tr><tr><td class="c">11</td><td>SSgt Donaldson</td><td>SSgt Miller</td><td>GySgt Aird</td></tr><tr><td class="c">12</td><td>SSgt Miller</td><td>GySgt Menz</td><td>GySgt Pena</td></tr><tr><td class="c">13</td><td>SSgt Jensen</td><td>SSgt Jensen</td><td>GySgt Menz</td></tr><tr><td class="c">14</td><td>SSgt Weiland</td><td>Sgt Campa</td><td>SSgt Jensen</td></tr><tr><td class="c">15</td><td>SSgt Kotasenski</td><td>Sgt Gaskin</td><td>SSgt Miller</td></tr><tr><td class="c">16</td><td>SSgt Johnson</td><td>SSgt Johnson</td><td>SSgt Kotasenski</td></tr><tr><td class="c">17</td><td>Sgt Campa</td><td>SSgt Kotasenski</td><td>Sgt Campa</td></tr><tr><td class="c">18</td><td>Sgt Hallam</td><td>Cpl Ramos</td><td>SSgt Johnson</td></tr><tr><td class="c">19</td><td>SSgt Mueller</td><td>GySgt Pena</td><td>SSgt Mueller</td></tr><tr><td class="c">20</td><td>Sgt Rosie</td><td>GySgt McCreary</td><td>Sgt Rosie</td></tr><tr><td class="c">21</td><td>Cpl Ramos</td><td>GySgt Aird</td><td>Cpl Ramos</td></tr><tr><td class="c">22</td><td>SSgt Bumgarner</td><td>Sgt Rosie</td><td>SSgt Bumgarner</td></tr><tr><td class="c">23</td><td>Sgt Gaskin</td><td>Cpl Mashler</td><td>Sgt Gaskin</td></tr><tr><td class="c">24</td><td>Sgt Capone</td><td>LCpl Walter</td><td>Sgt Capone</td></tr><tr><td class="c">25</td><td>Cpl Mashler</td><td>Cpl Ezeta</td><td>Cpl Mashler</td></tr><tr><td class="c">26</td><td>LCpl Arriaga</td><td>SSgt Bumgarner</td><td>LCpl Arriaga</td></tr><tr><td class="c">27</td><td>LCpl Collins</td><td>Cpl Osterhout</td><td>LCpl Collins</td></tr><tr><td class="c">28</td><td>Cpl Ezeta</td><td>LCpl Arriaga</td><td>Cpl Ezeta</td></tr><tr><td class="c">29</td><td>Cpl Cendan</td><td>Cpl Cendan</td><td>Cpl Cendan</td></tr><tr><td class="c">30</td><td>Cpl Osterhout</td><td>LCpl Collins</td><td>Cpl Osterhout</td></tr><tr><td class="c">31</td><td>LCpl Walter</td><td>Sgt Capone</td><td>LCpl Walter</td></tr></tbody></table>
+
+<div class="page"></div>
+<h2 class="first">12-month outcome per Marine</h2>
+<p>Average pick <span class="mono">[best–worst]</span> over the 12 months, by method, plus weekends stood. <span class="small">Sen = seniority rank.</span></p>
+<table><thead><tr><th style="width:6%">Sen</th><th style="width:24%">Marine</th><th>COA 1</th><th>COA 2</th><th>COA 3</th><th style="width:8%">Wknds</th></tr></thead><tbody><tr><td class="c">1</td><td>GySgt Pena</td><td class="num">4.8 [1–9]</td><td class="num">14.3 [5–24]</td><td class="num">9.1 [5–12]</td><td class="c">4</td></tr><tr><td class="c">2</td><td>GySgt McCreary</td><td class="num">5.2 [2–7]</td><td class="num">16 [8–23]</td><td class="num">9.6 [7–12]</td><td class="c">3</td></tr><tr><td class="c">3</td><td>GySgt Aird</td><td class="num">6.6 [3–10]</td><td class="num">16.3 [3–26]</td><td class="num">9.6 [3–13]</td><td class="c">4</td></tr><tr><td class="c">4</td><td>GySgt Steel</td><td class="num">7.3 [4–10]</td><td class="num">14.5 [4–26]</td><td class="num">10 [4–14]</td><td class="c">3</td></tr><tr><td class="c">5</td><td>GySgt Walker</td><td class="num">8.1 [5–11]</td><td class="num">12.8 [2–27]</td><td class="num">10.2 [2–16]</td><td class="c">3</td></tr><tr><td class="c">6</td><td>GySgt Menz</td><td class="num">9.3 [5–12]</td><td class="num">11.9 [5–21]</td><td class="num">11 [5–15]</td><td class="c">4</td></tr><tr><td class="c">7</td><td>SSgt Weiland</td><td class="num">10.3 [5–15]</td><td class="num">15.3 [6–25]</td><td class="num">11.3 [6–18]</td><td class="c">4</td></tr><tr><td class="c">8</td><td>SSgt Kotasenski</td><td class="num">11.2 [7–15]</td><td class="num">14.9 [3–25]</td><td class="num">12.5 [3–17]</td><td class="c">4</td></tr><tr><td class="c">9</td><td>SSgt Jensen</td><td class="num">11.3 [1–15]</td><td class="num">14.4 [1–26]</td><td class="num">11.2 [1–19]</td><td class="c">4</td></tr><tr><td class="c">10</td><td>SSgt Donaldson</td><td class="num">11.8 [1–17]</td><td class="num">14.1 [1–28]</td><td class="num">11.2 [1–20]</td><td class="c">3</td></tr><tr><td class="c">11</td><td>SSgt Miller</td><td class="num">12.3 [3–16]</td><td class="num">17.3 [3–29]</td><td class="num">13.8 [3–20]</td><td class="c">3</td></tr><tr><td class="c">12</td><td>SSgt Mueller</td><td class="num">14.7 [1–19]</td><td class="num">12.4 [1–29]</td><td class="num">14.6 [1–21]</td><td class="c">4</td></tr><tr><td class="c">13</td><td>SSgt Bumgarner</td><td class="num">14.2 [1–22]</td><td class="num">12.8 [1–27]</td><td class="num">12.3 [1–22]</td><td class="c">4</td></tr><tr><td class="c">14</td><td>SSgt Johnson</td><td class="num">15.4 [3–21]</td><td class="num">13.4 [3–26]</td><td class="num">14.8 [3–19]</td><td class="c">3</td></tr><tr><td class="c">15</td><td>Sgt Gaskin</td><td class="num">15.9 [1–23]</td><td class="num">15.8 [1–27]</td><td class="num">15.2 [1–23]</td><td class="c">4</td></tr><tr><td class="c">16</td><td>Sgt Capone</td><td class="num">16.9 [3–24]</td><td class="num">19.5 [1–31]</td><td class="num">17.5 [1–24]</td><td class="c">4</td></tr><tr><td class="c">17</td><td>Sgt Hallam</td><td class="num">19.3 [16–23]</td><td class="num">16.5 [4–28]</td><td class="num">17.2 [4–25]</td><td class="c">4</td></tr><tr><td class="c">18</td><td>Sgt Rosie</td><td class="num">20.3 [17–23]</td><td class="num">17.2 [5–30]</td><td class="num">19.2 [5–25]</td><td class="c">3</td></tr><tr><td class="c">19</td><td>Sgt Campa</td><td class="num">21.8 [17–25]</td><td class="num">13.3 [3–28]</td><td class="num">19.1 [3–24]</td><td class="c">2</td></tr><tr><td class="c">20</td><td>Cpl Ramos</td><td class="num">20.3 [1–25]</td><td class="num">13.5 [1–24]</td><td class="num">17.1 [1–26]</td><td class="c">3</td></tr><tr><td class="c">21</td><td>Cpl Mashler</td><td class="num">21.7 [3–27]</td><td class="num">18.5 [3–29]</td><td class="num">18.8 [3–27]</td><td class="c">4</td></tr><tr><td class="c">22</td><td>Cpl Ezeta</td><td class="num">22.3 [1–28]</td><td class="num">19.9 [1–31]</td><td class="num">22.8 [1–28]</td><td class="c">4</td></tr><tr><td class="c">23</td><td>Cpl Cendan</td><td class="num">22.8 [1–29]</td><td class="num">19.6 [1–31]</td><td class="num">21.5 [1–29]</td><td class="c">4</td></tr><tr><td class="c">24</td><td>Cpl Osterhout</td><td class="num">24.2 [3–31]</td><td class="num">20.3 [3–29]</td><td class="num">23 [3–31]</td><td class="c">4</td></tr><tr><td class="c">25</td><td>LCpl Arriaga</td><td class="num">23.9 [1–30]</td><td class="num">21.6 [1–31]</td><td class="num">24.2 [1–30]</td><td class="c">3</td></tr><tr><td class="c">26</td><td>LCpl Collins</td><td class="num">25.3 [1–31]</td><td class="num">18.5 [1–30]</td><td class="num">21.9 [1–31]</td><td class="c">3</td></tr><tr><td class="c">27</td><td>LCpl Walter</td><td class="num">25.5 [3–31]</td><td class="num">21.8 [3–31]</td><td class="num">23.9 [3–31]</td><td class="c">4</td></tr><tr><td class="c">28</td><td>LCpl Sakamoto</td><td class="num">26.5 [1–31]</td><td class="num">19.1 [1–31]</td><td class="num">26.5 [1–31]</td><td class="c">4</td></tr><tr><td class="c">29</td><td>LCpl McBride</td><td class="num">27.8 [3–31]</td><td class="num">20.9 [3–30]</td><td class="num">27.8 [3–31]</td><td class="c">4</td></tr></tbody></table>
+
+<h2>Scorecard &amp; the decision</h2>
+<table><thead><tr><th style="width:40%">&nbsp;</th><th>COA 1</th><th>COA 2</th><th>COA 3</th></tr></thead><tbody><tr><td>Every pick explainable to the Marine</td><td class="c">Yes</td><td class="c bad-cell">No — “the draw”</td><td class="c">Mostly</td></tr><tr><td>Seniority respected</td><td class="c">Yes</td><td class="c bad-cell">Odds only</td><td class="c">Yes</td></tr><tr><td>Recent burden compensated</td><td class="c">Yes</td><td class="c bad-cell">Odds only</td><td class="c">Yes</td></tr><tr><td>Outcome decided by chance</td><td class="c">No</td><td class="c bad-cell">Yes (~7 spots)</td><td class="c">Top 5 only</td></tr><tr><td>A Marine can land at the bottom repeatedly by luck</td><td class="c">No</td><td class="c bad-cell">Yes</td><td class="c">Only near the top</td></tr></tbody></table>
+<p><strong>The choice is purely how much chance to introduce into the draft order</strong> — weekend burden is equal regardless. COA 1 maximizes explainability and trust; every pick can be defended to the Marine standing it. COA 2 maximizes opportunity for junior Marines, at the cost of explainability and seniority. COA 3 is a middle path: a rules-based order with a small, bounded lottery for the top five slots.</p>
+<p class="foot">Generated from the DutyDraft draft-order engine and 12-month fairness simulation. All figures are live model output, not estimates. Seed-stable and reproducible.</p>
+
+</body></html>

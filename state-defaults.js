@@ -14,11 +14,13 @@ function getInitialState(){
     turnMins:3,
     blackouts:[],extraWk:[],workdays:[],
     preAssigned:{},preAssignReasons:{},pendingPreAssignNotifs:[],
-    weekendDates:[],wkAssigneeIds:[],wkAssignees:{junior:[],ssgt:[],gysgt:[]},
+    weekendDates:[],wkAssigneeIds:[],wkAssignees:[],
     doubleDuty:{},shortMonth:false,shortRoster:null,
     prefs:{},nonAvail:{},assignments:{},
     draftOrder:[],draftIdx:0,draftLive:false,draftPaused:false,draftDone:false,
     draftScheduled:null,turnSecsRemaining:0,
+    // Draft-order engine: selected COA + the locked, audited order (null until locked).
+    draftOrderMode:'weighted_seniority',draftOrderAudit:null,
     voluntaryWkTakers:[],freedMarines:[],
     // ── Funeral roster state ─────────────────────────────────────────────────
     funeralPhase:'idle',

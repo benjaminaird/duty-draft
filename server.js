@@ -24,13 +24,23 @@ app.get('/apple-touch-icon.png',(req,res)=>{
   res.sendFile(path.join(__dirname,'public','apple-touch-icon.png'));
 });
 
+// Serve the draft-order engine + burden fixture to the browser from their single
+// source at the repo root / scripts dir (no duplication; Node tests require the same
+// files). These are plain dependency-free JS that attach a window global.
+app.get('/draft-order-engine.js',(req,res)=>{res.type('application/javascript');res.sendFile(path.join(__dirname,'draft-order-engine.js'));});
+app.get('/burden-2026-q2.js',(req,res)=>{res.type('application/javascript');res.sendFile(path.join(__dirname,'scripts','data','burden-2026-q2.js'));});
+
 app.use(express.static(path.join(__dirname,'public')));
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 const RANK_TO_GRADE={PVT:'E1',PFC:'E2',LCPL:'E3',CPL:'E4',SGT:'E5',SSGT:'E6',GYSGT:'E7'};
 const GRADE_NUM={E1:1,E2:2,E3:3,E4:4,E5:5,E6:6,E7:7};
 const BURDEN_GROUP={E1:'junior',E2:'junior',E3:'junior',E4:'junior',E5:'junior',E6:'ssgt',E7:'gysgt'};
-const GROUP_QUOTA={junior:0.60,ssgt:0.25,gysgt:0.15};
+// DEPRECATED / UNUSED: rank-based weekend quota (E1–E5 60% / E6 25% / E7 15%).
+// Weekend burden is now distributed EQUALLY across all Marines (client-side equal
+// selection). weekendBurden is still stored grouped by rank for history continuity,
+// but rank no longer governs weekend obligation. Kept only as documentation.
+// const GROUP_QUOTA={junior:0.60,ssgt:0.25,gysgt:0.15};
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 const gradeOf=r=>RANK_TO_GRADE[r]||'E1';
@@ -481,9 +491,12 @@ app.post('/api/state',auth.requireAuth,async(req,res)=>{
 });
 
 app.post('/api/draft/start',auth.requireAdmin,async(req,res)=>{
-  const{draftOrder,assignments}=req.body;
+  const{draftOrder,assignments,draftOrderAudit,draftOrderMode}=req.body;
   appState.draftOrder=draftOrder;
   appState.assignments=assignments||{};
+  // Persist the locked audit + selected COA alongside the order, for the record.
+  if(draftOrderAudit!==undefined)appState.draftOrderAudit=draftOrderAudit;
+  if(draftOrderMode!==undefined)appState.draftOrderMode=draftOrderMode;
   appState.draftIdx=0;
   appState.draftLive=true;appState.draftDone=false;appState.draftPaused=false;
   appState.phase='draft';
@@ -582,6 +595,7 @@ app.post('/api/reset',auth.requireAdmin,async(req,res)=>{
   if(Array.isArray(appState.marines)&&appState.marines.length)fresh.marines=appState.marines;
   fresh.funeralMarines=appState.funeralMarines||[];
   if(appState.turnMins)fresh.turnMins=appState.turnMins;
+  if(appState.draftOrderMode)fresh.draftOrderMode=appState.draftOrderMode; // keep the master's COA choice
   appState=fresh;
   await persist();
   res.json({ok:true});
@@ -1009,11 +1023,12 @@ app.post('/api/next-month',auth.requireAdmin,async(req,res)=>{
     turnMins:appState.turnMins||3,
     blackouts:[],extraWk:[],workdays:[],
     preAssigned:{},preAssignReasons:{},pendingPreAssignNotifs:[],
-    weekendDates:[],wkAssigneeIds:[],wkAssignees:{junior:[],ssgt:[],gysgt:[]},
+    weekendDates:[],wkAssigneeIds:[],wkAssignees:[],
     doubleDuty:{},shortMonth:false,shortRoster:null,
     prefs:{},nonAvail:{},assignments:{},
     draftOrder:[],draftIdx:0,draftLive:false,draftPaused:false,draftDone:false,
     draftScheduled:null,turnSecsRemaining:0,
+    draftOrderMode:appState.draftOrderMode||'weighted_seniority',draftOrderAudit:null,
     voluntaryWkTakers:[],freedMarines:[],
     // Funeral: carry burden counts, reset everything else
     funeralPhase:'idle',

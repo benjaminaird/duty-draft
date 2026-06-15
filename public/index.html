@@ -280,6 +280,9 @@ body.light .toggle-switch input:checked+.toggle-track::before{background:var(--a
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.5/babel.min.js"></script>
+<!-- Modular draft-order engine + historical burden fixture (served from repo root). -->
+<script src="/draft-order-engine.js"></script>
+<script src="/burden-2026-q2.js"></script>
 <script type="text/babel">
 const {useState,useEffect,useRef,useCallback}=React;
 
@@ -287,7 +290,9 @@ const RANKS=['PVT','PFC','LCPL','CPL','SGT','SSGT','GYSGT'];
 const RANK_TO_GRADE={PVT:'E1',PFC:'E2',LCPL:'E3',CPL:'E4',SGT:'E5',SSGT:'E6',GYSGT:'E7'};
 const GRADE_NUM={E1:1,E2:2,E3:3,E4:4,E5:5,E6:6,E7:7};
 const BURDEN_GROUP={E1:'junior',E2:'junior',E3:'junior',E4:'junior',E5:'junior',E6:'ssgt',E7:'gysgt'};
-const GROUP_QUOTA={junior:0.60,ssgt:0.25,gysgt:0.15};
+// GROUP_QUOTA (rank-based weekend ratios E1–E5 60% / E6 25% / E7 15%) was REMOVED:
+// per Maj Morris, weekend burden is distributed EQUALLY across all Marines.
+// Rank/seniority affects draft order only, not weekend obligation.
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const PHASE_ORDER=['setup','calendar','wkpreview','top5','nonavail','review','draft-scheduled','draft','postdraft','published'];
@@ -360,30 +365,25 @@ const api={
   deleteUser:id=>authFetch('/api/admin/users/'+id,{method:'DELETE'}).then(r=>r.json()),
 };
 
+// Weekend duty is distributed EQUALLY across the whole company (per Maj Morris) —
+// no rank quotas. The Marines with the LEAST recent weekend burden are slotted
+// first; rank/seniority does not affect weekend obligation. weekendBurden is still
+// STORED grouped by rank (legacy), so we combine the groups into one company-wide
+// burden list before selecting. Returns a FLAT array of slotted Marines.
 function computeWkAssignees(marines,wkCount,history){
-  if(!wkCount)return{junior:[],ssgt:[],gysgt:[]};
-  const groups={junior:[],ssgt:[],gysgt:[]};
-  marines.forEach(m=>groups[groupOf(m.rank)].push(m));
-  const q={junior:Math.round(GROUP_QUOTA.junior*wkCount),ssgt:Math.round(GROUP_QUOTA.ssgt*wkCount),gysgt:0};
-  q.gysgt=Math.max(0,wkCount-q.junior-q.ssgt);
-  if(q.junior+q.ssgt+q.gysgt!==wkCount)q.junior+=wkCount-(q.junior+q.ssgt+q.gysgt);
-  const countIn=(arr,id)=>arr.filter(x=>x===id).length;
-  const wkSort=(hist,a,b)=>{const ac=countIn(hist,a.id),bc=countIn(hist,b.id);if(ac!==bc)return ac-bc;const ai=hist.lastIndexOf(a.id),bi=hist.lastIndexOf(b.id);return ai!==bi?ai-bi:gradeNum(a.rank)-gradeNum(b.rank);};
-  const result={junior:[],ssgt:[],gysgt:[]};let total=0;
-  Object.entries(groups).forEach(([g,gMs])=>{
-    if(!gMs.length||q[g]<=0)return;
-    const hist=(history.weekendBurden||{})[g]||[];
-    const sorted=[...gMs].sort((a,b)=>wkSort(hist,a,b));
-    result[g]=sorted.slice(0,Math.min(q[g],sorted.length));total+=result[g].length;
-  });
-  while(total<wkCount){
-    const hist=(history.weekendBurden||{}).junior||[];
-    const sorted=[...groups.junior].sort((a,b)=>wkSort(hist,a,b));
-    const have=new Set(result.junior.map(m=>m.id));
-    const next=sorted.find(m=>!have.has(m.id));
-    if(next){result.junior.push(next);total++;}else break;
-  }
-  return result;
+  if(!wkCount)return[];
+  const wb=(history&&history.weekendBurden)||{};
+  const flat=[...(wb.junior||[]),...(wb.ssgt||[]),...(wb.gysgt||[])];
+  const E=window.DraftOrderEngine;
+  if(E&&E.computeWeekendAssignees)return E.computeWeekendAssignees(marines,wkCount,flat);
+  // Fallback if the engine script is unavailable: least-burdened, then longest-ago.
+  const counts={};flat.forEach(id=>{counts[id]=(counts[id]||0)+1;});
+  const last={};flat.forEach((id,i)=>{last[id]=i;});
+  return marines.map((m,i)=>({m,i})).sort((a,b)=>{
+    const ca=counts[a.m.id]||0,cb=counts[b.m.id]||0;if(ca!==cb)return ca-cb;
+    const la=last[a.m.id]==null?-1:last[a.m.id],lb=last[b.m.id]==null?-1:last[b.m.id];
+    if(la!==lb)return la-lb;return a.i-b.i;
+  }).slice(0,Math.min(wkCount,marines.length)).map(x=>x.m);
 }
 
 function computeDoubleDuty(marines,totalDays,preAssigned,history){
@@ -402,22 +402,27 @@ function computeDoubleDuty(marines,totalDays,preAssigned,history){
   const dd={};sorted.slice(0,Math.min(rem-elig.length,4)).forEach(m=>{dd[m.id]=2;});return dd;
 }
 
+// Short month (fewer duty days than Marines): some Marines sit out. Standing duty
+// is allocated EQUALLY across the company by overall duty burden — the Marines who
+// have stood the LEAST recent duty stand first; rank does not buy a Marine out.
+// dutyHistory is stored grouped by rank (legacy), so combine before selecting.
+// Returns FLAT { standing:[...], sittingOut:[...] }.
 function computeShortMonthRoster(marines,availDays,preAssigned,history){
   const preIds=new Set(Object.values(preAssigned));
   const elig=marines.filter(m=>!preIds.has(m.id));
   const rem=availDays-Object.keys(preAssigned).length;
-  const s={junior:Math.round(GROUP_QUOTA.junior*rem),ssgt:Math.round(GROUP_QUOTA.ssgt*rem),gysgt:0};
-  s.gysgt=Math.max(0,rem-s.junior-s.ssgt);
-  const diff=rem-(s.junior+s.ssgt+s.gysgt);if(diff)s.junior+=diff;
-  const standing={junior:[],ssgt:[],gysgt:[]},sittingOut={junior:[],ssgt:[],gysgt:[]};
-  ['junior','ssgt','gysgt'].forEach(g=>{
-    const gMs=elig.filter(m=>groupOf(m.rank)===g);
-    const hist=((history.dutyHistory)||{})[g]||[];
-    const sorted=[...gMs].sort((a,b)=>{const ai=hist.lastIndexOf(a.id),bi=hist.lastIndexOf(b.id);return ai!==bi?ai-bi:gradeNum(a.rank)-gradeNum(b.rank);});
-    const n=Math.max(0,Math.min(s[g],sorted.length));
-    standing[g]=sorted.slice(0,n);sittingOut[g]=sorted.slice(n);
+  const dh=(history&&history.dutyHistory)||{};
+  const flat=[...(dh.junior||[]),...(dh.ssgt||[]),...(dh.gysgt||[])];
+  const counts={};flat.forEach(id=>{counts[id]=(counts[id]||0)+1;});
+  const last={};flat.forEach((id,i)=>{last[id]=i;});
+  const seniorityIdx={};marines.forEach((m,i)=>{seniorityIdx[m.id]=i;});
+  const sorted=[...elig].sort((a,b)=>{
+    const ca=counts[a.id]||0,cb=counts[b.id]||0;if(ca!==cb)return ca-cb;
+    const la=last[a.id]==null?-1:last[a.id],lb=last[b.id]==null?-1:last[b.id];
+    if(la!==lb)return la-lb;return seniorityIdx[a.id]-seniorityIdx[b.id];
   });
-  return{standing,sittingOut};
+  const n=Math.max(0,Math.min(rem,sorted.length));
+  return{standing:sorted.slice(0,n),sittingOut:sorted.slice(n)};
 }
 
 function buildDraftOrder(marines,doubleDuty,preAssigned){
@@ -433,6 +438,148 @@ function buildDraftOrder(marines,doubleDuty,preAssigned){
   ddNon.forEach(m=>{order.push({id:m.id,turn:1});order.push({id:m.id,turn:2});});
   rest.forEach(m=>order.push({id:m.id,turn:1}));
   return order;
+}
+
+// ─── DRAFT-ORDER ENGINE BRIDGE ────────────────────────────────────────────────
+// The strategy-based draft-order engine (window.DraftOrderEngine) and the historical
+// burden fixture (window.DutyDraftBurden) are loaded as separate scripts above. The
+// engine is pure + unit-tested; the UI only feeds it data and renders the result.
+const DRAFT_MODE_LABELS={
+  pure_seniority:'Pure Seniority',
+  weighted_seniority:'COA 1 — Weighted Seniority',
+  weighted_lottery:'COA 2 — Weighted Lottery',
+  hybrid:'COA 3 — Hybrid',
+};
+const DRAFT_MODE_OPTIONS=[
+  ['weighted_seniority','COA 1 — Weighted Seniority'],
+  ['weighted_lottery','COA 2 — Weighted Lottery'],
+  ['hybrid','COA 3 — Hybrid'],
+  ['pure_seniority','Pure Seniority (fallback)'],
+];
+
+// TODO(import): the live app does not yet track per-month burden, so the historical
+// window comes from the Apr–Jun 2026 fixture, matched to the current roster BY NAME.
+// Swap this for real captured per-month burden when that pipeline exists.
+function engineHistoryFor(marines){
+  return (window.DutyDraftBurden)
+    ? window.DutyDraftBurden.buildHistoryForRoster(marines)
+    : {months:[],weekend:{},doubleDuty:{}};
+}
+function generateDraftOrderEngine(mode,marines,doubleDuty,preAssigned,seed,opts){
+  const E=window.DraftOrderEngine;
+  if(!E)throw new Error('Draft-order engine not loaded — check /draft-order-engine.js');
+  const history=engineHistoryFor(marines);
+  return E.generateDraftOrder(mode,marines,history,Object.assign({
+    doubleDuty:doubleDuty||{},
+    preAssigned:preAssigned||{},
+    seed:seed,
+  },opts||{}));
+}
+
+// COA decision tool for the CO. Takes Monte-Carlo lab results (each COA simulated
+// many times) and renders: (1) per-COA summary stat cards, (2) a side-by-side
+// comparison table of every Marine's expected pick + range under each COA vs their
+// pure-seniority slot, (3) one sample order per COA. Pure facts, no recommendation.
+function CoaComparison({labResults,marines}){
+  if(!labResults)return null;
+  const stats=labResults.stats;
+  const mean=acc=>acc&&acc.n?acc.sum/acc.n:null;
+  const baseById={};
+  Object.keys(stats.pure_seniority||{}).forEach(id=>{const m=mean(stats.pure_seniority[id]);baseById[id]=m==null?null:Math.round(m);});
+  function summarize(modeStats){
+    let totAbs=0,totRange=0,cnt=0;const moves=[];
+    Object.keys(modeStats||{}).forEach(id=>{
+      const a=modeStats[id];const mn=mean(a);const base=baseById[id];
+      if(mn==null||base==null)return;
+      const delta=base-mn; // + = picks earlier than seniority
+      totAbs+=Math.abs(delta);totRange+=(a.max-a.min);cnt++;
+      moves.push({id,delta,mean:mn,min:a.min,max:a.max});
+    });
+    moves.sort((x,y)=>y.delta-x.delta);
+    return{avgAbsMove:cnt?totAbs/cnt:0,volatility:cnt?totRange/cnt:0,moved:moves.filter(x=>Math.abs(x.delta)>=0.5).length,total:cnt,topUp:moves.filter(x=>x.delta>0.5).slice(0,3),topDown:moves.filter(x=>x.delta<-0.5).slice(-3).reverse()};
+  }
+  const COMPARE_MODES=['weighted_seniority','weighted_lottery','hybrid'];
+  const nm=id=>{const m=(marines||[]).find(x=>x.id===id);return m?m.rank+' '+m.lastName:id;};
+  const sum={};COMPARE_MODES.forEach(m=>{sum[m]=summarize(stats[m]||{});});
+  const dcolor=d=>d>0.5?'var(--green)':d<-0.5?'var(--red)':'var(--muted)';
+  return(
+    <div className="mt">
+      {COMPARE_MODES.map(mode=>(
+        <div key={mode} className="wk-group" style={{marginBottom:6}}>
+          <div className="wk-group-title" style={{fontSize:11}}>{DRAFT_MODE_LABELS[mode]}</div>
+          <div style={{fontSize:10,color:'var(--muted)',marginBottom:4}}>
+            avg movement ±{sum[mode].avgAbsMove.toFixed(1)} spots · {sum[mode].moved}/{sum[mode].total} move · volatility {sum[mode].volatility.toFixed(1)} {sum[mode].volatility<0.5?'(stable)':sum[mode].volatility>4?'(high)':'(moderate)'}
+          </div>
+          <div style={{fontSize:10}}>
+            <span style={{color:'var(--green)'}}>▲ helped:</span> {sum[mode].topUp.length?sum[mode].topUp.map(x=>nm(x.id)+' (+'+x.delta.toFixed(1)+')').join(', '):'—'}<br/>
+            <span style={{color:'var(--red)'}}>▼ moved back:</span> {sum[mode].topDown.length?sum[mode].topDown.map(x=>nm(x.id)+' ('+x.delta.toFixed(1)+')').join(', '):'—'}
+          </div>
+        </div>
+      ))}
+      <div style={{fontSize:10,color:'var(--muted)',margin:'6px 0 4px'}}>Expected pick (avg over {labResults.N} runs); range shown for COAs with chance. Color = vs seniority.</div>
+      <div style={{overflowX:'auto'}}>
+        <table className="rt" style={{minWidth:440}}>
+          <thead><tr>
+            <th style={{textAlign:'left'}}>MARINE</th><th>SEN</th><th>COA 1</th><th>COA 2</th><th>COA 3</th>
+          </tr></thead>
+          <tbody>
+            {marines.map(m=>{
+              const base=baseById[m.id];
+              return(
+                <tr key={m.id}>
+                  <td style={{fontFamily:'var(--fh)',fontSize:10,letterSpacing:.3}}>{m.rank} {m.lastName}</td>
+                  <td style={{textAlign:'center',fontSize:10,color:'var(--muted)'}}>{base==null?'—':base}</td>
+                  {COMPARE_MODES.map(mode=>{
+                    const a=stats[mode]&&stats[mode][m.id];const mn=a?mean(a):null;const d=(mn==null||base==null)?null:base-mn;
+                    return(
+                      <td key={mode} style={{textAlign:'center',fontSize:10}}>
+                        {mn==null?'—':<span><span style={{color:dcolor(d),fontWeight:Math.abs(d)>0.5?700:400}}>{Math.round(mn)}</span>{a.max!==a.min&&<span style={{color:'var(--muted)',fontSize:8}}> [{a.min}-{a.max}]</span>}</span>}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {labResults.sampleAudits&&Object.keys(labResults.sampleAudits).map(mode=>(
+        <details key={mode} style={{marginTop:6}}>
+          <summary style={{cursor:'pointer',fontSize:11,color:'var(--accent)'}}>Sample {DRAFT_MODE_LABELS[mode]} order</summary>
+          <div className="mt"><DraftOrderPreview audit={labResults.sampleAudits[mode]} marines={marines} detailed={true}/></div>
+        </details>
+      ))}
+    </div>
+  );
+}
+
+// Reusable, explainable order display. `detailed` adds the per-Marine math (admins
+// only); Marines see just the order + a plain-language explanation.
+function DraftOrderPreview({audit,marines,detailed}){
+  if(!audit)return null;
+  const byId={};(marines||[]).forEach(m=>{byId[m.id]=m;});
+  const rowById={};(audit.marines||[]).forEach(r=>{rowById[r.id]=r;});
+  const ddIds=new Set((audit.currentMonthDoubleDuty||[]).map(d=>d.id));
+  return(
+    <div>
+      <div className="alert a-i" style={{marginBottom:8}}><strong>{DRAFT_MODE_LABELS[audit.draftOrderMode]||audit.draftOrderMode}</strong>{audit.modeExplanation}</div>
+      {(audit.currentMonthDoubleDuty||[]).length>0&&<div className="alert a-w" style={{marginBottom:8}}><strong>DOUBLE-DUTY PRIORITY</strong>{audit.currentMonthDoubleDuty.map(d=>d.name).join(', ')} stand double duty this month, so they pick first — two picks each.</div>}
+      <div style={{border:'1px solid var(--border)',borderRadius:4,overflow:'hidden'}}>
+        {(audit.order||[]).map((e,i)=>{
+          const m=byId[e.id];const r=rowById[e.id];const dd=ddIds.has(e.id);
+          return(
+            <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 8px',borderBottom:i<audit.order.length-1?'1px solid var(--border)':'none',fontSize:11,background:dd?'rgba(200,168,75,0.08)':'transparent'}}>
+              <span style={{width:28,color:'var(--muted)',fontFamily:'var(--fm)'}}>#{e.pick}</span>
+              <span style={{flex:1}}>{e.name||(m?dName(m):e.id)}</span>
+              {dd&&<span className="pill p-org">×2 · turn {e.turn}</span>}
+              {detailed&&!dd&&r&&r.source==='weighted-seniority'&&<span style={{color:'var(--muted)',fontFamily:'var(--fm)',fontSize:10}}>b{r.base}+w{r.weekendPoints}+d{r.doubleDutyPoints}={r.uncappedScore}</span>}
+              {detailed&&!dd&&r&&r.source==='lottery'&&<span style={{color:'var(--muted)',fontFamily:'var(--fm)',fontSize:10}}>🎟 {r.tickets}</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function TimerRing({secs,total,paused}){
@@ -489,6 +636,7 @@ function App({authUser,onLogout}){
   // Identity is bound to the logged-in account: admins act as the NCOIC,
   // a linked Marine acts as themselves. No free "view as" switching.
   const isAdminUser=authUser.role==='sncoic'||authUser.role==='master';
+  const isMaster=authUser.role==='master';
   const boundUser=isAdminUser?'ncoic':(authUser.marineId||'ncoic');
   const [st,setSt]=useState(null);
   const [tab,setTab]=useState(isAdminUser?'admin':'roster');
@@ -505,6 +653,9 @@ function App({authUser,onLogout}){
   const [editDModal,setEditDModal]=useState(null);
   const [calMode,setCalMode]=useState(null);
   const [clearModal,setClearModal]=useState(null); // {type:'pd'|'na', mid}
+  const [orderPreview,setOrderPreview]=useState(null); // engine result generated-but-not-locked
+  const [labResults,setLabResults]=useState(null);     // master-admin COA comparison ("show command")
+  const [labSampleDD,setLabSampleDD]=useState(false);  // lab: simulate this month's double duty for the demo
   const [loading,setLoading]=useState(true);
   const [editRoster,setEditRoster]=useState(null);
   const [newMRank,setNewMRank]=useState('LCPL');
@@ -851,7 +1002,7 @@ function App({authUser,onLogout}){
       const ad=getAllDates();
       const wk=ad.filter(d=>isWkDate(d));
       const wkAsgn=computeWkAssignees(marines,wk.length,st.history||{});
-      const wkIds=[...wkAsgn.junior,...wkAsgn.ssgt,...wkAsgn.gysgt].map(m=>m.id);
+      const wkIds=wkAsgn.map(m=>m.id);
       const dd=computeDoubleDuty(marines,ad.length,preAssigned,st.history||{});
       const preIds=new Set(Object.values(preAssigned));
       const remDays=ad.length-Object.keys(preAssigned).length;
@@ -932,15 +1083,16 @@ function App({authUser,onLogout}){
 
   // ── SHORT MONTH ────────────────────────────────────────────────────────────
   function ShortMonthView(){
-    const roster=st.shortRoster||{standing:{junior:[],ssgt:[],gysgt:[]},sittingOut:{junior:[],ssgt:[],gysgt:[]}};
-    const standing=[...(roster.standing?.junior||[]),...(roster.standing?.ssgt||[]),...(roster.standing?.gysgt||[])];
-    const sitting=[...(roster.sittingOut?.junior||[]),...(roster.sittingOut?.ssgt||[]),...(roster.sittingOut?.gysgt||[])];
+    const roster=st.shortRoster||{standing:[],sittingOut:[]};
+    // Support both the new flat shape and any legacy grouped state.
+    const standing=Array.isArray(roster.standing)?roster.standing:[...(roster.standing?.junior||[]),...(roster.standing?.ssgt||[]),...(roster.standing?.gysgt||[])];
+    const sitting=Array.isArray(roster.sittingOut)?roster.sittingOut:[...(roster.sittingOut?.junior||[]),...(roster.sittingOut?.ssgt||[]),...(roster.sittingOut?.gysgt||[])];
     async function confirm(){
       const standIds=new Set(standing.map(m=>m.id));
       const activeMariners=marines.filter(m=>standIds.has(m.id));
       const ad=getAllDates();const wk=ad.filter(d=>isWkDate(d));
       const wkAsgn=computeWkAssignees(activeMariners,wk.length,st.history||{});
-      const wkIds=[...wkAsgn.junior,...wkAsgn.ssgt,...wkAsgn.gysgt].map(m=>m.id);
+      const wkIds=wkAsgn.map(m=>m.id);
       const dd=computeDoubleDuty(activeMariners,ad.length,preAssigned,st.history||{});
       await patch({marines:activeMariners,weekendDates:wk,wkAssigneeIds:wkIds,wkAssignees:wkAsgn,doubleDuty:dd,phase:'wkpreview'});
       for(const m of sitting)await api.addNotif('ROSTER UPDATE',`${dName(m)}: limited duty days this month  --  not on the roster for ${MONTHS[st.month]}. Rotation maintained.`,'📋',m.id);
@@ -949,7 +1101,7 @@ function App({authUser,onLogout}){
       <div>
         <div className="short-banner">
           <div style={{fontFamily:'var(--fh)',fontSize:12,letterSpacing:1,color:'var(--red)',marginBottom:4}}>⚠ SHORT MONTH</div>
-          <div style={{fontSize:12,color:'#fca5a5'}}>{getAllDates().length} days · {marines.length} Marines · {sitting.length} sit out (60/25/15 rotation)</div>
+          <div style={{fontSize:12,color:'#fca5a5'}}>{getAllDates().length} days · {marines.length} Marines · {sitting.length} sit out (equal rotation)</div>
         </div>
         <div className="card"><div className="card-title">STANDING DUTY ({standing.length})</div>{standing.map(m=><div key={m.id} className="short-marine">{dName(m)}</div>)}</div>
         <div className="card"><div className="card-title" style={{color:'var(--muted)'}}>SITTING OUT ({sitting.length})</div>{sitting.map(m=><div key={m.id} className="short-marine" style={{color:'var(--muted)'}}>{dName(m)}</div>)}</div>
@@ -966,7 +1118,8 @@ function App({authUser,onLogout}){
     await patch({phase:'top5'});
     // Notify ALL duties
     await api.addNotif('SUBMISSIONS OPEN',`${MONTHS[st.month]} ${st.year}: Preferred Dates and Non-Availability selection is now open. Deadline is 1630 today.`,'📅');
-    for(const m of[...(wkAssignees.junior||[]),...(wkAssignees.ssgt||[]),...(wkAssignees.gysgt||[])]){
+    const wkAssignedList=Array.isArray(wkAssignees)?wkAssignees:[...(wkAssignees.junior||[]),...(wkAssignees.ssgt||[]),...(wkAssignees.gysgt||[])];
+    for(const m of wkAssignedList){
       await api.addNotif('WEEKEND DUTY',`${dName(m)}: you are scheduled for weekend duty next month.`,'📅',m.id);
     }
     for(const mid of Object.keys(doubleDuty)){
@@ -976,23 +1129,23 @@ function App({authUser,onLogout}){
   }
 
   function WkPreview(){
-    const groups=[{label:'E1-E5 (JUNIOR)',key:'junior',quota:GROUP_QUOTA.junior,color:'var(--blue)'},{label:'E6 (SSGT)',key:'ssgt',quota:GROUP_QUOTA.ssgt,color:'var(--accent)'},{label:'E7 (GYSGT)',key:'gysgt',quota:GROUP_QUOTA.gysgt,color:'var(--orange)'}];
+    const assigned=Array.isArray(wkAssignees)?wkAssignees:[...(wkAssignees.junior||[]),...(wkAssignees.ssgt||[]),...(wkAssignees.gysgt||[])];
+    const fairness=(window.DraftOrderEngine&&window.DraftOrderEngine.FAIRNESS_STATEMENT)||'Weekend burden is tracked equally across all Marines. Seniority affects draft order, not weekend obligation.';
     return(
       <div>
         <div className="card">
           <div className="card-title">WEEKEND DUTY PREVIEW</div>
           <div className="card-sub">{MONTHS[st.month]} {st.year} · {weekendDates.length} weekend day{weekendDates.length!==1?'s':''} · 1 slotted duty per date</div>
-          {groups.map(g=>{const assigned=wkAssignees[g.key]||[];return(
-            <div key={g.key} className="wk-group">
-              <div className="wk-group-title" style={{color:g.color}}>{g.label}  --  {Math.round(g.quota*100)}% = {assigned.length} day{assigned.length!==1?'s':''}</div>
-              {!assigned.length&&<div style={{color:'var(--muted)',fontSize:11}}>None this month.</div>}
-              {assigned.map((m,i)=>(<div key={m.id} className="wk-marine-row">
-                <span style={{fontFamily:'var(--fh)',fontSize:11,flex:1}}>{dName(m)}</span>
-                <span style={{color:'var(--muted)',fontSize:9}}>#{i+1}</span>
-                {doubleDuty[m.id]&&<span className="pill p-org">×2</span>}
-              </div>))}
-            </div>
-          );})}
+          <div className="alert a-i mt"><strong>EQUAL WEEKEND BURDEN</strong>{fairness}</div>
+          <div className="wk-group mt">
+            <div className="wk-group-title">SLOTTED WEEKEND DUTIES ({assigned.length})</div>
+            {!assigned.length&&<div style={{color:'var(--muted)',fontSize:11}}>None this month.</div>}
+            {assigned.map((m,i)=>(<div key={m.id} className="wk-marine-row">
+              <span style={{fontFamily:'var(--fh)',fontSize:11,flex:1}}>{dName(m)}</span>
+              <span style={{color:'var(--muted)',fontSize:9}}>#{i+1}</span>
+              {doubleDuty[m.id]&&<span className="pill p-org">×2</span>}
+            </div>))}
+          </div>
           {Object.keys(doubleDuty).length>0&&<div className="alert a-w mt"><strong>DOUBLE DUTY</strong>{Object.keys(doubleDuty).map(mid=>{const m=marines.find(x=>x.id===mid);return m?<div key={mid}>{dName(m)}</div>:null;})}</div>}
           {Object.keys(preAssigned).length>0&&<div className="alert a-i mt"><strong>PRE-ASSIGNED</strong>{Object.entries(preAssigned).map(([d,mid])=>{const m=marines.find(x=>x.id===mid);return<div key={d}>{MONTHS[st.month].slice(0,3)} {d}: {m?dName(m):' -- '}  --  {preAssignReasons[d]||''}</div>;})}</div>}
         </div>
@@ -1147,6 +1300,58 @@ function App({authUser,onLogout}){
     );
   }
 
+  // ── DRAFT ORDER (generate → review → lock) ─────────────────────────────────
+  function DraftOrderSection(){
+    const mode=st.draftOrderMode||'weighted_seniority';
+    const locked=!!(st.draftOrderAudit&&st.draftOrderAudit.locked);
+    async function changeMode(m){setOrderPreview(null);await patch({draftOrderMode:m});}
+    function doGenerate(){
+      try{setOrderPreview(generateDraftOrderEngine(mode,marines,doubleDuty,preAssigned,Date.now(),{month:st.month,year:st.year,generatedBy:activeUser}));}
+      catch(err){alert('Could not generate draft order: '+err.message);}
+    }
+    async function lockOrder(){
+      if(!orderPreview||!window.DraftOrderEngine)return;
+      const lockedAudit=window.DraftOrderEngine.lockDraftOrder(orderPreview.audit,activeUser);
+      await patch({draftOrderAudit:lockedAudit,draftOrder:orderPreview.order,draftOrderMode:mode});
+      setOrderPreview(null);
+    }
+    async function resetOrder(){
+      if(!confirm('Reset the locked draft order? You will need to generate and lock it again before the draft can start.'))return;
+      setOrderPreview(null);
+      await patch({draftOrderAudit:null});
+    }
+    return(
+      <div className="card">
+        <div className="card-title">DRAFT ORDER</div>
+        <div className="field">
+          <label className="lbl">Method (COA)</label>
+          {isMaster
+            ?<select className="inp" value={mode} disabled={locked} onChange={e=>changeMode(e.target.value)}>
+               {DRAFT_MODE_OPTIONS.map(o=><option key={o[0]} value={o[0]}>{o[1]}</option>)}
+             </select>
+            :<div style={{fontSize:12,fontWeight:700}}>{DRAFT_MODE_LABELS[mode]}{!isMaster&&<span style={{color:'var(--muted)',fontWeight:400}}>  (set by master admin)</span>}</div>}
+        </div>
+        {locked
+          ?<div>
+             <div className="alert a-g"><strong>✓ DRAFT ORDER LOCKED</strong>Locked and ready to start.{st.draftOrderAudit.generatedAt?' Generated '+new Date(st.draftOrderAudit.generatedAt).toLocaleString()+'.':''}</div>
+             <DraftOrderPreview audit={st.draftOrderAudit} marines={marines} detailed={isAdminUser}/>
+             {isMaster&&<button className="btn btn-red btn-sm mt" onClick={resetOrder}>↺ RESET / UNLOCK</button>}
+           </div>
+          :<div>
+             <div className="card-sub">Generate the order, review it, then lock it. The draft cannot start until the order is locked.</div>
+             <button className="btn btn-gold btn-full" onClick={doGenerate}>⚙ GENERATE DRAFT ORDER</button>
+             {orderPreview&&<div className="mt">
+               <DraftOrderPreview audit={orderPreview.audit} marines={marines} detailed={isAdminUser}/>
+               <div className="rowb mt">
+                 <button className="btn btn-ghost btn-sm" onClick={doGenerate}>↻ Regenerate</button>
+                 <button className="btn btn-grn" onClick={lockOrder}>✓ CONFIRM &amp; LOCK</button>
+               </div>
+             </div>}
+           </div>}
+      </div>
+    );
+  }
+
   // ── REVIEW ─────────────────────────────────────────────────────────────────
   function Review(){
     const submitted=marines.filter(m=>(prefs[m.id]||[]).length>0).length;
@@ -1195,12 +1400,14 @@ function App({authUser,onLogout}){
             </div>
           );})}
         </div>
+        {DraftOrderSection()}
         <div className="card">
           <div className="card-title">SCHEDULE DRAFT</div>
+          {!(st.draftOrderAudit&&st.draftOrderAudit.locked)&&<div className="alert a-w"><strong>LOCK THE DRAFT ORDER FIRST</strong>Generate and lock the draft order above before scheduling the draft.</div>}
           <div className="field"><label className="lbl">Date and time</label><input className="inp" type="datetime-local" value={draftDT} onChange={e=>setDraftDT(e.target.value)}/></div>
           <div className="rowb mt">
             {BackBtn()}
-            <button className="btn btn-gold" onClick={schedule}>SCHEDULE DRAFT →</button>
+            <button className="btn btn-gold" onClick={schedule} disabled={!(st.draftOrderAudit&&st.draftOrderAudit.locked)}>SCHEDULE DRAFT →</button>
           </div>
         </div>
       </div>
@@ -1209,10 +1416,16 @@ function App({authUser,onLogout}){
 
   // ── DRAFT VIEW ─────────────────────────────────────────────────────────────
   async function handleLaunchDraft(){
-    const order=buildDraftOrder(marines,doubleDuty,preAssigned);
+    // The draft can only start from a LOCKED, audited order (built in the Review
+    // screen). The legacy buildDraftOrder() is retained but no longer drives the draft.
+    const audit=st.draftOrderAudit;
+    if(!audit||!audit.locked||!Array.isArray(st.draftOrder)||!st.draftOrder.length){
+      alert('No locked draft order. Generate and lock the draft order in the NCOIC Review screen first.');
+      return;
+    }
     const initial={};
     Object.entries(preAssigned).forEach(([d,mid])=>{initial[Number(d)]=mid;});
-    const result=await api.startDraft({draftOrder:order,assignments:initial});
+    const result=await api.startDraft({draftOrder:st.draftOrder,assignments:initial,draftOrderAudit:audit,draftOrderMode:st.draftOrderMode});
     if(result.state)setSt(result.state);
   }
 
@@ -1238,6 +1451,10 @@ function App({authUser,onLogout}){
             <div className="card-sub">All duties notified. Draft launches automatically.</div>
             {isNcoic&&<button className="btn btn-orange btn-sm mt" onClick={handleLaunchDraft}>▶ LAUNCH NOW (DEMO)</button>}
           </div>
+          {st.draftOrderAudit&&<div className="card">
+            <div className="card-title">ANNOUNCED DRAFT ORDER</div>
+            <DraftOrderPreview audit={st.draftOrderAudit} marines={marines} detailed={isAdminUser}/>
+          </div>}
         </div>
       );
     }
@@ -1768,6 +1985,9 @@ function App({authUser,onLogout}){
     const wbJ=h.weekendBurden.junior||[];
     const wbS=h.weekendBurden.ssgt||[];
     const wbG=h.weekendBurden.gysgt||[];
+    // Weekend burden is tracked company-wide (equal across all ranks); combine the
+    // legacy per-rank arrays so WK STOOD / WK QUEUE reflect the whole company.
+    const wbAll=[...wbJ,...wbS,...wbG];
     const ed=h.extraDuty||[];
     const dhJ=h.dutyHistory.junior||[];
     const dhS=h.dutyHistory.ssgt||[];
@@ -1787,6 +2007,7 @@ function App({authUser,onLogout}){
         <div className="card">
           <div className="card-title">FAIRNESS HISTORY REPORT</div>
           <div className="card-sub">Cumulative data across all completed cycles. Use this to verify the rotation engine is working correctly.</div>
+          <div className="alert a-i mt"><strong>EQUAL WEEKEND BURDEN</strong>Weekend burden is tracked equally across all Marines. Seniority affects draft order, not weekend obligation. (Tables are grouped by rank for readability only; WK columns count company-wide.)</div>
           <div className="dash-grid" style={{marginTop:8}}>
             <div className="dash-cell"><div className="dash-num">{totalWkStood}</div><div className="dash-lbl">TOTAL WK DUTIES</div></div>
             <div className="dash-cell"><div className="dash-num">{totalDD}</div><div className="dash-lbl">TOTAL DOUBLE DUTIES</div></div>
@@ -1811,8 +2032,8 @@ function App({authUser,onLogout}){
                 </thead>
                 <tbody>
                   {g.marines.map(m=>{
-                    const wkCount=countOccurrences(g.wb,m.id);
-                    const wkPos=queuePos(g.wb,m.id);
+                    const wkCount=countOccurrences(wbAll,m.id);
+                    const wkPos=queuePos(wbAll,m.id);
                     const ddCount=countOccurrences(ed,m.id);
                     const ddPos=queuePos(ed,m.id);
                     const sitCount=countOccurrences(g.dh,m.id);
@@ -1877,6 +2098,29 @@ function App({authUser,onLogout}){
       if(r.ok){const s=await api.getState();setSt(s);setEditRoster([...s.marines]);setActiveUser(boundUser);setPendingDay(null);}
     }
     const nextMonthName=(()=>{const m=st.month===11?0:st.month+1;const y=st.month===11?st.year+1:st.year;return MONTHS[m]+' '+y;})();
+    function runLab(){
+      try{
+        const E=window.DraftOrderEngine,B=window.DutyDraftBurden;
+        if(!E)throw new Error('engine not loaded');
+        const N=400; // simulate the random COAs many times for honest expected picks
+        const dd=labSampleDD&&B?B.currentDoubleDutyForRoster(marines):doubleDuty;
+        const stats={},sampleAudits={};
+        E.ALL_MODES.forEach(mode=>{
+          const acc={};let sample=null;
+          const runs=mode==='pure_seniority'?1:N; // deterministic mode needs one run
+          for(let i=0;i<runs;i++){
+            const res=generateDraftOrderEngine(mode,marines,dd,preAssigned,mode+'-'+i,{month:st.month,year:st.year});
+            if(i===0)sample=res;
+            const seen={};
+            res.order.forEach((e,idx)=>{if(seen[e.id]==null)seen[e.id]=idx+1;}); // first pick # per Marine
+            Object.keys(seen).forEach(id=>{const p=seen[id];if(!acc[id])acc[id]={sum:0,min:Infinity,max:-Infinity,n:0};acc[id].sum+=p;acc[id].min=Math.min(acc[id].min,p);acc[id].max=Math.max(acc[id].max,p);acc[id].n++;});
+          }
+          stats[mode]=acc;sampleAudits[mode]=sample.audit;
+        });
+        const ddCount=Array.isArray(dd)?dd.length:Object.keys(dd).length;
+        setLabResults({N,stats,sampleAudits,ddCount});
+      }catch(err){alert('Lab failed: '+err.message);}
+    }
     return(
       <div>
         <div className="card">
@@ -1917,6 +2161,20 @@ function App({authUser,onLogout}){
             </div>
           ))}
         </div>
+        {isMaster&&<div className="card">
+          <div className="card-title">COA COMPARISON LAB</div>
+          <div className="card-sub">For the CO: real draft orders under the real rules, using the current roster and recent weekend/double-duty burden. The random COAs (2 &amp; 3) are simulated 400× to show each Marine's expected pick and range. Changes nothing and starts no draft.</div>
+          <label style={{display:'flex',alignItems:'center',gap:8,margin:'8px 0',fontSize:11}}>
+            <input type="checkbox" checked={labSampleDD} onChange={e=>setLabSampleDD(e.target.checked)}/>
+            Simulate this month's double duty (LCpl Sakamoto #1, LCpl McBride #2) to show the priority rule
+          </label>
+          <div className="row">
+            <button className="btn btn-gold" onClick={runLab}>▶ RUN COMPARISON</button>
+            {labResults&&<button className="btn btn-ghost" onClick={()=>setLabResults(null)}>✕ Clear</button>}
+          </div>
+          {labResults&&<div style={{fontSize:10,color:'var(--muted)',marginTop:8}}>{MONTHS[st.month]} {st.year} · roster {marines.length} · double-duty priority: {labResults.ddCount?labResults.ddCount+' Marine(s) locked to the front':'none this month'} · burden window: recent weekend + double-duty history</div>}
+          {labResults&&<CoaComparison labResults={labResults} marines={marines}/>}
+        </div>}
         <div className="card">
           <div className="card-title">COMMANDING OFFICER</div>
           <div className="card-sub">Name appears on the published duty roster. Saved automatically.</div>
@@ -1964,7 +2222,7 @@ function App({authUser,onLogout}){
   const notifications=st.notifications||[];
   const history=st.history||{weekendBurden:{junior:[],ssgt:[],gysgt:[]},extraDuty:[],dutyHistory:{junior:[],ssgt:[],gysgt:[]},lastDutyDay:{}};
   const weekendDates=st.weekendDates||[];
-  const wkAssignees=st.wkAssignees||{junior:[],ssgt:[],gysgt:[]};
+  const wkAssignees=st.wkAssignees||[];
 
   const unreadCount=notifications.filter(n=>n.unread&&(activeUser==='ncoic'||!n.targetMid||n.targetMid===activeUser)).length;
 

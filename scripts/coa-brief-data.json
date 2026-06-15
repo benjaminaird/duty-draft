@@ -1,0 +1,577 @@
+{
+  "meta": {
+    "generated": "2026-06-13",
+    "months": 12,
+    "startLabel": "July 2026",
+    "endLabel": "June 2027",
+    "rosterSize": 29,
+    "cap": 8
+  },
+  "weekend": {
+    "min": 2,
+    "max": 4,
+    "avg": 3.6,
+    "spread": 2
+  },
+  "luck": {
+    "c1": 0,
+    "c2": 7,
+    "c3": 2.9
+  },
+  "seniorityPredicts": {
+    "c1": 1,
+    "c2": 0.7,
+    "c3": 1
+  },
+  "ddRotation": [
+    {
+      "month": "Jul 2026",
+      "marines": "LCpl McBride (#29),  LCpl Sakamoto (#28)"
+    },
+    {
+      "month": "Aug 2026",
+      "marines": "LCpl Walter (#27),  LCpl Collins (#26)"
+    },
+    {
+      "month": "Sep 2026",
+      "marines": "LCpl Arriaga (#25)"
+    },
+    {
+      "month": "Oct 2026",
+      "marines": "Cpl Osterhout (#24),  Cpl Cendan (#23)"
+    },
+    {
+      "month": "Nov 2026",
+      "marines": "Cpl Ezeta (#22)"
+    },
+    {
+      "month": "Dec 2026",
+      "marines": "Cpl Mashler (#21),  Cpl Ramos (#20)"
+    },
+    {
+      "month": "Jan 2027",
+      "marines": "Sgt Capone (#16),  Sgt Gaskin (#15)"
+    },
+    {
+      "month": "Feb 2027",
+      "marines": "— (short month)"
+    },
+    {
+      "month": "Mar 2027",
+      "marines": "SSgt Johnson (#14),  SSgt Bumgarner (#13)"
+    },
+    {
+      "month": "Apr 2027",
+      "marines": "SSgt Mueller (#12)"
+    },
+    {
+      "month": "May 2027",
+      "marines": "SSgt Miller (#11),  SSgt Donaldson (#10)"
+    },
+    {
+      "month": "Jun 2027",
+      "marines": "SSgt Jensen (#9)"
+    }
+  ],
+  "perMarine": [
+    {
+      "sen": 1,
+      "name": "GySgt Pena",
+      "c1": "4.8 [1–9]",
+      "c2": "14.3 [5–24]",
+      "c3": "9.1 [5–12]",
+      "weekends": 4,
+      "doubleDuties": 0
+    },
+    {
+      "sen": 2,
+      "name": "GySgt McCreary",
+      "c1": "5.2 [2–7]",
+      "c2": "16 [8–23]",
+      "c3": "9.6 [7–12]",
+      "weekends": 3,
+      "doubleDuties": 0
+    },
+    {
+      "sen": 3,
+      "name": "GySgt Aird",
+      "c1": "6.6 [3–10]",
+      "c2": "16.3 [3–26]",
+      "c3": "9.6 [3–13]",
+      "weekends": 4,
+      "doubleDuties": 0
+    },
+    {
+      "sen": 4,
+      "name": "GySgt Steel",
+      "c1": "7.3 [4–10]",
+      "c2": "14.5 [4–26]",
+      "c3": "10 [4–14]",
+      "weekends": 3,
+      "doubleDuties": 0
+    },
+    {
+      "sen": 5,
+      "name": "GySgt Walker",
+      "c1": "8.1 [5–11]",
+      "c2": "12.8 [2–27]",
+      "c3": "10.2 [2–16]",
+      "weekends": 3,
+      "doubleDuties": 0
+    },
+    {
+      "sen": 6,
+      "name": "GySgt Menz",
+      "c1": "9.3 [5–12]",
+      "c2": "11.9 [5–21]",
+      "c3": "11 [5–15]",
+      "weekends": 4,
+      "doubleDuties": 0
+    },
+    {
+      "sen": 7,
+      "name": "SSgt Weiland",
+      "c1": "10.3 [5–15]",
+      "c2": "15.3 [6–25]",
+      "c3": "11.3 [6–18]",
+      "weekends": 4,
+      "doubleDuties": 0
+    },
+    {
+      "sen": 8,
+      "name": "SSgt Kotasenski",
+      "c1": "11.2 [7–15]",
+      "c2": "14.9 [3–25]",
+      "c3": "12.5 [3–17]",
+      "weekends": 4,
+      "doubleDuties": 0
+    },
+    {
+      "sen": 9,
+      "name": "SSgt Jensen",
+      "c1": "11.3 [1–15]",
+      "c2": "14.4 [1–26]",
+      "c3": "11.2 [1–19]",
+      "weekends": 4,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 10,
+      "name": "SSgt Donaldson",
+      "c1": "11.8 [1–17]",
+      "c2": "14.1 [1–28]",
+      "c3": "11.2 [1–20]",
+      "weekends": 3,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 11,
+      "name": "SSgt Miller",
+      "c1": "12.3 [3–16]",
+      "c2": "17.3 [3–29]",
+      "c3": "13.8 [3–20]",
+      "weekends": 3,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 12,
+      "name": "SSgt Mueller",
+      "c1": "14.7 [1–19]",
+      "c2": "12.4 [1–29]",
+      "c3": "14.6 [1–21]",
+      "weekends": 4,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 13,
+      "name": "SSgt Bumgarner",
+      "c1": "14.2 [1–22]",
+      "c2": "12.8 [1–27]",
+      "c3": "12.3 [1–22]",
+      "weekends": 4,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 14,
+      "name": "SSgt Johnson",
+      "c1": "15.4 [3–21]",
+      "c2": "13.4 [3–26]",
+      "c3": "14.8 [3–19]",
+      "weekends": 3,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 15,
+      "name": "Sgt Gaskin",
+      "c1": "15.9 [1–23]",
+      "c2": "15.8 [1–27]",
+      "c3": "15.2 [1–23]",
+      "weekends": 4,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 16,
+      "name": "Sgt Capone",
+      "c1": "16.9 [3–24]",
+      "c2": "19.5 [1–31]",
+      "c3": "17.5 [1–24]",
+      "weekends": 4,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 17,
+      "name": "Sgt Hallam",
+      "c1": "19.3 [16–23]",
+      "c2": "16.5 [4–28]",
+      "c3": "17.2 [4–25]",
+      "weekends": 4,
+      "doubleDuties": 0
+    },
+    {
+      "sen": 18,
+      "name": "Sgt Rosie",
+      "c1": "20.3 [17–23]",
+      "c2": "17.2 [5–30]",
+      "c3": "19.2 [5–25]",
+      "weekends": 3,
+      "doubleDuties": 0
+    },
+    {
+      "sen": 19,
+      "name": "Sgt Campa",
+      "c1": "21.8 [17–25]",
+      "c2": "13.3 [3–28]",
+      "c3": "19.1 [3–24]",
+      "weekends": 2,
+      "doubleDuties": 0
+    },
+    {
+      "sen": 20,
+      "name": "Cpl Ramos",
+      "c1": "20.3 [1–25]",
+      "c2": "13.5 [1–24]",
+      "c3": "17.1 [1–26]",
+      "weekends": 3,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 21,
+      "name": "Cpl Mashler",
+      "c1": "21.7 [3–27]",
+      "c2": "18.5 [3–29]",
+      "c3": "18.8 [3–27]",
+      "weekends": 4,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 22,
+      "name": "Cpl Ezeta",
+      "c1": "22.3 [1–28]",
+      "c2": "19.9 [1–31]",
+      "c3": "22.8 [1–28]",
+      "weekends": 4,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 23,
+      "name": "Cpl Cendan",
+      "c1": "22.8 [1–29]",
+      "c2": "19.6 [1–31]",
+      "c3": "21.5 [1–29]",
+      "weekends": 4,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 24,
+      "name": "Cpl Osterhout",
+      "c1": "24.2 [3–31]",
+      "c2": "20.3 [3–29]",
+      "c3": "23 [3–31]",
+      "weekends": 4,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 25,
+      "name": "LCpl Arriaga",
+      "c1": "23.9 [1–30]",
+      "c2": "21.6 [1–31]",
+      "c3": "24.2 [1–30]",
+      "weekends": 3,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 26,
+      "name": "LCpl Collins",
+      "c1": "25.3 [1–31]",
+      "c2": "18.5 [1–30]",
+      "c3": "21.9 [1–31]",
+      "weekends": 3,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 27,
+      "name": "LCpl Walter",
+      "c1": "25.5 [3–31]",
+      "c2": "21.8 [3–31]",
+      "c3": "23.9 [3–31]",
+      "weekends": 4,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 28,
+      "name": "LCpl Sakamoto",
+      "c1": "26.5 [1–31]",
+      "c2": "19.1 [1–31]",
+      "c3": "26.5 [1–31]",
+      "weekends": 4,
+      "doubleDuties": 1
+    },
+    {
+      "sen": 29,
+      "name": "LCpl McBride",
+      "c1": "27.8 [3–31]",
+      "c2": "20.9 [3–30]",
+      "c3": "27.8 [3–31]",
+      "weekends": 4,
+      "doubleDuties": 1
+    }
+  ],
+  "example": {
+    "name": "GySgt Aird (#3 most senior)",
+    "c1": [
+      8,
+      9,
+      3,
+      8,
+      6,
+      10,
+      6,
+      3,
+      8,
+      4,
+      7,
+      7
+    ],
+    "c2": [
+      21,
+      20,
+      10,
+      13,
+      3,
+      5,
+      24,
+      19,
+      19,
+      22,
+      14,
+      26
+    ],
+    "c3": [
+      11,
+      11,
+      9,
+      12,
+      3,
+      5,
+      11,
+      8,
+      11,
+      9,
+      13,
+      12
+    ],
+    "c1Worst": 10,
+    "c2Worst": 26
+  },
+  "oneMonth": {
+    "label": "Jul 2026",
+    "rows": [
+      {
+        "pick": 1,
+        "c1": "LCpl Sakamoto (×2·t1)",
+        "c2": "LCpl Sakamoto (×2·t1)",
+        "c3": "LCpl Sakamoto (×2·t1)"
+      },
+      {
+        "pick": 2,
+        "c1": "LCpl Sakamoto (×2·t2)",
+        "c2": "LCpl Sakamoto (×2·t2)",
+        "c3": "LCpl Sakamoto (×2·t2)"
+      },
+      {
+        "pick": 3,
+        "c1": "LCpl McBride (×2·t1)",
+        "c2": "LCpl McBride (×2·t1)",
+        "c3": "LCpl McBride (×2·t1)"
+      },
+      {
+        "pick": 4,
+        "c1": "LCpl McBride (×2·t2)",
+        "c2": "LCpl McBride (×2·t2)",
+        "c3": "LCpl McBride (×2·t2)"
+      },
+      {
+        "pick": 5,
+        "c1": "GySgt Walker",
+        "c2": "SSgt Donaldson",
+        "c3": "SSgt Donaldson"
+      },
+      {
+        "pick": 6,
+        "c1": "GySgt McCreary",
+        "c2": "GySgt Walker",
+        "c3": "GySgt Walker"
+      },
+      {
+        "pick": 7,
+        "c1": "GySgt Steel",
+        "c2": "GySgt Steel",
+        "c3": "GySgt Steel"
+      },
+      {
+        "pick": 8,
+        "c1": "GySgt Aird",
+        "c2": "SSgt Weiland",
+        "c3": "SSgt Weiland"
+      },
+      {
+        "pick": 9,
+        "c1": "GySgt Pena",
+        "c2": "Sgt Hallam",
+        "c3": "Sgt Hallam"
+      },
+      {
+        "pick": 10,
+        "c1": "GySgt Menz",
+        "c2": "SSgt Mueller",
+        "c3": "GySgt McCreary"
+      },
+      {
+        "pick": 11,
+        "c1": "SSgt Donaldson",
+        "c2": "SSgt Miller",
+        "c3": "GySgt Aird"
+      },
+      {
+        "pick": 12,
+        "c1": "SSgt Miller",
+        "c2": "GySgt Menz",
+        "c3": "GySgt Pena"
+      },
+      {
+        "pick": 13,
+        "c1": "SSgt Jensen",
+        "c2": "SSgt Jensen",
+        "c3": "GySgt Menz"
+      },
+      {
+        "pick": 14,
+        "c1": "SSgt Weiland",
+        "c2": "Sgt Campa",
+        "c3": "SSgt Jensen"
+      },
+      {
+        "pick": 15,
+        "c1": "SSgt Kotasenski",
+        "c2": "Sgt Gaskin",
+        "c3": "SSgt Miller"
+      },
+      {
+        "pick": 16,
+        "c1": "SSgt Johnson",
+        "c2": "SSgt Johnson",
+        "c3": "SSgt Kotasenski"
+      },
+      {
+        "pick": 17,
+        "c1": "Sgt Campa",
+        "c2": "SSgt Kotasenski",
+        "c3": "Sgt Campa"
+      },
+      {
+        "pick": 18,
+        "c1": "Sgt Hallam",
+        "c2": "Cpl Ramos",
+        "c3": "SSgt Johnson"
+      },
+      {
+        "pick": 19,
+        "c1": "SSgt Mueller",
+        "c2": "GySgt Pena",
+        "c3": "SSgt Mueller"
+      },
+      {
+        "pick": 20,
+        "c1": "Sgt Rosie",
+        "c2": "GySgt McCreary",
+        "c3": "Sgt Rosie"
+      },
+      {
+        "pick": 21,
+        "c1": "Cpl Ramos",
+        "c2": "GySgt Aird",
+        "c3": "Cpl Ramos"
+      },
+      {
+        "pick": 22,
+        "c1": "SSgt Bumgarner",
+        "c2": "Sgt Rosie",
+        "c3": "SSgt Bumgarner"
+      },
+      {
+        "pick": 23,
+        "c1": "Sgt Gaskin",
+        "c2": "Cpl Mashler",
+        "c3": "Sgt Gaskin"
+      },
+      {
+        "pick": 24,
+        "c1": "Sgt Capone",
+        "c2": "LCpl Walter",
+        "c3": "Sgt Capone"
+      },
+      {
+        "pick": 25,
+        "c1": "Cpl Mashler",
+        "c2": "Cpl Ezeta",
+        "c3": "Cpl Mashler"
+      },
+      {
+        "pick": 26,
+        "c1": "LCpl Arriaga",
+        "c2": "SSgt Bumgarner",
+        "c3": "LCpl Arriaga"
+      },
+      {
+        "pick": 27,
+        "c1": "LCpl Collins",
+        "c2": "Cpl Osterhout",
+        "c3": "LCpl Collins"
+      },
+      {
+        "pick": 28,
+        "c1": "Cpl Ezeta",
+        "c2": "LCpl Arriaga",
+        "c3": "Cpl Ezeta"
+      },
+      {
+        "pick": 29,
+        "c1": "Cpl Cendan",
+        "c2": "Cpl Cendan",
+        "c3": "Cpl Cendan"
+      },
+      {
+        "pick": 30,
+        "c1": "Cpl Osterhout",
+        "c2": "LCpl Collins",
+        "c3": "Cpl Osterhout"
+      },
+      {
+        "pick": 31,
+        "c1": "LCpl Walter",
+        "c2": "Sgt Capone",
+        "c3": "LCpl Walter"
+      }
+    ]
+  }
+}
