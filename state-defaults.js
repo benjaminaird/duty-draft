@@ -10,7 +10,7 @@ function getInitialState(){
   return {
     phase:'setup',year:getTargetYear(),month:getTargetMonth(),
     marines:getDefaultMarines(),
-    history:{weekendBurden:{junior:[],ssgt:[],gysgt:[]},extraDuty:[],dutyHistory:{junior:[],ssgt:[],gysgt:[]},lastDutyDay:{}},
+    history:{weekendBurden:{junior:[],ssgt:[],gysgt:[]},weekendMonthly:[],extraDuty:[],dutyHistory:{junior:[],ssgt:[],gysgt:[]},lastDutyDay:{}},
     turnMins:3,
     blackouts:[],extraWk:[],workdays:[],
     preAssigned:{},preAssignReasons:{},pendingPreAssignNotifs:[],

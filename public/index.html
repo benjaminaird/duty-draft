@@ -372,8 +372,15 @@ const api={
 // burden list before selecting. Returns a FLAT array of slotted Marines.
 function computeWkAssignees(marines,wkCount,history){
   if(!wkCount)return[];
-  const wb=(history&&history.weekendBurden)||{};
-  const flat=[...(wb.junior||[]),...(wb.ssgt||[]),...(wb.gysgt||[])];
+  // Prefer the RECENT-months weekend log (fair across turnover); fall back to the
+  // legacy flat grouped burden if the month-tagged log isn't present yet.
+  let flat;
+  if(history&&Array.isArray(history.weekendMonthly)&&history.weekendMonthly.length){
+    flat=[];history.weekendMonthly.slice(-12).forEach(e=>(e.ids||[]).forEach(id=>flat.push(id)));
+  }else{
+    const wb=(history&&history.weekendBurden)||{};
+    flat=[...(wb.junior||[]),...(wb.ssgt||[]),...(wb.gysgt||[])];
+  }
   const E=window.DraftOrderEngine;
   if(E&&E.computeWeekendAssignees)return E.computeWeekendAssignees(marines,wkCount,flat);
   // Fallback if the engine script is unavailable: least-burdened, then longest-ago.

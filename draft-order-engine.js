@@ -583,7 +583,19 @@
   // past weekend duty). Returns the selected Marines (length = min(wkCount, n)).
   function computeWeekendAssignees(marines, wkCount, weekendHistory) {
     if (!wkCount || !marines.length) return [];
-    const counts = normalizeWeekendHistory(weekendHistory);
+    const counts = Object.assign({}, normalizeWeekendHistory(weekendHistory));
+    // New-arrival fairness: a Marine with no weekend history would otherwise sort
+    // first forever (count 0) and get hammered with weekends after joining the
+    // unit mid-stream (turnover/promotions). Seed any no-history Marine in the
+    // current roster at the MEDIAN weekend count of the Marines who DO have
+    // history, so newcomers slot into the middle of the rotation, not the front.
+    // (At the very first draft everyone has 0 history -> no seeding -> unchanged.)
+    const histVals = marines.map((m) => counts[m.id] || 0).filter((c) => c > 0).sort((a, b) => a - b);
+    if (histVals.length) {
+      const mid = Math.floor(histVals.length / 2);
+      const median = histVals.length % 2 ? histVals[mid] : (histVals[mid - 1] + histVals[mid]) / 2;
+      marines.forEach((m) => { if (!(counts[m.id] > 0)) counts[m.id] = median; });
+    }
     const lastIndex = {};
     if (Array.isArray(weekendHistory)) {
       weekendHistory.forEach((id, i) => { lastIndex[id] = i; });

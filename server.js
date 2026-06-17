@@ -988,14 +988,22 @@ app.post('/api/next-month',auth.requireAdmin,async(req,res)=>{
   Object.entries(appState.preAssigned||{}).forEach(([d,mid])=>{
     if(!allAsgn[Number(d)])allAsgn[Number(d)]=mid;
   });
+  const thisMonthWk=[];
   Object.entries(allAsgn).forEach(([day,mid])=>{
     if(isWkDate(Number(day),appState)){
       const m=(appState.marines||[]).find(x=>x.id===mid);
       if(!m)return;
       const g=groupOf(m.rank);
       newWb[g].push(mid);
+      thisMonthWk.push(mid);
     }
   });
+  // Month-tagged weekend log, windowed to the last 12 months. The slate is computed
+  // from RECENT weekend burden so Marines who join mid-stream (turnover/promotions)
+  // don't have to "catch up" to veterans' lifetime totals and get hammered with
+  // weekends. (The legacy flat weekendBurden above is kept for history continuity.)
+  const curWkKey=`${appState.year}-${String(appState.month+1).padStart(2,'0')}`;
+  const newWkMonthly=[...(prevHistory.weekendMonthly||[]),{key:curWkKey,ids:thisMonthWk}].slice(-12);
   Object.entries(appState.doubleDuty||{}).forEach(([mid,count])=>{
     if(count>=2)newEd.push(mid);
   });
@@ -1019,7 +1027,7 @@ app.post('/api/next-month',auth.requireAdmin,async(req,res)=>{
     year:nextYear,
     month:nextMonth,
     marines:appState.marines,
-    history:{weekendBurden:newWb,extraDuty:newEd,dutyHistory:newDh,lastDutyDay},
+    history:{weekendBurden:newWb,weekendMonthly:newWkMonthly,extraDuty:newEd,dutyHistory:newDh,lastDutyDay},
     turnMins:appState.turnMins||3,
     blackouts:[],extraWk:[],workdays:[],
     preAssigned:{},preAssignReasons:{},pendingPreAssignNotifs:[],
