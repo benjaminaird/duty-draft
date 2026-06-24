@@ -1,0 +1,1009 @@
+{
+  "app": "dutydraft",
+  "name": "DutyDraft",
+  "exportedAt": "2026-06-15T13:30:50.076Z",
+  "source": "WhatsNext App Control",
+  "rules": [
+    {
+      "id": "dd-ov-what",
+      "title": "What DutyDraft Is",
+      "category": "Overview",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "DutyDraft is a rule-based duty-roster scheduling tool for The Commandant’s Own. It helps collect Marine preferences, account for approved non-availability, organize draft-order courses of action, flag possible fairness issues, and prepare rosters for leadership review. DutyDraft is designed to support the SNCOIC and command team, not replace them. Every roster it produces is a recommendation that a human reviews, adjusts, and approves before it becomes official.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-ov-not",
+      "title": "What DutyDraft Is Not",
+      "category": "Overview",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "DutyDraft is not an autonomous AI scheduler. It does not secretly assign Marines without review, does not publish rosters without approval, does not override leadership judgment, and does not remove the SNCOIC from the process. It is a rule-based decision-support tool. There is no “black box”: every assignment can be explained by seniority, preferences, approved availability, and recent burden.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-ov-control",
+      "title": "Leadership Control",
+      "category": "Overview",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Leadership retains complete control of the outcome. The SNCOIC sets up the month, decides when preference submissions open and close, reviews and approves non-availability, generates and reviews the draft order, manually adjusts assignments where needed, locks the order before the draft runs, and approves the final roster before it publishes. DutyDraft cannot start a draft or publish a roster on its own — those gates require an explicit leadership action.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-ov-philosophy",
+      "title": "Assignment Philosophy",
+      "category": "Overview",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "DutyDraft assigns duty transparently and fairly. Marines submit preferred dates; approved non-availability is honored as a hard constraint; recent burden (especially weekends and double duty) is tracked so the load rotates instead of falling on the same people; conflicts are checked before a draft is proposed; and nothing is final until a human reviews it. Seniority influences draft-pick order, but it does not change how much weekend obligation a Marine carries — burden is shared.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-ov-weekend",
+      "title": "Current Weekend Burden Rule",
+      "category": "Overview",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Weekend duty is distributed equally across the whole company. DutyDraft does not reserve protected weekend quotas by rank group (the old 60/25/15 split has been removed). When choosing who stands a weekend, it considers prior weekend burden, recent assignments, double-duty risk, historical assignment count, and preference order, and favors the Marines who have carried the least recent weekend burden — regardless of rank. The fairness statement is: “Weekend burden is tracked equally across all Marines. Seniority affects draft order, not weekend obligation.”",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-ov-approval",
+      "title": "Current Approval Workflow",
+      "category": "Overview",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The roster moves through four gates: Generate → Review → Lock → Publish/Start. The SNCOIC generates a draft order using the selected course of action, reviews it (with fairness flags and the audit breakdown), locks it so it cannot be casually re-rolled, and only then starts the draft or publishes the roster. Each gate is an explicit leadership decision, and the locked order plus its audit are saved so the outcome can always be explained.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-weekend-burden",
+      "title": "Weekend Burden",
+      "category": "Fairness",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Weekend assignments are treated equally across all ranks. The draft algorithm must not reserve separate weekend-duty quotas for E1–E5, E6, or E7 Marines. Fairness considers prior weekend burden, recent assignments, double-duty risk, historical assignment count, and preference order — but rank-based weekend quota percentages are not applied.",
+      "config": {
+        "rankQuotaEnabled": false,
+        "rankWeekendQuotas": null,
+        "weekendBurdenMode": "equal_across_all_ranks"
+      },
+      "tests": [
+        "No rank group receives a protected weekend percentage.",
+        "Recent weekend assignments increase a Marine’s burden score.",
+        "The 60/25/15 quotas are not applied unless rankQuotaEnabled is true."
+      ]
+    },
+    {
+      "id": "dd-preference-order",
+      "title": "Preference Order",
+      "category": "Workflow",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Marines submit a ranked list of preferred duty dates. DutyDraft uses preference order to inform assignments and the live draft, so a Marine is more likely to receive an earlier-ranked preferred date when fairness and availability allow. Preferences inform; they do not override fairness, seniority, or approved availability constraints.",
+      "config": {
+        "maxPreferredDates": 10,
+        "overridesFairness": false,
+        "preferenceInfluences": "draft_pick_and_live_draft"
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-blackout",
+      "title": "Blackout Dates / Non-Availability",
+      "category": "Availability",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Blackout dates are dates when a Marine is not available for duty because of approved leave, official commitments, duty conflicts, or another leadership-approved reason. DutyDraft should treat approved blackout dates as unavailable dates when generating a roster. A Marine’s submitted non-availability should not automatically block assignment until it has been reviewed and approved by the appropriate administrator. This preserves leadership control and prevents the system from treating unverified preferences as hard restrictions.",
+      "config": {
+        "approvedIsHardConstraint": true,
+        "unapprovedBlocksAssignment": false
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-approved-na",
+      "title": "Approved vs Unapproved Non-Availability",
+      "category": "Availability",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Non-availability has two states. Submitted (unapproved) requests are what a Marine claims; approved requests are what leadership has verified. Only approved non-availability becomes a hard constraint that removes a date from a Marine’s eligible pool. Unapproved requests are shown to the SNCOIC for review and may be approved or denied, but until approved they do not change scheduling.",
+      "config": {
+        "states": [
+          "pending",
+          "approved",
+          "denied"
+        ],
+        "onlyApprovedConstrains": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-preassign",
+      "title": "Pre-Assignments",
+      "category": "Workflow",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A pre-assignment is a duty date the SNCOIC fixes to a specific Marine before the draft runs, for a known reason (a required billet, a directed tasking, a fairness correction). Pre-assigned dates and Marines are removed from the normal draft pool so they are not double-counted, and the reason is recorded.",
+      "config": {
+        "reasonRecorded": true,
+        "excludedFromDraft": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-double-duty",
+      "title": "Double Duty Protection",
+      "category": "Fairness",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "When a month has more duty days than available Marines, one or more Marines must stand two duty days (double duty). DutyDraft protects fairness by selecting the most-junior Marines on rotation, placing them first in the draft as compensation (two picks each), and never hitting a Marine with double duty twice before everyone has been hit once. The month of double duty puts those Marines at the front; the immediately following month’s draft also credits that burden.",
+      "config": {
+        "rotation": "most_junior_first_fewest_prior",
+        "picksPerDoubleDuty": 2,
+        "priorDoubleDutyPoints": 5,
+        "currentMonthDoubleDutyFirst": true,
+        "priorDoubleDutyLookbackMonths": 1
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-history",
+      "title": "Recent Assignment History",
+      "category": "Algorithm",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "DutyDraft remembers who stood duty recently and uses a rolling three-month window, weighted by recency, so the most recent month counts most and older months count less but still count. Only starred weekend duties count toward weekend burden; past comp days do not. History is what lets the system rotate burden instead of repeating it.",
+      "config": {
+        "windowMonths": 3,
+        "starredWeekendsOnly": true,
+        "weekendPointsByRecency": [
+          5,
+          3.35,
+          1.65
+        ]
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-rotation",
+      "title": "Month-to-Month Rotation",
+      "category": "Fairness",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Burdens that cannot be made equal in a single month are rotated across months. Double duty climbs the seniority line month to month; weekend assignments favor whoever has carried the least lately. Over a cycle, the heavy and light months even out so no Marine is permanently advantaged or disadvantaged.",
+      "config": {
+        "rotates": [
+          "double_duty",
+          "weekend_burden"
+        ]
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-draft-timer",
+      "title": "Draft Timer",
+      "category": "Workflow",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "During the live draft, each Marine has a turn timer (default three minutes) to make their pick. The timer keeps the draft moving and prevents it from stalling when someone is unavailable. The SNCOIC can pause and resume the draft, which preserves the remaining time.",
+      "config": {
+        "pausable": true,
+        "turnMinutes": 3
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-autopick",
+      "title": "Auto-Pick Fallback",
+      "category": "Workflow",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "If a Marine’s turn timer expires, DutyDraft auto-picks the best available duty day for them — respecting their preferences, approved availability, and fairness — and then advances the draft. Auto-pick is a safety net so the draft never stalls, not the primary way picks are made.",
+      "config": {
+        "autoPickOnExpiry": true,
+        "respectsConstraints": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-leadership-review",
+      "title": "Leadership Review",
+      "category": "Safety",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Before a draft starts and before a roster publishes, the SNCOIC reviews the proposed order and the final roster. The review surfaces fairness flags (for example, Marines with many weekend non-availabilities) and the audit breakdown so leadership can see exactly why the order came out as it did and make manual adjustments.",
+      "config": {
+        "reviewBeforeStart": true,
+        "reviewBeforePublish": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-leadership-approval",
+      "title": "Lock Before Start",
+      "category": "Safety",
+      "status": "active",
+      "locked": true,
+      "plainEnglishRule": "The draft order must be generated, reviewed, and LOCKED by the SNCOIC before the draft can start. A locked order cannot be casually regenerated or re-rolled; changing it requires an intentional reset. This prevents “rolling until you like the result” and makes the order auditable.",
+      "config": {
+        "lockBeforeStart": true,
+        "allowCasualReroll": false
+      },
+      "tests": [
+        "The draft cannot start until the order is locked.",
+        "A locked order cannot be casually regenerated."
+      ]
+    },
+    {
+      "id": "dd-overrides",
+      "title": "Manual Overrides",
+      "category": "Workflow",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The SNCOIC can manually adjust assignments — swapping Marines, fixing a date, correcting a fairness edge case — before the roster is published. Manual overrides take precedence over the algorithm’s recommendation, and the fact that an override occurred is part of the record.",
+      "config": {
+        "overridesArePermitted": true,
+        "overrideBeatsAlgorithm": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-publish",
+      "title": "Publish Rules",
+      "category": "Safety",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A roster is only published after leadership review and approval. Publishing produces the official monthly duty roster (including the PDF) that Marines rely on. An unreviewed or unlocked roster cannot be published, and publication is an explicit action — not an automatic side effect of generating a draft.",
+      "config": {
+        "requiresReview": true,
+        "producesOfficialPdf": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-audit",
+      "title": "Audit Trail",
+      "category": "Safety",
+      "status": "active",
+      "locked": true,
+      "plainEnglishRule": "DutyDraft records how each draft order was produced: the month, the selected course of action, the burden window used, the per-Marine scoring inputs, the random seed (where applicable), who generated it, and the locked status. This audit is saved with the roster so leadership can later explain exactly why the order came out as it did.",
+      "config": {
+        "storesSeed": true,
+        "immutableRecord": true,
+        "storesPerMarineBreakdown": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-funeral-sep",
+      "title": "Funeral Roster Separation",
+      "category": "Roster",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The funeral bugler roster is a separate roster from the monthly duty roster. It has its own pool of qualified Marines, its own burden tracking, and its own generation and publishing flow. Funeral duty does not consume monthly duty fairness and vice versa; the two are kept independent on purpose.",
+      "config": {
+        "separatePool": true,
+        "separateBurden": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-equal-fair",
+      "title": "Equal vs Fair Burden Philosophy",
+      "category": "Fairness",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "DutyDraft distinguishes between “equal” and “fair.” Weekend and duty BURDEN is shared equally across all Marines over time. DRAFT-PICK ORDER, by contrast, is earned: seniority sets the baseline and recent burden adjusts it (with a movement cap so it never becomes chaotic). Fair does not mean everyone gets the same pick every month; it means everyone carries a comparable load and every pick is explainable.",
+      "config": {
+        "burden": "equal_over_time",
+        "pickOrder": "seniority_plus_capped_burden",
+        "movementCap": 8
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-rank",
+      "title": "Rank Handling",
+      "category": "Fairness",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Rank and seniority influence draft-pick order — more senior Marines generally pick earlier — but rank does not change how much weekend or duty obligation a Marine carries. There are no rank-based weekend quotas. Rank is used for ordering and tie-breaking, not for excusing anyone from their share of the load.",
+      "config": {
+        "rankAffects": [
+          "pick_order",
+          "tie_break"
+        ],
+        "rankAffectsBurden": false
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-weekend-def",
+      "title": "Weekend Definition",
+      "category": "Definition",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "For burden purposes, a “weekend” duty is a Saturday or Sunday duty day that is marked (starred) on the roster. Only starred weekend duties count toward weekend burden. Comp days and regular weekday duty do not count as weekend burden, even if they fall adjacent to a weekend.",
+      "config": {
+        "starredOnly": true,
+        "weekendDays": [
+          "Saturday",
+          "Sunday"
+        ]
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-testdrive",
+      "title": "Test Drive / Simulation Mode",
+      "category": "Tooling",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "DutyDraft can simulate the schedule across many months without touching live data, so leadership can compare courses of action and confirm fairness before committing. The simulation runs the real engine against the real roster and reports weekend burden spread, double-duty rotation, pick distribution, and how much each method departs from a rules-based baseline.",
+      "config": {
+        "months": 12,
+        "writesLiveData": false
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-wf-setup",
+      "title": "Admin Setup Workflow",
+      "category": "Workflow",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Before anything else, the SNCOIC sets up the upcoming month: confirms the roster and seniority order, marks the duty calendar (weekend days, holidays, blackouts, any pre-assignments), and sets the turn timer. Setup is what every later step depends on, so it is confirmed deliberately.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-wf-pref",
+      "title": "Marine Preference Submission Workflow",
+      "category": "Workflow",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Once submissions open (the 1st of the month), Marines submit their preferred duty dates and rank them. The window stays open until the SNCOIC closes it. Preferences are stored per Marine and later inform the draft order and the live draft.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-wf-na",
+      "title": "Non-Availability Request Workflow",
+      "category": "Workflow",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "In the same window, a Marine submits non-availability with a reason. The request is stored as pending. The SNCOIC reviews each request and approves or denies it. Only approved requests become hard constraints; denials can notify the Marine.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-wf-generate",
+      "title": "Draft Generation Workflow",
+      "category": "Workflow",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "DutyDraft generates a draft roster only after the required setup information has been entered and Marine preference windows have closed or timed out. The app evaluates eligible Marines, approved blackout dates, pre-assignments, recent burden, weekend burden, double-duty risk, and preference order. The generated result is a draft for review, not a final roster.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-wf-review",
+      "title": "Review Workflow",
+      "category": "Workflow",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The SNCOIC reviews the generated order: the selected course of action, the double-duty priority, the per-Marine breakdown, and any fairness flags. Adjustments can be made here. Review is the checkpoint that must pass before the order is locked.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-wf-lock",
+      "title": "Lock Workflow",
+      "category": "Workflow",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "After review, the SNCOIC locks the order. Locking freezes the order and its audit so it cannot be casually re-rolled. Only after locking can the draft be scheduled or started.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-wf-publish",
+      "title": "Publish Workflow",
+      "category": "Workflow",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "After the draft completes and the roster is reviewed, the SNCOIC publishes it. Publishing generates the official monthly roster and PDF that Marines rely on. Publication is an explicit, approved action.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-wf-funeral",
+      "title": "Funeral Roster Workflow",
+      "category": "Workflow",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The funeral bugler roster is built and published separately from the monthly duty roster, using its own qualified pool and burden tracking. It can be auto-assigned or manually assigned, reviewed, and published independently.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-wf-testdrive",
+      "title": "Test-Drive Workflow",
+      "category": "Workflow",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "To compare courses of action or sanity-check fairness, the SNCOIC runs the simulation. It executes the real engine over multiple months against the real roster and produces comparison metrics — all without changing any live data.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-wf-rulechange",
+      "title": "Rule-Change Workflow",
+      "category": "Workflow",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Changing how DutyDraft behaves is itself a reviewed process. A rule is edited in plain English, which creates a proposed change rather than altering live behavior. The proposal shows before/after text and any config change, and is approved (config applies) or routed to a developer prompt (code change) before it takes effect.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-f-marine",
+      "title": "Marine",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A member of the unit who can be assigned duty. Each Marine has a rank, last name, section, history, and availability.",
+      "config": {
+        "editable": true,
+        "inExports": true,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-rank",
+      "title": "Rank",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The Marine’s rank/grade. Used for seniority ordering and tie-breaking in the draft.",
+      "config": {
+        "editable": true,
+        "inExports": true,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-lastname",
+      "title": "Last Name",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The Marine’s last name, used for display and on the published roster.",
+      "config": {
+        "editable": true,
+        "inExports": true,
+        "affectsScheduling": false
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-section",
+      "title": "Section",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The Marine’s section/shop within the unit.",
+      "config": {
+        "editable": true,
+        "inExports": true,
+        "affectsScheduling": false
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-dutydate",
+      "title": "Duty Date",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A specific calendar date that requires a duty stander.",
+      "config": {
+        "editable": true,
+        "inExports": true,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-weekend",
+      "title": "Weekend",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A Saturday or Sunday duty date. Starred weekend duties count toward weekend burden.",
+      "config": {
+        "editable": false,
+        "inExports": true,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-holiday",
+      "title": "Holiday",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A date marked as a holiday in the duty calendar.",
+      "config": {
+        "editable": true,
+        "inExports": true,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-pref",
+      "title": "Preference",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A duty date a Marine has said they would prefer to stand.",
+      "config": {
+        "editable": true,
+        "inExports": false,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-preforder",
+      "title": "Preference Order",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The ranking of a Marine’s preferred dates, most-wanted first.",
+      "config": {
+        "editable": true,
+        "inExports": false,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-blackout",
+      "title": "Blackout Date",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A date a Marine is unavailable for an approved reason.",
+      "config": {
+        "editable": true,
+        "inExports": false,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-na-req",
+      "title": "Non-Availability Request",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A Marine’s submitted claim that they are unavailable on a date, pending review.",
+      "config": {
+        "editable": true,
+        "inExports": false,
+        "affectsScheduling": false
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-na-appr",
+      "title": "Approved Non-Availability",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A non-availability request leadership has verified and approved.",
+      "config": {
+        "editable": true,
+        "inExports": false,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-na-deny",
+      "title": "Denied Non-Availability",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A non-availability request leadership reviewed and denied.",
+      "config": {
+        "editable": true,
+        "inExports": false,
+        "affectsScheduling": false
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-preassign",
+      "title": "Pre-Assignment",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A duty date the SNCOIC fixes to a specific Marine before the draft.",
+      "config": {
+        "editable": true,
+        "inExports": true,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-draftpick",
+      "title": "Draft Pick",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A pick made during the live draft, where a Marine selects a duty day in their turn.",
+      "config": {
+        "editable": true,
+        "inExports": true,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-autopick",
+      "title": "Auto-Pick",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A pick the app makes automatically when a Marine’s turn timer expires.",
+      "config": {
+        "editable": false,
+        "inExports": true,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-timer",
+      "title": "Timer Expiration",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The moment a Marine’s draft turn runs out of time.",
+      "config": {
+        "editable": false,
+        "inExports": false,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-asg-hist",
+      "title": "Assignment History",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The record of which duty dates each Marine has stood over time.",
+      "config": {
+        "editable": false,
+        "inExports": false,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-wk-burden",
+      "title": "Weekend Burden",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The amount of Saturday/Sunday duty a Marine has carried over the tracked history period. DutyDraft uses weekend burden to help avoid repeatedly assigning the same Marine to weekends when other eligible Marines have carried less weekend duty. Weekend burden is currently treated equally across ranks unless a future approved rule changes that behavior.",
+      "config": {
+        "editable": false,
+        "inExports": false,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-double",
+      "title": "Double Duty",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "When a Marine stands two duty days in one month because there are more duty days than Marines.",
+      "config": {
+        "editable": false,
+        "inExports": true,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-funeral",
+      "title": "Funeral Roster",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The separate roster of qualified funeral buglers and their assignments.",
+      "config": {
+        "editable": true,
+        "inExports": true,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-published",
+      "title": "Published Roster",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The official monthly duty roster after leadership approval, including the PDF.",
+      "config": {
+        "editable": false,
+        "inExports": true,
+        "affectsScheduling": false
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-locked",
+      "title": "Locked Roster",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A draft order that has been locked so it cannot be casually re-rolled.",
+      "config": {
+        "editable": false,
+        "inExports": false,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-override",
+      "title": "Manual Override",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A leadership adjustment that changes an assignment regardless of the algorithm.",
+      "config": {
+        "editable": true,
+        "inExports": true,
+        "affectsScheduling": true
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-f-audit",
+      "title": "Audit Entry",
+      "category": "Field",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A saved record of how a draft order was produced (course of action, inputs, seed, who, when).",
+      "config": {
+        "editable": false,
+        "inExports": false,
+        "affectsScheduling": false
+      },
+      "tests": []
+    },
+    {
+      "id": "dd-alg-eligibility",
+      "title": "Eligibility Filtering",
+      "category": "Algorithm",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Purpose: determine which Marines can stand a given duty date before any scoring happens. Process: for each date, DutyDraft removes Marines who have an approved non-availability on that date, who are pre-assigned elsewhere, or who are otherwise constrained, leaving only the eligible pool to consider.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-alg-prefscore",
+      "title": "Preference Scoring",
+      "category": "Algorithm",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Purpose: let a Marine’s ranked preferences influence which dates they tend to receive. Process: preferences contribute to draft order and live-draft choices so earlier-ranked preferred dates are favored, but only among assignments that are already fair and available.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-alg-weekend",
+      "title": "Weekend Burden Scoring",
+      "category": "Algorithm",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Purpose: weekend burden scoring helps DutyDraft avoid repeatedly placing the same Marines on weekend duty when other eligible Marines have had fewer weekend assignments. Process: when evaluating a weekend duty date, DutyDraft looks at eligible Marines and compares their previous weekend assignment burden. Marines with heavier recent weekend burden are less preferred than comparable eligible Marines with lighter weekend burden, unless a leadership-approved override, pre-assignment, or availability constraint requires otherwise. The current rule treats weekend burden equally across all ranks and does not apply protected weekend quotas by rank group.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-alg-double",
+      "title": "Double-Duty Detection",
+      "category": "Algorithm",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Purpose: decide when double duty is required and who stands it. Process: if a month has more duty days than available Marines, DutyDraft computes how many double duties are needed and selects the most-junior Marines on rotation (fewest prior double duties first), placing them at the front of the draft with two picks each.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-alg-coa",
+      "title": "Draft-Order COA Comparison",
+      "category": "Algorithm",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Purpose: produce the draft-pick order under a chosen course of action and let leadership compare options. Process: after locking double-duty Marines to the front, DutyDraft orders the rest by the selected method — Pure Seniority, Weighted Seniority (seniority plus recent burden, capped ±8), Weighted Lottery, or Hybrid — and records the full breakdown.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-alg-autopick",
+      "title": "Auto-Pick Fallback",
+      "category": "Algorithm",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Purpose: keep the live draft moving when a Marine’s turn expires. Process: DutyDraft selects the best available duty date for that Marine consistent with their preferences and constraints, records it, and advances to the next pick.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-alg-history",
+      "title": "Historical Fairness Tracking",
+      "category": "Algorithm",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Purpose: make fairness hold over time, not just within one month. Process: DutyDraft maintains a rolling three-month, recency-weighted burden record per Marine (weekends and double duty) and feeds it into the next month’s scoring so burden rotates.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-alg-conflict",
+      "title": "Conflict Detection",
+      "category": "Algorithm",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Purpose: catch problems before a roster reaches leadership. Process: DutyDraft checks for back-to-back duty, assignments on approved non-available dates, missing coverage, and Marines flagged with many weekend non-availabilities, and surfaces them as review flags.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-alg-funeral",
+      "title": "Funeral Roster Generation",
+      "category": "Algorithm",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Purpose: build the funeral bugler roster from its own qualified pool. Process: DutyDraft assigns qualified buglers to funeral dates using their separate burden counts, resolves conflict days, and supports manual assignment, independent of the monthly duty math.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-alg-pdf",
+      "title": "PDF Roster Generation",
+      "category": "Algorithm",
+      "status": "active",
+      "locked": true,
+      "plainEnglishRule": "Purpose: produce the official, correctly-formatted roster PDF that Marines rely on. Process: the PDF builder renders the approved roster into the exact layout, fonts, and coordinates the unit expects. This area was difficult to get right and is treated as a protected system.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-rl-monthly",
+      "title": "Monthly Duty Roster",
+      "category": "Roster",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The monthly duty roster is the schedule of who stands each duty date for the upcoming month. It is built from setup, preferences, approved availability, pre-assignments, and the locked draft order, then reviewed and published.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-rl-draft",
+      "title": "Draft Roster",
+      "category": "Roster",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A draft roster is a proposed schedule produced by generation. It is explicitly not final — it exists to be reviewed, adjusted, and approved. Generating a draft never publishes anything.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-rl-published",
+      "title": "Published Roster",
+      "category": "Roster",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A published roster is the official, approved schedule released to the company, including the PDF. It is produced only after leadership review and an explicit publish action.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-rl-locked",
+      "title": "Locked Roster",
+      "category": "Roster",
+      "status": "active",
+      "locked": true,
+      "plainEnglishRule": "A locked roster/order is frozen so it cannot be casually re-rolled. Locking happens after review and before the draft starts; it preserves the order and its audit.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-rl-becomes",
+      "title": "How a Draft Becomes Official",
+      "category": "Roster",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "A draft becomes official by passing the gates in order: it is generated, reviewed by the SNCOIC, locked, drafted (live or auto), reviewed again as a roster, approved, and finally published. Each gate is a human decision.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-rl-manual",
+      "title": "Manual Changes After Generation",
+      "category": "Roster",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "Leadership may manually change assignments after generation and during review. Those changes take precedence over the algorithm and are reflected in the published roster. The fact that a manual change occurred is part of the record.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-rl-after",
+      "title": "After Publication",
+      "category": "Roster",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "After a roster publishes, it is the official schedule. Corrections after publication should be deliberate and tracked. The next month’s cycle carries forward fairness history so the published outcomes influence future rotation.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-rl-frozen",
+      "title": "What Cannot Change After Lock/Start",
+      "category": "Roster",
+      "status": "active",
+      "locked": true,
+      "plainEnglishRule": "Once the order is locked and the draft has started, the draft order itself is fixed for that draft. Picks proceed in the locked order; changing the order requires an explicit reset/restart, not a quiet edit. This keeps a running draft honest.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-rl-pdf",
+      "title": "PDF Builder / Export Logic",
+      "category": "Safety",
+      "status": "active",
+      "locked": true,
+      "plainEnglishRule": "This area is locked and should not be modified casually. The PDF builder controls the formatting and export behavior of published rosters. Because this was difficult to get right, the App Control dashboard treats it as a protected system. Rule edits may describe PDF behavior, but code changes to PDF generation should require explicit unlock/confirmation.",
+      "config": {},
+      "tests": []
+    },
+    {
+      "id": "dd-rl-funeral",
+      "title": "Funeral Roster",
+      "category": "Roster",
+      "status": "active",
+      "locked": false,
+      "plainEnglishRule": "The funeral bugler roster is a separate roster with its own qualified pool, burden tracking, generation, and publishing. It does not affect the monthly duty fairness math and is reviewed and published on its own.",
+      "config": {},
+      "tests": []
+    }
+  ]
+}
